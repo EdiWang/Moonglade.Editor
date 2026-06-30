@@ -28,7 +28,7 @@ Current repository state:
 - `src/editor.ts` contains the first `MoongladeEditor` wrapper around `EditorView`.
 - `src/styles.css` contains basic editor styles.
 - `demo/index.html` loads `dist/moonglade-editor.js`.
-- `test/html.test.ts` covers initial HTML round-trip and unsafe link behavior.
+- Tests cover HTML round-trip behavior, sanitizer behavior, toolbar wiring, link/color/alignment controls, and mocked image upload responses.
 - `dist/` contains generated ESM, browser-global, CSS, sourcemap, and type declaration output.
 - Remote origin is `https://github.com/EdiWang/Moonglade.Editor.git`.
 
@@ -114,8 +114,8 @@ The editor should:
 | 7 | Selection state | Reflect active marks/nodes in toolbar state | Demo manual check | Complete |
 | 8 | Link dialog | Add/edit/remove links, safe URL validation | Tests for safe/unsafe URLs | Complete |
 | 9 | Color controls | Foreground/background palette and optional custom color input | Serialization tests | Complete |
-| 10 | Alignment controls | Left/center/right/justify for supported block nodes | Serialization tests | Not started |
-| 11 | Image upload | Button upload, paste, drag/drop, `/image` response handling | Mocked upload tests and demo check | Not started |
+| 10 | Alignment controls | Left/center/right/justify for supported block nodes | Serialization tests | Complete |
+| 11 | Image upload | Button upload, paste, drag/drop, `/image` response handling | Mocked upload tests and demo check | Complete |
 | 12 | Code snippets | Language selector and highlight.js-compatible output | Serialization tests and Moonglade renderer check later | Not started |
 | 13 | Tables | Insert table, add/delete rows/columns, header toggle, merge/split if feasible | Demo manual check and command tests | Not started |
 | 14 | HTML source mode | Source view/edit through schema/sanitizer | Round-trip and unsafe HTML tests | Not started |
@@ -124,13 +124,11 @@ The editor should:
 
 ## Suggested Execution Order
 
-1. Alignment support.
-2. Image upload support.
-3. Code snippet UX.
-4. Table controls.
-5. HTML source mode.
-6. Package/asset consumption documentation.
-7. Integrate into Moonglade in a separate task.
+1. Code snippet UX.
+2. Table controls.
+3. HTML source mode.
+4. Package/asset consumption documentation.
+5. Integrate into Moonglade in a separate task.
 
 ## Verification Log
 
@@ -148,6 +146,10 @@ The editor should:
 | 2026-06-30 | `npx tsc --noEmit` | Passed | Full typecheck after link and color controls. |
 | 2026-06-30 | `npm run build` | Passed | Regenerated `dist/` JS, CSS, maps, and declarations. |
 | 2026-06-30 | Browser demo smoke check | Passed | Served `demo/`, verified link dialog save, synced HTML, unlink, and foreground color swatch with Playwright CLI. |
+| 2026-06-30 | `npx tsc --noEmit` | Passed | Full typecheck after alignment and image upload changes. |
+| 2026-06-30 | `npm test` | Passed | 18 Vitest/jsdom tests covering alignment serialization/sanitization, image URL safety, and mocked `/image` upload responses. |
+| 2026-06-30 | `npm run build` | Passed | Regenerated ESM, browser-global, CSS, maps, and declarations under `dist/`. |
+| 2026-06-30 | Browser demo smoke check | Passed | Served `demo/`, verified page identity, console health, alignment toolbar state, textarea sync, upload control availability, and desktop/mobile rendering with the Browser plugin. |
 
 ## Known Risks
 

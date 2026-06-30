@@ -1,9 +1,9 @@
 import { lift, setBlockType, toggleMark, wrapIn } from 'prosemirror-commands';
 import { redo, undo } from 'prosemirror-history';
-import type { Mark, MarkType, NodeType, Schema } from 'prosemirror-model';
+import type { Mark, MarkType, Node as ProseMirrorNode, NodeType, Schema } from 'prosemirror-model';
 import { liftListItem, wrapInList } from 'prosemirror-schema-list';
 import type { Command, EditorState } from 'prosemirror-state';
-import { sanitizeStyleValue, sanitizeUrl } from './safety';
+import { sanitizeStyleValue, sanitizeTextAlign, sanitizeUrl, type TextAlignment } from './safety';
 
 export function createCommands(schema: Schema) {
   return {
@@ -23,7 +23,9 @@ export function createCommands(schema: Schema) {
     textColor: (color: string): Command => setColorMark(schema.marks.text_color, color),
     clearTextColor: removeMark(schema.marks.text_color),
     backgroundColor: (color: string): Command => setColorMark(schema.marks.background_color, color),
-    clearBackgroundColor: removeMark(schema.marks.background_color)
+    clearBackgroundColor: removeMark(schema.marks.background_color),
+    alignment: (align: TextAlignment): Command => setTextAlignment(schema, align),
+    insertImage: (src: string, alt?: string, title?: string): Command => insertImage(schema, src, alt, title)
   };
 }
 
@@ -113,6 +115,75 @@ function setColorMark(markType: MarkType, color: string): Command {
 
     return true;
   };
+}
+
+function setTextAlignment(schema: Schema, align: TextAlignment): Command {
+  const safeAlign = sanitizeTextAlign(align);
+  if (!safeAlign) {
+    return () => false;
+  }
+
+  return (state, dispatch) => {
+    const updates = getAlignableBlocks(state, schema);
+
+    if (!updates.length) {
+      return false;
+    }
+
+    if (dispatch) {
+      const transaction = state.tr;
+      for (const { node, pos } of updates) {
+        transaction.setNodeMarkup(pos, undefined, { ...node.attrs, align: safeAlign });
+      }
+
+      dispatch(transaction.scrollIntoView());
+    }
+
+    return true;
+  };
+}
+
+function insertImage(schema: Schema, src: string, alt?: string, title?: string): Command {
+  const safeSrc = sanitizeUrl(src);
+  if (!safeSrc) {
+    return () => false;
+  }
+
+  return (state, dispatch) => {
+    const image = schema.nodes.image.create({
+      src: safeSrc,
+      alt: alt?.trim() || null,
+      title: title?.trim() || null
+    });
+
+    if (dispatch) {
+      dispatch(state.tr.replaceSelectionWith(image).scrollIntoView());
+    }
+
+    return true;
+  };
+}
+
+function getAlignableBlocks(state: EditorState, schema: Schema): Array<{ node: ProseMirrorNode; pos: number }> {
+  const alignable = new Set([schema.nodes.paragraph, schema.nodes.heading]);
+  const updates: Array<{ node: ProseMirrorNode; pos: number }> = [];
+  const { selection } = state;
+
+  if (selection.empty && alignable.has(selection.$from.parent.type)) {
+    updates.push({ node: selection.$from.parent, pos: selection.$from.before(selection.$from.depth) });
+    return updates;
+  }
+
+  state.doc.nodesBetween(selection.from, selection.to, (node, pos) => {
+    if (alignable.has(node.type)) {
+      updates.push({ node, pos });
+      return false;
+    }
+
+    return true;
+  });
+
+  return updates;
 }
 
 function removeMark(markType: MarkType): Command {

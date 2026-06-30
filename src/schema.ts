@@ -1,11 +1,13 @@
-import { Schema } from 'prosemirror-model';
+import { Schema, type NodeSpec } from 'prosemirror-model';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
 import { tableNodes } from 'prosemirror-tables';
-import { sanitizeStyleValue } from './safety';
+import { sanitizeStyleValue, sanitizeTextAlign } from './safety';
 
 const nodes = addListNodes(
-  basicSchema.spec.nodes,
+  basicSchema.spec.nodes
+    .update('paragraph', withAlignment(basicSchema.spec.nodes.get('paragraph')!))
+    .update('heading', withAlignment(basicSchema.spec.nodes.get('heading')!)),
   'paragraph block*',
   'block'
 ).append(
@@ -16,7 +18,7 @@ const nodes = addListNodes(
       align: {
         default: null,
         getFromDOM(dom) {
-          return dom.style.textAlign || dom.getAttribute('align') || null;
+          return sanitizeTextAlign(dom.style.textAlign || dom.getAttribute('align')) || null;
         },
         setDOMAttr(value, attrs) {
           if (value) {
@@ -85,3 +87,49 @@ export const moongladeSchema = new Schema({
 });
 
 export type MoongladeSchema = typeof moongladeSchema;
+
+function withAlignment(spec: NodeSpec): NodeSpec {
+  return {
+    ...spec,
+    attrs: {
+      ...spec.attrs,
+      align: { default: null }
+    },
+    parseDOM: spec.parseDOM?.map((rule) => ({
+      ...rule,
+      getAttrs(dom) {
+        const originalAttrs = typeof rule.getAttrs === 'function'
+          ? rule.getAttrs(dom)
+          : rule.attrs ?? null;
+
+        if (originalAttrs === false) {
+          return false;
+        }
+
+        const element = dom instanceof HTMLElement ? dom : null;
+        const align = sanitizeTextAlign(element?.style.textAlign || element?.getAttribute('align'));
+        return {
+          ...(originalAttrs || {}),
+          align: align || null
+        };
+      }
+    })),
+    toDOM(node) {
+      const dom = spec.toDOM?.(node) ?? ['p', 0];
+      const align = sanitizeTextAlign(node.attrs.align);
+
+      if (!Array.isArray(dom) || !align) {
+        return dom;
+      }
+
+      const attrs = typeof dom[1] === 'object' && !Array.isArray(dom[1])
+        ? { ...(dom[1] as Record<string, string>) }
+        : {};
+      attrs.style = `${attrs.style || ''}text-align: ${align};`;
+
+      return typeof dom[1] === 'object' && !Array.isArray(dom[1])
+        ? [dom[0], attrs, ...dom.slice(2)]
+        : [dom[0], attrs, ...dom.slice(1)];
+    }
+  };
+}

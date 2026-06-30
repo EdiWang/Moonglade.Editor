@@ -3,7 +3,7 @@ import { gapCursor } from 'prosemirror-gapcursor';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import type { Mark, MarkType, Node as ProseMirrorNode, NodeType, Schema } from 'prosemirror-model';
-import { EditorState, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
+import { EditorState, TextSelection, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { tableEditing } from 'prosemirror-tables';
 import { createCommands, type MoongladeEditorCommands } from './commands';
@@ -24,6 +24,8 @@ interface ToolbarElements {
   formatSelect: HTMLSelectElement;
   buttons: Record<string, HTMLButtonElement>;
   colorButtons: ColorButton[];
+  imageInput: HTMLInputElement;
+  uploadStatus: HTMLDivElement;
   linkDialog: LinkDialogElements;
 }
 
@@ -99,7 +101,9 @@ export class MoongladeEditor {
           this.updateToolbarState();
           return false;
         }
-      }
+      },
+      handlePaste: (_view, event) => this.handleImagePaste(event),
+      handleDrop: (view, event) => this.handleImageDrop(view, event)
     });
 
     this.syncToTextarea();
@@ -151,6 +155,88 @@ export class MoongladeEditor {
     }
 
     this.onChange?.(html);
+  }
+
+  private handleImagePaste(event: ClipboardEvent): boolean {
+    const file = getFirstImageFile(event.clipboardData?.files);
+
+    if (!file || !this.uploadUrl) {
+      return false;
+    }
+
+    event.preventDefault();
+    this.savedSelection = this.view.state.selection.getBookmark();
+    void this.uploadAndInsertImage(file);
+    return true;
+  }
+
+  private handleImageDrop(view: EditorView, event: DragEvent): boolean {
+    const file = getFirstImageFile(event.dataTransfer?.files);
+
+    if (!file || !this.uploadUrl) {
+      return false;
+    }
+
+    const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+    if (coordinates) {
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, coordinates.pos)));
+    }
+
+    event.preventDefault();
+    this.savedSelection = this.view.state.selection.getBookmark();
+    void this.uploadAndInsertImage(file);
+    return true;
+  }
+
+  private async uploadAndInsertImage(file: File): Promise<boolean> {
+    if (!this.uploadUrl) {
+      this.setUploadStatus('Image upload is not configured.', true);
+      return false;
+    }
+
+    this.setUploadStatus('Uploading image...');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+
+      const response = await fetch(this.uploadUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Image upload failed with status ${response.status}.`);
+      }
+
+      const result = await response.json() as { location?: unknown; filename?: unknown };
+      const location = typeof result.location === 'string' ? result.location : '';
+      const filename = typeof result.filename === 'string' ? result.filename : file.name;
+      const inserted = this.executeWithSavedSelection(this.commands.insertImage(location, filename));
+
+      if (!inserted) {
+        throw new Error('The uploaded image response did not include a safe image URL.');
+      }
+
+      this.savedSelection = undefined;
+      this.setUploadStatus('');
+      return true;
+    } catch (error) {
+      this.savedSelection = undefined;
+      const message = error instanceof Error ? error.message : 'Image upload failed.';
+      this.setUploadStatus(message, true);
+      return false;
+    }
+  }
+
+  private setUploadStatus(message: string, isError = false): void {
+    this.toolbar.uploadStatus.textContent = message;
+    this.toolbar.uploadStatus.hidden = !message;
+    this.toolbar.uploadStatus.classList.toggle('text-danger', isError);
   }
 
   private dispatch(transaction: Transaction): void {
@@ -241,6 +327,12 @@ export class MoongladeEditor {
       ['bulletList', 'Bullets', 'Bullet list', this.commands.bulletList],
       ['orderedList', 'Numbers', 'Numbered list', this.commands.orderedList]
     );
+    addGroup(
+      ['alignLeft', 'Left', 'Align left', this.commands.alignment('left')],
+      ['alignCenter', 'Center', 'Align center', this.commands.alignment('center')],
+      ['alignRight', 'Right', 'Align right', this.commands.alignment('right')],
+      ['alignJustify', 'Justify', 'Justify text', this.commands.alignment('justify')]
+    );
 
     const linkGroup = document.createElement('div');
     linkGroup.className = 'btn-group btn-group-sm';
@@ -260,10 +352,44 @@ export class MoongladeEditor {
       this.createColorGroup('Background color', this.schema.marks.background_color, (color) => this.commands.backgroundColor(color), this.commands.clearBackgroundColor, colorButtons)
     );
 
+    const imageGroup = document.createElement('div');
+    imageGroup.className = 'btn-group btn-group-sm';
+    imageGroup.setAttribute('role', 'group');
+
+    const imageButton = this.createToolbarButton('image', 'Image', 'Upload image');
+    const imageInput = document.createElement('input');
+    imageInput.type = 'file';
+    imageInput.accept = 'image/*';
+    imageInput.hidden = true;
+    imageButton.disabled = !this.uploadUrl;
+    imageButton.addEventListener('click', () => {
+      this.savedSelection = this.view.state.selection.getBookmark();
+      imageInput.click();
+    });
+    imageInput.addEventListener('change', () => {
+      const file = getFirstImageFile(imageInput.files);
+      imageInput.value = '';
+
+      if (file) {
+        void this.uploadAndInsertImage(file);
+      }
+    });
+
+    buttons.image = imageButton;
+    imageGroup.append(imageButton, imageInput);
+    root.append(imageGroup);
+
+    const uploadStatus = document.createElement('div');
+    uploadStatus.className = 'mg-editor-upload-status small';
+    uploadStatus.setAttribute('role', 'status');
+    uploadStatus.setAttribute('aria-live', 'polite');
+    uploadStatus.hidden = true;
+    root.append(uploadStatus);
+
     const linkDialog = this.createLinkDialog();
     root.append(linkDialog.root);
 
-    return { root, formatSelect, buttons, colorButtons, linkDialog };
+    return { root, formatSelect, buttons, colorButtons, imageInput, uploadStatus, linkDialog };
   }
 
   private execute(command: Command): void {
@@ -444,6 +570,10 @@ export class MoongladeEditor {
     setButtonState(buttons.blockquote, hasAncestor(state, this.schema.nodes.blockquote), canRun(state, this.view, this.commands.blockquote));
     setButtonState(buttons.bulletList, hasAncestor(state, this.schema.nodes.bullet_list), canRun(state, this.view, this.commands.bulletList));
     setButtonState(buttons.orderedList, hasAncestor(state, this.schema.nodes.ordered_list), canRun(state, this.view, this.commands.orderedList));
+    setButtonState(buttons.alignLeft, getCurrentAlignment(state) === 'left', canRun(state, this.view, this.commands.alignment('left')));
+    setButtonState(buttons.alignCenter, getCurrentAlignment(state) === 'center', canRun(state, this.view, this.commands.alignment('center')));
+    setButtonState(buttons.alignRight, getCurrentAlignment(state) === 'right', canRun(state, this.view, this.commands.alignment('right')));
+    setButtonState(buttons.alignJustify, getCurrentAlignment(state) === 'justify', canRun(state, this.view, this.commands.alignment('justify')));
     setButtonState(buttons.link, Boolean(activeLink), canEditLink(state, activeLink));
     setButtonState(buttons.removeLink, false, Boolean(activeLink));
 
@@ -454,6 +584,7 @@ export class MoongladeEditor {
 
     buttons.undo.disabled = !canRun(state, this.view, this.commands.undo);
     buttons.redo.disabled = !canRun(state, this.view, this.commands.redo);
+    buttons.image.disabled = !this.uploadUrl;
   }
 }
 
@@ -487,6 +618,11 @@ function getCurrentFormat(state: EditorState): string {
   }
 
   return 'paragraph';
+}
+
+function getCurrentAlignment(state: EditorState): string {
+  const align = state.selection.$from.parent.attrs.align;
+  return typeof align === 'string' && align ? align : 'left';
 }
 
 function hasAncestor(state: EditorState, nodeType: NodeType): boolean {
@@ -531,4 +667,8 @@ function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boo
   button.classList.toggle('active', active);
   button.setAttribute('aria-pressed', active ? 'true' : 'false');
   button.disabled = !enabled;
+}
+
+function getFirstImageFile(files: FileList | null | undefined): File | null {
+  return Array.from(files ?? []).find((file) => file.type.startsWith('image/')) ?? null;
 }

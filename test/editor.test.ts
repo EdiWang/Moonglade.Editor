@@ -1,6 +1,30 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TextSelection } from 'prosemirror-state';
 import { createMoongladeEditor } from '../src/editor';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function waitForAsyncWork(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+async function waitForExpectation(assertion: () => void): Promise<void> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await waitForAsyncWork();
+    }
+  }
+
+  throw lastError;
+}
 
 describe('editor toolbar', () => {
   it('renders a framework-free toolbar shell', () => {
@@ -146,6 +170,112 @@ describe('editor toolbar', () => {
     (host.querySelector('[aria-label="Background color: Yellow"]') as HTMLButtonElement).click();
 
     expect(editor.getHTML()).toBe('<p><span style="color: rgb(13, 110, 253);"><span style="background-color: rgb(255, 193, 7);">Hello</span></span></p>');
+
+    editor.destroy();
+  });
+
+  it('applies text alignment from toolbar buttons', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+    const centerButton = host.querySelector('[data-command="alignCenter"]') as HTMLButtonElement;
+
+    centerButton.click();
+
+    expect(editor.getHTML()).toBe('<p style="text-align: center;">Hello</p>');
+    expect(centerButton.getAttribute('aria-pressed')).toBe('true');
+
+    editor.destroy();
+  });
+
+  it('rejects unsafe image command URLs', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    expect(editor.run(editor.commands.insertImage('javascript:alert(1)', 'Bad'))).toBe(false);
+    expect(editor.getHTML()).toBe('<p>Hello</p>');
+
+    editor.destroy();
+  });
+
+  it('uploads and inserts an image using the configured upload URL', async () => {
+    const file = new File(['fake-image'], 'photo.jpg', { type: 'image/jpeg' });
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      expect(init.method).toBe('POST');
+      expect(init.credentials).toBe('same-origin');
+      expect(init.body).toBeInstanceOf(FormData);
+      expect(((init.body as FormData).get('file') as File).name).toBe(file.name);
+
+      return new Response(JSON.stringify({ location: '/media/photo.jpg', filename: 'photo.jpg' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadUrl: '/image'
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    (host.querySelector('[data-command="image"]') as HTMLButtonElement).click();
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForExpectation(() => {
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('/image', expect.any(Object));
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/photo.jpg" alt="photo.jpg" loading="lazy"></p>');
+    expect((host.querySelector('.mg-editor-upload-status') as HTMLDivElement).hidden).toBe(true);
+
+    editor.destroy();
+  });
+
+  it('shows an upload error when the image response is unsafe', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ location: 'javascript:alert(1)' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })));
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadUrl: '/image'
+    });
+    const file = new File(['fake-image'], 'bad.jpg', { type: 'image/jpeg' });
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForAsyncWork();
+
+    const uploadStatus = host.querySelector('.mg-editor-upload-status') as HTMLDivElement;
+    expect(editor.getHTML()).toBe('<p>Hello</p>');
+    expect(uploadStatus.hidden).toBe(false);
+    expect(uploadStatus.textContent).toContain('safe image URL');
 
     editor.destroy();
   });

@@ -1,4 +1,7 @@
 const unsafeProtocolPattern = /^\s*(?:javascript|vbscript|data):/i;
+const safeTextAlignValues = new Set(['left', 'center', 'right', 'justify']);
+
+export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
 export function isSafeUrl(value: string): boolean {
   const normalized = value.trim();
@@ -29,4 +32,11 @@ export function sanitizeStyleValue(value: string): string | false {
   }
 
   return false;
+}
+
+export function sanitizeTextAlign(value: string | null | undefined): TextAlignment | false {
+  const normalized = value?.trim().toLowerCase();
+  return normalized && safeTextAlignValues.has(normalized)
+    ? normalized as TextAlignment
+    : false;
 }

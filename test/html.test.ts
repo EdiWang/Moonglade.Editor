@@ -15,6 +15,12 @@ describe('html parsing and serialization', () => {
     expect(roundTripHtml(moongladeSchema, html)).toBe('<p><u>Under</u> <s>Strike</s> <span style="color: rgb(13, 110, 253);">Blue</span> <span style="background-color: rgb(255, 193, 7);">Highlight</span></p>');
   });
 
+  it('round-trips supported text alignment on paragraphs and headings', () => {
+    const html = '<h2 style="text-align: center;">Centered</h2><p align="right">Right</p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<h2 style="text-align: center;">Centered</h2><p style="text-align: right;">Right</p>');
+  });
+
   it('strips unsafe link protocols', () => {
     const html = '<p><a href="javascript:alert(1)">bad link</a></p>';
 
@@ -25,5 +31,18 @@ describe('html parsing and serialization', () => {
     const html = '<p><span style="color: url(javascript:alert(1));">bad color</span></p>';
 
     expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad color</p>');
+  });
+
+  it('drops unsupported text alignment values', () => {
+    const html = '<p style="text-align: match-parent;">bad alignment</p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad alignment</p>');
+  });
+
+  it('adds lazy loading to safe images and strips unsafe image URLs', () => {
+    expect(roundTripHtml(moongladeSchema, '<p><img src="/media/photo.jpg" alt="Photo"></p>'))
+      .toBe('<p><img src="/media/photo.jpg" alt="Photo" loading="lazy"></p>');
+    expect(roundTripHtml(moongladeSchema, '<p><img src="javascript:alert(1)" alt="Bad"></p>'))
+      .toBe('<p></p>');
   });
 });
