@@ -20,6 +20,20 @@ npm test
 npm run build
 ```
 
+For Codex continuation, read:
+
+- `AGENTS.md`
+- `docs/CODEX_HANDOFF.md`
+- `docs/tasks/task-moonglade-editor-implementation.md`
+
+To run the demo after building:
+
+```powershell
+npx http-server . -p 5173
+```
+
+Then open `http://localhost:5173/demo/`.
+
 The build emits:
 
 - `dist/moonglade-editor.js` - bundled ESM entry.
