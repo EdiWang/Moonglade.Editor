@@ -83,9 +83,9 @@ export class MoongladeEditor {
     const initialContent = options.content ?? options.textarea?.value ?? '';
     const doc = parseHtml(this.schema, initialContent);
     const editorHost = document.createElement('div');
-    editorHost.className = 'mg-editor-body';
+    editorHost.className = 'mg-editor-body card-body d-flex flex-grow-1 p-0';
 
-    options.element.classList.add('mg-editor');
+    options.element.classList.add('mg-editor', 'card', 'd-flex', 'flex-column', 'overflow-hidden');
     options.element.replaceChildren();
 
     this.toolbar = this.createToolbar();
@@ -252,6 +252,7 @@ export class MoongladeEditor {
   private setUploadStatus(message: string, isError = false): void {
     this.toolbar.uploadStatus.textContent = message;
     this.toolbar.uploadStatus.hidden = !message;
+    this.toolbar.uploadStatus.classList.toggle('text-body-secondary', !isError);
     this.toolbar.uploadStatus.classList.toggle('text-danger', isError);
   }
 
@@ -266,7 +267,7 @@ export class MoongladeEditor {
 
   private createToolbar(): ToolbarElements {
     const root = document.createElement('div');
-    root.className = 'mg-editor-toolbar btn-toolbar gap-2 p-2 border-bottom';
+    root.className = 'mg-editor-toolbar card-header btn-toolbar gap-2 p-2';
     root.setAttribute('role', 'toolbar');
     root.setAttribute('aria-label', 'Editor toolbar');
 
@@ -324,7 +325,7 @@ export class MoongladeEditor {
     const colorButtons: ColorButton[] = [];
 
     const formatGroup = document.createElement('div');
-    formatGroup.className = 'mg-editor-format-group';
+    formatGroup.className = 'mg-editor-format-group input-group input-group-sm';
     formatGroup.append(formatSelect);
     root.append(formatGroup);
 
@@ -416,7 +417,7 @@ export class MoongladeEditor {
     root.append(imageGroup);
 
     const uploadStatus = document.createElement('div');
-    uploadStatus.className = 'mg-editor-upload-status small';
+    uploadStatus.className = 'mg-editor-upload-status small text-body-secondary align-self-center';
     uploadStatus.setAttribute('role', 'status');
     uploadStatus.setAttribute('aria-live', 'polite');
     uploadStatus.hidden = true;
@@ -488,14 +489,14 @@ export class MoongladeEditor {
 
   private createLinkDialog(): LinkDialogElements {
     const root = document.createElement('div');
-    root.className = 'mg-editor-dialog';
+    root.className = 'mg-editor-dialog dropdown-menu show p-3 shadow';
     root.hidden = true;
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-modal', 'true');
     root.setAttribute('aria-label', 'Link');
 
     const form = document.createElement('form');
-    form.className = 'mg-editor-dialog-panel';
+    form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
 
     const hrefInput = document.createElement('input');
     hrefInput.type = 'text';
@@ -512,12 +513,12 @@ export class MoongladeEditor {
     titleInput.setAttribute('aria-label', 'Link title');
 
     const error = document.createElement('div');
-    error.className = 'mg-editor-dialog-error';
+    error.className = 'mg-editor-dialog-error invalid-feedback d-block';
     error.setAttribute('role', 'alert');
     error.hidden = true;
 
     const actions = document.createElement('div');
-    actions.className = 'mg-editor-dialog-actions';
+    actions.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
 
     const saveButton = document.createElement('button');
     saveButton.type = 'submit';
@@ -562,14 +563,14 @@ export class MoongladeEditor {
 
   private createCodeDialog(): CodeDialogElements {
     const root = document.createElement('div');
-    root.className = 'mg-editor-dialog';
+    root.className = 'mg-editor-dialog dropdown-menu show p-3 shadow';
     root.hidden = true;
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-modal', 'true');
     root.setAttribute('aria-label', 'Code snippet');
 
     const form = document.createElement('form');
-    form.className = 'mg-editor-dialog-panel';
+    form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
 
     const languageSelect = document.createElement('select');
     languageSelect.className = 'form-select form-select-sm';
@@ -584,7 +585,7 @@ export class MoongladeEditor {
     }
 
     const actions = document.createElement('div');
-    actions.className = 'mg-editor-dialog-actions';
+    actions.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
 
     const applyButton = document.createElement('button');
     applyButton.type = 'submit';
@@ -612,14 +613,14 @@ export class MoongladeEditor {
 
   private createSourceDialog(): SourceDialogElements {
     const root = document.createElement('div');
-    root.className = 'mg-editor-dialog mg-editor-source-dialog';
+    root.className = 'mg-editor-dialog mg-editor-source-dialog dropdown-menu show p-3 shadow';
     root.hidden = true;
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-modal', 'true');
     root.setAttribute('aria-label', 'HTML source');
 
     const form = document.createElement('form');
-    form.className = 'mg-editor-dialog-panel';
+    form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
 
     const sourceTextarea = document.createElement('textarea');
     sourceTextarea.className = 'mg-editor-source-textarea form-control form-control-sm';
@@ -628,7 +629,7 @@ export class MoongladeEditor {
     sourceTextarea.setAttribute('aria-label', 'HTML source');
 
     const actions = document.createElement('div');
-    actions.className = 'mg-editor-dialog-actions';
+    actions.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
 
     const saveButton = document.createElement('button');
     saveButton.type = 'submit';

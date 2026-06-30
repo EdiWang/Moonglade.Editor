@@ -27,7 +27,7 @@ async function waitForExpectation(assertion: () => void): Promise<void> {
 }
 
 describe('editor toolbar', () => {
-  it('renders a framework-free toolbar shell', () => {
+  it('renders a Bootstrap-compatible toolbar shell', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({
       element: host,
@@ -35,7 +35,12 @@ describe('editor toolbar', () => {
     });
 
     expect(host.classList.contains('mg-editor')).toBe(true);
+    expect(host.classList.contains('card')).toBe(true);
     expect(host.querySelector('[role="toolbar"]')).not.toBeNull();
+    expect(host.querySelector('[role="toolbar"]')?.classList.contains('btn-toolbar')).toBe(true);
+    expect(host.querySelector('.mg-editor-format')?.classList.contains('form-select')).toBe(true);
+    expect(host.querySelector('[data-command="bold"]')?.classList.contains('btn')).toBe(true);
+    expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();
 
