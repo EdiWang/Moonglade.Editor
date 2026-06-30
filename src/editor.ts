@@ -2,8 +2,8 @@ import { baseKeymap } from 'prosemirror-commands';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
-import type { MarkType, Node as ProseMirrorNode, NodeType, Schema } from 'prosemirror-model';
-import { EditorState, type Command, type Transaction } from 'prosemirror-state';
+import type { Mark, MarkType, Node as ProseMirrorNode, NodeType, Schema } from 'prosemirror-model';
+import { EditorState, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { tableEditing } from 'prosemirror-tables';
 import { createCommands, type MoongladeEditorCommands } from './commands';
@@ -23,6 +23,25 @@ interface ToolbarElements {
   root: HTMLDivElement;
   formatSelect: HTMLSelectElement;
   buttons: Record<string, HTMLButtonElement>;
+  colorButtons: ColorButton[];
+  linkDialog: LinkDialogElements;
+}
+
+interface ColorButton {
+  button: HTMLButtonElement;
+  markType: MarkType;
+  color: string;
+  command: Command;
+}
+
+interface LinkDialogElements {
+  root: HTMLDivElement;
+  form: HTMLFormElement;
+  hrefInput: HTMLInputElement;
+  titleInput: HTMLInputElement;
+  error: HTMLDivElement;
+  removeButton: HTMLButtonElement;
+  cancelButton: HTMLButtonElement;
 }
 
 export class MoongladeEditor {
@@ -33,6 +52,7 @@ export class MoongladeEditor {
   private readonly textarea?: HTMLTextAreaElement;
   private readonly onChange?: (html: string) => void;
   private readonly toolbar: ToolbarElements;
+  private savedSelection?: SelectionBookmark;
   private view: EditorView;
 
   constructor(options: MoongladeEditorOptions) {
@@ -199,6 +219,7 @@ export class MoongladeEditor {
 
       root.append(group);
     };
+    const colorButtons: ColorButton[] = [];
 
     const formatGroup = document.createElement('div');
     formatGroup.className = 'mg-editor-format-group';
@@ -221,7 +242,28 @@ export class MoongladeEditor {
       ['orderedList', 'Numbers', 'Numbered list', this.commands.orderedList]
     );
 
-    return { root, formatSelect, buttons };
+    const linkGroup = document.createElement('div');
+    linkGroup.className = 'btn-group btn-group-sm';
+    linkGroup.setAttribute('role', 'group');
+
+    const linkButton = this.createToolbarButton('link', 'Link', 'Add or edit link');
+    linkButton.addEventListener('click', () => this.openLinkDialog());
+    const removeLinkButton = this.createToolbarButton('removeLink', 'Unlink', 'Remove link');
+    removeLinkButton.addEventListener('click', () => this.execute(this.commands.removeLink));
+    buttons.link = linkButton;
+    buttons.removeLink = removeLinkButton;
+    linkGroup.append(linkButton, removeLinkButton);
+    root.append(linkGroup);
+
+    root.append(
+      this.createColorGroup('Text color', this.schema.marks.text_color, (color) => this.commands.textColor(color), this.commands.clearTextColor, colorButtons),
+      this.createColorGroup('Background color', this.schema.marks.background_color, (color) => this.commands.backgroundColor(color), this.commands.clearBackgroundColor, colorButtons)
+    );
+
+    const linkDialog = this.createLinkDialog();
+    root.append(linkDialog.root);
+
+    return { root, formatSelect, buttons, colorButtons, linkDialog };
   }
 
   private execute(command: Command): void {
@@ -230,9 +272,168 @@ export class MoongladeEditor {
     this.updateToolbarState();
   }
 
+  private createToolbarButton(name: string, label: string, ariaLabel: string): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mg-editor-toolbar-button btn btn-outline-secondary';
+    button.dataset.command = name;
+    button.textContent = label;
+    button.setAttribute('aria-label', ariaLabel);
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    return button;
+  }
+
+  private createColorGroup(
+    label: string,
+    markType: MarkType,
+    commandFactory: (color: string) => Command,
+    clearCommand: Command,
+    colorButtons: ColorButton[]
+  ): HTMLDivElement {
+    const group = document.createElement('div');
+    group.className = 'mg-editor-color-group btn-group btn-group-sm';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', label);
+
+    const clearButton = this.createToolbarButton(`${markType.name}:clear`, 'Clear', `Clear ${label.toLowerCase()}`);
+    clearButton.addEventListener('click', () => this.execute(clearCommand));
+    group.append(clearButton);
+
+    for (const color of colorPalette) {
+      const button = this.createToolbarButton(`${markType.name}:${color.value}`, '', `${label}: ${color.label}`);
+      button.classList.add('mg-editor-color-button');
+      button.style.setProperty('--mg-editor-swatch', color.value);
+      const command = commandFactory(color.value);
+      button.addEventListener('click', () => this.execute(command));
+      colorButtons.push({ button, markType, color: color.value, command });
+      group.append(button);
+    }
+
+    return group;
+  }
+
+  private createLinkDialog(): LinkDialogElements {
+    const root = document.createElement('div');
+    root.className = 'mg-editor-dialog';
+    root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'Link');
+
+    const form = document.createElement('form');
+    form.className = 'mg-editor-dialog-panel';
+
+    const hrefInput = document.createElement('input');
+    hrefInput.type = 'text';
+    hrefInput.className = 'form-control form-control-sm';
+    hrefInput.name = 'href';
+    hrefInput.placeholder = 'https://example.com';
+    hrefInput.setAttribute('aria-label', 'Link URL');
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.className = 'form-control form-control-sm';
+    titleInput.name = 'title';
+    titleInput.placeholder = 'Title';
+    titleInput.setAttribute('aria-label', 'Link title');
+
+    const error = document.createElement('div');
+    error.className = 'mg-editor-dialog-error';
+    error.setAttribute('role', 'alert');
+    error.hidden = true;
+
+    const actions = document.createElement('div');
+    actions.className = 'mg-editor-dialog-actions';
+
+    const saveButton = document.createElement('button');
+    saveButton.type = 'submit';
+    saveButton.className = 'btn btn-primary btn-sm';
+    saveButton.textContent = 'Save';
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'btn btn-outline-danger btn-sm';
+    removeButton.textContent = 'Remove';
+    removeButton.addEventListener('click', () => {
+      this.executeWithSavedSelection(this.commands.removeLink);
+      this.closeLinkDialog(true);
+    });
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'btn btn-outline-secondary btn-sm';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', () => this.closeLinkDialog(true));
+
+    actions.append(saveButton, removeButton, cancelButton);
+    form.append(hrefInput, titleInput, error, actions);
+    root.append(form);
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const applied = this.executeWithSavedSelection(this.commands.link(hrefInput.value, titleInput.value));
+
+      if (!applied) {
+        error.textContent = 'Enter a safe link URL.';
+        error.hidden = false;
+        hrefInput.focus();
+        return;
+      }
+
+      this.closeLinkDialog(false);
+    });
+
+    return { root, form, hrefInput, titleInput, error, removeButton, cancelButton };
+  }
+
+  private openLinkDialog(): void {
+    this.savedSelection = this.view.state.selection.getBookmark();
+    const activeLink = getActiveMark(this.view.state, this.schema.marks.link);
+    const { linkDialog } = this.toolbar;
+
+    linkDialog.hrefInput.value = activeLink?.attrs.href ?? '';
+    linkDialog.titleInput.value = activeLink?.attrs.title ?? '';
+    linkDialog.error.hidden = true;
+    linkDialog.removeButton.disabled = !activeLink;
+    linkDialog.root.hidden = false;
+    linkDialog.hrefInput.focus();
+    linkDialog.hrefInput.select();
+  }
+
+  private closeLinkDialog(restoreSelection: boolean): void {
+    this.toolbar.linkDialog.root.hidden = true;
+
+    if (restoreSelection) {
+      this.restoreSavedSelection();
+    }
+
+    this.savedSelection = undefined;
+    this.view.focus();
+    this.updateToolbarState();
+  }
+
+  private executeWithSavedSelection(command: Command): boolean {
+    this.restoreSavedSelection();
+    const result = command(this.view.state, this.view.dispatch, this.view);
+    this.view.focus();
+    this.updateToolbarState();
+    return result;
+  }
+
+  private restoreSavedSelection(): void {
+    if (!this.savedSelection) {
+      return;
+    }
+
+    const selection = this.savedSelection.resolve(this.view.state.doc);
+    this.view.dispatch(this.view.state.tr.setSelection(selection));
+  }
+
   private updateToolbarState(): void {
     const { state } = this.view;
-    const { buttons, formatSelect } = this.toolbar;
+    const { buttons, colorButtons, formatSelect } = this.toolbar;
+    const activeLink = getActiveMark(state, this.schema.marks.link);
 
     formatSelect.value = getCurrentFormat(state);
 
@@ -243,6 +444,13 @@ export class MoongladeEditor {
     setButtonState(buttons.blockquote, hasAncestor(state, this.schema.nodes.blockquote), canRun(state, this.view, this.commands.blockquote));
     setButtonState(buttons.bulletList, hasAncestor(state, this.schema.nodes.bullet_list), canRun(state, this.view, this.commands.bulletList));
     setButtonState(buttons.orderedList, hasAncestor(state, this.schema.nodes.ordered_list), canRun(state, this.view, this.commands.orderedList));
+    setButtonState(buttons.link, Boolean(activeLink), canEditLink(state, activeLink));
+    setButtonState(buttons.removeLink, false, Boolean(activeLink));
+
+    for (const colorButton of colorButtons) {
+      const activeColor = getActiveMark(state, colorButton.markType)?.attrs.color;
+      setButtonState(colorButton.button, activeColor === colorButton.color, canRun(state, this.view, colorButton.command));
+    }
 
     buttons.undo.disabled = !canRun(state, this.view, this.commands.undo);
     buttons.redo.disabled = !canRun(state, this.view, this.commands.redo);
@@ -253,8 +461,21 @@ export function createMoongladeEditor(options: MoongladeEditorOptions): Moonglad
   return new MoongladeEditor(options);
 }
 
+const colorPalette = [
+  { label: 'Dark', value: '#212529' },
+  { label: 'Gray', value: '#6c757d' },
+  { label: 'Blue', value: '#0d6efd' },
+  { label: 'Green', value: '#198754' },
+  { label: 'Red', value: '#dc3545' },
+  { label: 'Yellow', value: '#ffc107' }
+];
+
 function canRun(state: EditorState, view: EditorView, command: Command): boolean {
   return command(state, undefined, view);
+}
+
+function canEditLink(state: EditorState, activeLink: Mark | null): boolean {
+  return Boolean(activeLink) || !state.selection.empty;
 }
 
 function getCurrentFormat(state: EditorState): string {
@@ -288,6 +509,22 @@ function isMarkActive(state: EditorState, markType: MarkType): boolean {
   }
 
   return state.doc.rangeHasMark(from, to, markType);
+}
+
+function getActiveMark(state: EditorState, markType: MarkType): Mark | null {
+  const { empty, from, to, $from } = state.selection;
+
+  if (empty) {
+    return markType.isInSet(state.storedMarks || $from.marks()) ?? null;
+  }
+
+  let activeMark: Mark | null = null;
+  state.doc.nodesBetween(from, to, (node) => {
+    activeMark = markType.isInSet(node.marks) ?? null;
+    return !activeMark;
+  });
+
+  return activeMark;
 }
 
 function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boolean): void {

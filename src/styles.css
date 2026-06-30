@@ -11,6 +11,7 @@
   background: var(--bs-tertiary-bg, #f8f9fa);
   display: flex;
   flex-wrap: wrap;
+  position: relative;
 }
 
 .mg-editor-format {
@@ -30,6 +31,52 @@
   background: var(--bs-secondary-bg, #e9ecef);
   border-color: var(--bs-secondary-color, #6c757d);
   color: var(--bs-body-color, #212529);
+}
+
+.mg-editor-color-button::before {
+  background: var(--mg-editor-swatch);
+  border: 1px solid rgba(0, 0, 0, .2);
+  content: "";
+  display: inline-block;
+  height: 1rem;
+  vertical-align: middle;
+  width: 1rem;
+}
+
+.mg-editor-dialog[hidden] {
+  display: none;
+}
+
+.mg-editor-dialog {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+  left: .5rem;
+  max-width: min(28rem, calc(100% - 1rem));
+  padding: .75rem;
+  position: absolute;
+  top: calc(100% - .25rem);
+  width: 28rem;
+  z-index: 10;
+}
+
+.mg-editor-dialog-panel,
+.mg-editor-dialog-actions {
+  display: flex;
+  gap: .5rem;
+}
+
+.mg-editor-dialog-panel {
+  flex-direction: column;
+}
+
+.mg-editor-dialog-actions {
+  justify-content: flex-end;
+}
+
+.mg-editor-dialog-error {
+  color: var(--bs-danger, #dc3545);
+  font-size: .875rem;
 }
 
 .mg-editor-body {

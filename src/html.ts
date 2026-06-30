@@ -1,6 +1,5 @@
 import { DOMParser as ProseMirrorDOMParser, DOMSerializer, type Node as ProseMirrorNode, type Schema } from 'prosemirror-model';
-
-const unsafeProtocolPattern = /^\s*(?:javascript|vbscript|data):/i;
+import { isSafeUrl } from './safety';
 
 function removeUnsafeAttributes(root: HTMLElement): void {
   for (const element of Array.from(root.querySelectorAll('*'))) {
@@ -13,7 +12,7 @@ function removeUnsafeAttributes(root: HTMLElement): void {
         continue;
       }
 
-      if ((name === 'href' || name === 'src') && unsafeProtocolPattern.test(value)) {
+      if ((name === 'href' || name === 'src') && !isSafeUrl(value)) {
         element.removeAttribute(attribute.name);
       }
     }

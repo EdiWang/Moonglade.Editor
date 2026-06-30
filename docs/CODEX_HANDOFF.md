@@ -25,8 +25,9 @@ Current scaffold:
 - TypeScript source under src/.
 - ProseMirror schema, HTML parse/serialize helpers, commands, and basic EditorView wrapper exist.
 - Framework-free toolbar shell, basic formatting controls, undo/redo, and selection state exist.
+- Link dialog, safe command URL validation, and foreground/background color palette controls exist.
 - esbuild emits ESM and browser-global bundles to dist/.
-- Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link stripping, toolbar shell/format wiring, and blockquote toggle state.
+- Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link stripping, toolbar shell/format wiring, blockquote toggle state, link dialog/command safety, and color controls.
 - Demo page exists at demo/index.html and can be served from the repository root after npm run build.
 
 Before implementing, inspect nearby source and update the task file as progress changes.
@@ -34,11 +35,11 @@ For behavior changes, run npm test and npm run build.
 
 Recommended next implementation batch:
 
-1. Add the link dialog for add/edit/remove link workflows.
-2. Add safe link command tests around accepted and rejected protocols.
-3. Add foreground/background color controls with constrained palette values.
-4. Add serialization tests for color output and sanitizer behavior.
-5. Browser-check the demo for toolbar, dialog focus, selection preservation, and textarea sync.
+1. Add text alignment support for supported block nodes.
+2. Add serialization tests for alignment output and sanitizer behavior.
+3. Add image upload and insertion using the configurable uploadUrl option.
+4. Add mocked upload tests for `/image`-style responses.
+5. Browser-check the demo for alignment, upload dialog/focus, selection preservation, and textarea sync.
 
 Do not remove, bypass, or weaken the sanitizer and schema constraints.
 Do not introduce React/Vue/Angular/Svelte unless explicitly requested.

@@ -112,8 +112,8 @@ The editor should:
 | 5 | Toolbar shell | Framework-free toolbar with accessible buttons/selects | Demo manual check | Complete |
 | 6 | Basic formatting controls | paragraph/headings, bold, italic, underline, strike, blockquote, bullet/numbered lists, undo/redo | Demo manual check, command tests where useful | Complete |
 | 7 | Selection state | Reflect active marks/nodes in toolbar state | Demo manual check | Complete |
-| 8 | Link dialog | Add/edit/remove links, safe URL validation | Tests for safe/unsafe URLs | Not started |
-| 9 | Color controls | Foreground/background palette and optional custom color input | Serialization tests | Not started |
+| 8 | Link dialog | Add/edit/remove links, safe URL validation | Tests for safe/unsafe URLs | Complete |
+| 9 | Color controls | Foreground/background palette and optional custom color input | Serialization tests | Complete |
 | 10 | Alignment controls | Left/center/right/justify for supported block nodes | Serialization tests | Not started |
 | 11 | Image upload | Button upload, paste, drag/drop, `/image` response handling | Mocked upload tests and demo check | Not started |
 | 12 | Code snippets | Language selector and highlight.js-compatible output | Serialization tests and Moonglade renderer check later | Not started |
@@ -124,14 +124,13 @@ The editor should:
 
 ## Suggested Execution Order
 
-1. Link and color controls.
-2. Alignment support.
-3. Image upload support.
-4. Code snippet UX.
-5. Table controls.
-6. HTML source mode.
-7. Package/asset consumption documentation.
-8. Integrate into Moonglade in a separate task.
+1. Alignment support.
+2. Image upload support.
+3. Code snippet UX.
+4. Table controls.
+5. HTML source mode.
+6. Package/asset consumption documentation.
+7. Integrate into Moonglade in a separate task.
 
 ## Verification Log
 
@@ -145,6 +144,10 @@ The editor should:
 | 2026-06-30 | `npx tsc --noEmit` | Passed | Full typecheck after toolbar changes. |
 | 2026-06-30 | `npm run build` | Passed | Regenerated `dist/` JS, CSS, maps, and declarations. |
 | 2026-06-30 | Browser demo smoke check | Passed | Served `demo/`, verified toolbar state, heading command, textarea sync, and undo with Playwright CLI. |
+| 2026-06-30 | `npm test` | Passed | 11 Vitest/jsdom tests covering HTML safety, link commands/dialog, and color controls. |
+| 2026-06-30 | `npx tsc --noEmit` | Passed | Full typecheck after link and color controls. |
+| 2026-06-30 | `npm run build` | Passed | Regenerated `dist/` JS, CSS, maps, and declarations. |
+| 2026-06-30 | Browser demo smoke check | Passed | Served `demo/`, verified link dialog save, synced HTML, unlink, and foreground color swatch with Playwright CLI. |
 
 ## Known Risks
 
