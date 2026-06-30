@@ -305,15 +305,8 @@ export class MoongladeEditor {
       group.className = 'btn-group btn-group-sm';
       group.setAttribute('role', 'group');
 
-      for (const [name, label, ariaLabel, command] of items) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'mg-editor-toolbar-button btn btn-outline-secondary';
-        button.dataset.command = name;
-        button.textContent = label;
-        button.setAttribute('aria-label', ariaLabel);
-        button.setAttribute('aria-pressed', 'false');
-        button.addEventListener('mousedown', (event) => event.preventDefault());
+      for (const [name, icon, ariaLabel, command] of items) {
+        const button = this.createToolbarButton(name, icon, ariaLabel);
         button.addEventListener('click', () => this.execute(command));
 
         buttons[name] = button;
@@ -330,54 +323,60 @@ export class MoongladeEditor {
     root.append(formatGroup);
 
     addGroup(
-      ['undo', 'Undo', 'Undo', this.commands.undo],
-      ['redo', 'Redo', 'Redo', this.commands.redo]
+      ['undo', 'arrow-counterclockwise', 'Undo', this.commands.undo],
+      ['redo', 'arrow-clockwise', 'Redo', this.commands.redo]
     );
     addGroup(
-      ['bold', 'B', 'Bold', this.commands.bold],
-      ['italic', 'I', 'Italic', this.commands.italic],
-      ['underline', 'U', 'Underline', this.commands.underline],
-      ['strike', 'S', 'Strikethrough', this.commands.strike]
+      ['bold', 'type-bold', 'Bold', this.commands.bold],
+      ['italic', 'type-italic', 'Italic', this.commands.italic],
+      ['underline', 'type-underline', 'Underline', this.commands.underline],
+      ['strike', 'type-strikethrough', 'Strikethrough', this.commands.strike]
     );
     addGroup(
-      ['blockquote', 'Quote', 'Blockquote', this.commands.blockquote],
-      ['bulletList', 'Bullets', 'Bullet list', this.commands.bulletList],
-      ['orderedList', 'Numbers', 'Numbered list', this.commands.orderedList]
+      ['blockquote', 'quote', 'Blockquote', this.commands.blockquote],
+      ['bulletList', 'list-ul', 'Bullet list', this.commands.bulletList],
+      ['orderedList', 'list-ol', 'Numbered list', this.commands.orderedList]
     );
     addGroup(
-      ['alignLeft', 'Left', 'Align left', this.commands.alignment('left')],
-      ['alignCenter', 'Center', 'Align center', this.commands.alignment('center')],
-      ['alignRight', 'Right', 'Align right', this.commands.alignment('right')],
-      ['alignJustify', 'Justify', 'Justify text', this.commands.alignment('justify')]
+      ['alignLeft', 'text-left', 'Align left', this.commands.alignment('left')],
+      ['alignCenter', 'text-center', 'Align center', this.commands.alignment('center')],
+      ['alignRight', 'text-right', 'Align right', this.commands.alignment('right')],
+      ['alignJustify', 'justify', 'Justify text', this.commands.alignment('justify')]
     );
 
     const codeGroup = document.createElement('div');
     codeGroup.className = 'btn-group btn-group-sm';
     codeGroup.setAttribute('role', 'group');
 
-    const codeButton = this.createToolbarButton('codeBlock', 'Code', 'Code snippet');
+    const codeButton = this.createToolbarButton('codeBlock', 'code-slash', 'Code snippet');
     codeButton.addEventListener('click', () => this.openCodeDialog());
     buttons.codeBlock = codeButton;
     codeGroup.append(codeButton);
     root.append(codeGroup);
 
     addGroup(
-      ['insertTable', 'Table', 'Insert table', this.commands.insertTable()],
-      ['addTableRow', '+Row', 'Add table row', this.commands.addTableRow],
-      ['deleteTableRow', '-Row', 'Delete table row', this.commands.deleteTableRow],
-      ['addTableColumn', '+Col', 'Add table column', this.commands.addTableColumn],
-      ['deleteTableColumn', '-Col', 'Delete table column', this.commands.deleteTableColumn],
-      ['toggleTableHeaderRow', 'Head', 'Toggle table header row', this.commands.toggleTableHeaderRow],
-      ['deleteTable', 'Del Table', 'Delete table', this.commands.deleteTable]
+      ['insertTable', 'table', 'Insert table', this.commands.insertTable()]
+    );
+    addGroup(
+      ['addTableRow', 'plus-lg', 'Add table row', this.commands.addTableRow],
+      ['deleteTableRow', 'dash-lg', 'Delete table row', this.commands.deleteTableRow]
+    );
+    addGroup(
+      ['addTableColumn', 'plus-square', 'Add table column', this.commands.addTableColumn],
+      ['deleteTableColumn', 'dash-square', 'Delete table column', this.commands.deleteTableColumn]
+    );
+    addGroup(
+      ['toggleTableHeaderRow', 'layout-three-columns', 'Toggle table header row', this.commands.toggleTableHeaderRow],
+      ['deleteTable', 'trash', 'Delete table', this.commands.deleteTable]
     );
 
     const linkGroup = document.createElement('div');
     linkGroup.className = 'btn-group btn-group-sm';
     linkGroup.setAttribute('role', 'group');
 
-    const linkButton = this.createToolbarButton('link', 'Link', 'Add or edit link');
+    const linkButton = this.createToolbarButton('link', 'link-45deg', 'Add or edit link');
     linkButton.addEventListener('click', () => this.openLinkDialog());
-    const removeLinkButton = this.createToolbarButton('removeLink', 'Unlink', 'Remove link');
+    const removeLinkButton = this.createToolbarButton('removeLink', 'link', 'Remove link');
     removeLinkButton.addEventListener('click', () => this.execute(this.commands.removeLink));
     buttons.link = linkButton;
     buttons.removeLink = removeLinkButton;
@@ -393,7 +392,7 @@ export class MoongladeEditor {
     imageGroup.className = 'btn-group btn-group-sm';
     imageGroup.setAttribute('role', 'group');
 
-    const imageButton = this.createToolbarButton('image', 'Image', 'Upload image');
+    const imageButton = this.createToolbarButton('image', 'image', 'Upload image');
     const imageInput = document.createElement('input');
     imageInput.type = 'file';
     imageInput.accept = 'image/*';
@@ -426,7 +425,7 @@ export class MoongladeEditor {
     const sourceGroup = document.createElement('div');
     sourceGroup.className = 'btn-group btn-group-sm';
     sourceGroup.setAttribute('role', 'group');
-    const sourceButton = this.createToolbarButton('htmlSource', 'HTML', 'Edit HTML source');
+    const sourceButton = this.createToolbarButton('htmlSource', 'filetype-html', 'Edit HTML source');
     sourceButton.addEventListener('click', () => this.openSourceDialog());
     buttons.htmlSource = sourceButton;
     sourceGroup.append(sourceButton);
@@ -446,15 +445,23 @@ export class MoongladeEditor {
     this.updateToolbarState();
   }
 
-  private createToolbarButton(name: string, label: string, ariaLabel: string): HTMLButtonElement {
+  private createToolbarButton(name: string, icon: string, ariaLabel: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'mg-editor-toolbar-button btn btn-outline-secondary';
+    button.className = 'mg-editor-toolbar-button mg-editor-icon-button btn btn-outline-secondary';
     button.dataset.command = name;
-    button.textContent = label;
     button.setAttribute('aria-label', ariaLabel);
     button.setAttribute('aria-pressed', 'false');
+    button.title = ariaLabel;
     button.addEventListener('mousedown', (event) => event.preventDefault());
+
+    if (icon) {
+      const iconElement = document.createElement('i');
+      iconElement.className = `bi bi-${icon}`;
+      iconElement.setAttribute('aria-hidden', 'true');
+      button.append(iconElement);
+    }
+
     return button;
   }
 
@@ -470,7 +477,7 @@ export class MoongladeEditor {
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', label);
 
-    const clearButton = this.createToolbarButton(`${markType.name}:clear`, 'Clear', `Clear ${label.toLowerCase()}`);
+    const clearButton = this.createToolbarButton(`${markType.name}:clear`, 'eraser', `Clear ${label.toLowerCase()}`);
     clearButton.addEventListener('click', () => this.execute(clearCommand));
     group.append(clearButton);
 

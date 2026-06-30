@@ -40,6 +40,10 @@ describe('editor toolbar', () => {
     expect(host.querySelector('[role="toolbar"]')?.classList.contains('btn-toolbar')).toBe(true);
     expect(host.querySelector('.mg-editor-format')?.classList.contains('form-select')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')?.classList.contains('btn')).toBe(true);
+    expect(host.querySelector('[data-command="bold"]')?.textContent).toBe('');
+    expect(host.querySelector('[data-command="bold"] .bi-type-bold')).not.toBeNull();
+    expect(host.querySelector('[data-command="undo"] .bi-arrow-counterclockwise')).not.toBeNull();
+    expect(host.querySelector('[data-command="text_color:clear"] .bi-eraser')).not.toBeNull();
     expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();

@@ -13,6 +13,10 @@
 }
 
 .mg-editor-toolbar-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 2rem;
   min-width: 2.25rem;
 }
 
@@ -24,6 +28,11 @@
   height: 1rem;
   vertical-align: middle;
   width: 1rem;
+}
+
+.mg-editor-icon-button .bi {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .mg-editor-dialog[hidden] {
