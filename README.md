@@ -57,7 +57,7 @@ editor.syncToTextarea();
 
 ## Status
 
-Initial scaffold. The schema, parser/serializer, editor shell, and build pipeline are present. Toolbar UI, dialogs, image upload UI, table controls, code snippet UX, source mode, and Moonglade integration are planned follow-up work.
+Initial scaffold. The schema, parser/serializer, editor shell, toolbar shell, basic formatting controls, selection state, and build pipeline are present. Dialogs, image upload UI, table controls, code snippet UX, source mode, and Moonglade integration are planned follow-up work.
 
 ## License
 

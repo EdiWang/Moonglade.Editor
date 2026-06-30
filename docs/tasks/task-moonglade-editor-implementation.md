@@ -109,9 +109,9 @@ The editor should:
 | 2 | Schema baseline | Paragraph, headings, blockquote, lists, tables, code block, image, custom marks | HTML round-trip tests | Started |
 | 3 | HTML safety baseline | Strip event attributes and unsafe protocols | Tests for unsafe links and imported HTML | Started |
 | 4 | Editor wrapper | `createMoongladeEditor`, `getHTML`, `setHTML`, `syncToTextarea`, `destroy` | Unit tests and demo smoke check | Started |
-| 5 | Toolbar shell | Framework-free toolbar with accessible buttons/selects | Demo manual check | Not started |
-| 6 | Basic formatting controls | paragraph/headings, bold, italic, underline, strike, blockquote, bullet/numbered lists, undo/redo | Demo manual check, command tests where useful | Not started |
-| 7 | Selection state | Reflect active marks/nodes in toolbar state | Demo manual check | Not started |
+| 5 | Toolbar shell | Framework-free toolbar with accessible buttons/selects | Demo manual check | Complete |
+| 6 | Basic formatting controls | paragraph/headings, bold, italic, underline, strike, blockquote, bullet/numbered lists, undo/redo | Demo manual check, command tests where useful | Complete |
+| 7 | Selection state | Reflect active marks/nodes in toolbar state | Demo manual check | Complete |
 | 8 | Link dialog | Add/edit/remove links, safe URL validation | Tests for safe/unsafe URLs | Not started |
 | 9 | Color controls | Foreground/background palette and optional custom color input | Serialization tests | Not started |
 | 10 | Alignment controls | Left/center/right/justify for supported block nodes | Serialization tests | Not started |
@@ -124,16 +124,14 @@ The editor should:
 
 ## Suggested Execution Order
 
-1. Toolbar shell and basic command wiring.
-2. Selection state updates.
-3. Link and color controls.
-4. Alignment support.
-5. Image upload support.
-6. Code snippet UX.
-7. Table controls.
-8. HTML source mode.
-9. Package/asset consumption documentation.
-10. Integrate into Moonglade in a separate task.
+1. Link and color controls.
+2. Alignment support.
+3. Image upload support.
+4. Code snippet UX.
+5. Table controls.
+6. HTML source mode.
+7. Package/asset consumption documentation.
+8. Integrate into Moonglade in a separate task.
 
 ## Verification Log
 
@@ -143,6 +141,10 @@ The editor should:
 | 2026-06-30 | `npm test` | Passed | 3 Vitest/jsdom tests. |
 | 2026-06-30 | `npm run build` | Passed | Generated ESM, browser-global, CSS, maps, and declarations under `dist/`. |
 | 2026-06-30 | `git remote -v` | Passed | `origin` is `https://github.com/EdiWang/Moonglade.Editor.git`. |
+| 2026-06-30 | `npm test` | Passed | 7 Vitest/jsdom tests covering HTML, toolbar shell, format wiring, and blockquote toggle state. |
+| 2026-06-30 | `npx tsc --noEmit` | Passed | Full typecheck after toolbar changes. |
+| 2026-06-30 | `npm run build` | Passed | Regenerated `dist/` JS, CSS, maps, and declarations. |
+| 2026-06-30 | Browser demo smoke check | Passed | Served `demo/`, verified toolbar state, heading command, textarea sync, and undo with Playwright CLI. |
 
 ## Known Risks
 

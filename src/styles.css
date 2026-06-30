@@ -6,12 +6,45 @@
   background: var(--bs-body-bg, #fff);
 }
 
+.mg-editor-toolbar {
+  align-items: center;
+  background: var(--bs-tertiary-bg, #f8f9fa);
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.mg-editor-format {
+  max-width: 10rem;
+}
+
+.mg-editor .btn-group {
+  display: inline-flex;
+}
+
+.mg-editor-toolbar-button {
+  min-width: 2.25rem;
+}
+
+.mg-editor-toolbar-button.active,
+.mg-editor-toolbar-button[aria-pressed="true"] {
+  background: var(--bs-secondary-bg, #e9ecef);
+  border-color: var(--bs-secondary-color, #6c757d);
+  color: var(--bs-body-color, #212529);
+}
+
+.mg-editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 260px;
+}
+
 .mg-editor .ProseMirror {
   flex: 1;
   min-height: 260px;
   padding: 1rem;
   outline: none;
   color: var(--bs-body-color, #212529);
+  width: 100%;
 }
 
 .mg-editor .ProseMirror table {
