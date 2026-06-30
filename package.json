@@ -1,0 +1,49 @@
+{
+  "name": "@moonglade/editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone ProseMirror-based rich text editor for Moonglade.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "module": "./dist/moonglade-editor.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/moonglade-editor.js"
+    },
+    "./style.css": "./dist/moonglade-editor.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "types": "tsc -p tsconfig.build.json",
+    "bundle": "node scripts/build.mjs",
+    "build": "npm run clean && npm run types && npm run bundle",
+    "dev": "node scripts/build.mjs --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "prosemirror-commands": "^1.7.1",
+    "prosemirror-gapcursor": "^1.4.1",
+    "prosemirror-history": "^1.5.0",
+    "prosemirror-inputrules": "^1.5.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.9",
+    "prosemirror-schema-basic": "^1.2.4",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-tables": "^1.8.5",
+    "prosemirror-view": "^1.41.9"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.7",
+    "esbuild": "0.28.1",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

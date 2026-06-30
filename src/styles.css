@@ -1,0 +1,50 @@
+.mg-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  background: var(--bs-body-bg, #fff);
+}
+
+.mg-editor .ProseMirror {
+  flex: 1;
+  min-height: 260px;
+  padding: 1rem;
+  outline: none;
+  color: var(--bs-body-color, #212529);
+}
+
+.mg-editor .ProseMirror table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+  width: 100%;
+}
+
+.mg-editor .ProseMirror th,
+.mg-editor .ProseMirror td {
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  min-width: 2rem;
+  padding: .4rem .5rem;
+  vertical-align: top;
+}
+
+.mg-editor .ProseMirror .selectedCell::after {
+  background: rgba(13, 110, 253, .12);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.mg-editor .ProseMirror pre {
+  background: var(--bs-tertiary-bg, #f8f9fa);
+  border-radius: .25rem;
+  padding: .75rem;
+  white-space: pre-wrap;
+}
+
+.mg-editor .ProseMirror img {
+  height: auto;
+  max-width: 100%;
+}
