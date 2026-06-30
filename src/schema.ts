@@ -2,12 +2,13 @@ import { Schema, type NodeSpec } from 'prosemirror-model';
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
 import { tableNodes } from 'prosemirror-tables';
-import { sanitizeStyleValue, sanitizeTextAlign } from './safety';
+import { sanitizeCodeLanguage, sanitizeStyleValue, sanitizeTextAlign } from './safety';
 
 const nodes = addListNodes(
   basicSchema.spec.nodes
     .update('paragraph', withAlignment(basicSchema.spec.nodes.get('paragraph')!))
-    .update('heading', withAlignment(basicSchema.spec.nodes.get('heading')!)),
+    .update('heading', withAlignment(basicSchema.spec.nodes.get('heading')!))
+    .update('code_block', withCodeLanguage()),
   'paragraph block*',
   'block'
 ).append(
@@ -130,6 +131,43 @@ function withAlignment(spec: NodeSpec): NodeSpec {
       return typeof dom[1] === 'object' && !Array.isArray(dom[1])
         ? [dom[0], attrs, ...dom.slice(2)]
         : [dom[0], attrs, ...dom.slice(1)];
+    }
+  };
+}
+
+function withCodeLanguage(): NodeSpec {
+  return {
+    content: 'text*',
+    marks: '',
+    group: 'block',
+    code: true,
+    defining: true,
+    attrs: {
+      language: { default: null }
+    },
+    parseDOM: [
+      {
+        tag: 'pre',
+        preserveWhitespace: 'full',
+        getAttrs(dom) {
+          const element = dom instanceof HTMLElement ? dom : null;
+          const code = element?.querySelector('code');
+          const className = code?.getAttribute('class') || '';
+          const language = className
+            .split(/\s+/)
+            .map((token) => token.match(/^(?:language|lang)-(.+)$/i)?.[1])
+            .find(Boolean);
+
+          return {
+            language: sanitizeCodeLanguage(language) || null
+          };
+        }
+      }
+    ],
+    toDOM(node) {
+      const language = sanitizeCodeLanguage(node.attrs.language);
+      const codeAttrs = language ? { class: `language-${language}` } : {};
+      return ['pre', ['code', codeAttrs, 0]];
     }
   };
 }

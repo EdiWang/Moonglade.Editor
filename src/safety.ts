@@ -1,5 +1,6 @@
 const unsafeProtocolPattern = /^\s*(?:javascript|vbscript|data):/i;
 const safeTextAlignValues = new Set(['left', 'center', 'right', 'justify']);
+const codeLanguagePattern = /^[a-z0-9_+-]{1,32}$/i;
 
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
@@ -38,5 +39,12 @@ export function sanitizeTextAlign(value: string | null | undefined): TextAlignme
   const normalized = value?.trim().toLowerCase();
   return normalized && safeTextAlignValues.has(normalized)
     ? normalized as TextAlignment
+    : false;
+}
+
+export function sanitizeCodeLanguage(value: string | null | undefined): string | false {
+  const normalized = value?.trim().toLowerCase();
+  return normalized && codeLanguagePattern.test(normalized)
+    ? normalized
     : false;
 }

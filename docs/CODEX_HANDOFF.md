@@ -25,9 +25,9 @@ Current scaffold:
 - TypeScript source under src/.
 - ProseMirror schema, HTML parse/serialize helpers, commands, and basic EditorView wrapper exist.
 - Framework-free toolbar shell, basic formatting controls, undo/redo, and selection state exist.
-- Link dialog, safe command URL validation, foreground/background color palette controls, text alignment controls, and image upload controls exist.
+- Link dialog, safe command URL validation, foreground/background color palette controls, text alignment controls, image upload controls, code snippet controls, table controls, and HTML source mode exist.
 - esbuild emits ESM and browser-global bundles to dist/.
-- Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link/image stripping, toolbar shell/format wiring, blockquote toggle state, link dialog/command safety, color controls, alignment controls, and mocked image upload responses.
+- Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link/image stripping, toolbar shell/format wiring, blockquote toggle state, link dialog/command safety, color controls, alignment controls, mocked image upload responses, code snippets, table controls, and source mode.
 - Demo page exists at demo/index.html and can be served from the repository root after npm run build.
 
 Before implementing, inspect nearby source and update the task file as progress changes.
@@ -35,11 +35,10 @@ For behavior changes, run npm test and npm run build.
 
 Recommended next implementation batch:
 
-1. Add code snippet UX with highlight.js-compatible HTML output.
-2. Add table insertion and editing controls.
-3. Add HTML source view/edit that always reparses through the schema and sanitizer.
-4. Document Moonglade consumption options for static assets/packages.
-5. Browser-check the demo for code snippets, tables, source mode, selection preservation, and textarea sync.
+1. Integrate the built editor assets into the main Moonglade repository without adding frontend build tooling there.
+2. Preserve Markdown editor behavior and the existing post save payload shape.
+3. Browser-check HTML post editing, `/image` upload, source mode, table editing, and save/preview rendering in Moonglade.
+4. Choose a publishing license before distributing the package independently.
 
 Do not remove, bypass, or weaken the sanitizer and schema constraints.
 Do not introduce React/Vue/Angular/Svelte unless explicitly requested.

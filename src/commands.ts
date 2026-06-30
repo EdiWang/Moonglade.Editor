@@ -3,7 +3,17 @@ import { redo, undo } from 'prosemirror-history';
 import type { Mark, MarkType, Node as ProseMirrorNode, NodeType, Schema } from 'prosemirror-model';
 import { liftListItem, wrapInList } from 'prosemirror-schema-list';
 import type { Command, EditorState } from 'prosemirror-state';
-import { sanitizeStyleValue, sanitizeTextAlign, sanitizeUrl, type TextAlignment } from './safety';
+import {
+  addColumnAfter,
+  addRowAfter,
+  findTable,
+  deleteColumn,
+  deleteRow,
+  deleteTable,
+  toggleHeaderRow
+} from 'prosemirror-tables';
+import { TextSelection } from 'prosemirror-state';
+import { sanitizeCodeLanguage, sanitizeStyleValue, sanitizeTextAlign, sanitizeUrl, type TextAlignment } from './safety';
 
 export function createCommands(schema: Schema) {
   return {
@@ -25,7 +35,15 @@ export function createCommands(schema: Schema) {
     backgroundColor: (color: string): Command => setColorMark(schema.marks.background_color, color),
     clearBackgroundColor: removeMark(schema.marks.background_color),
     alignment: (align: TextAlignment): Command => setTextAlignment(schema, align),
-    insertImage: (src: string, alt?: string, title?: string): Command => insertImage(schema, src, alt, title)
+    insertImage: (src: string, alt?: string, title?: string): Command => insertImage(schema, src, alt, title),
+    codeBlock: (language?: string): Command => setCodeBlock(schema, language),
+    insertTable: (rows = 3, columns = 3): Command => insertTable(schema, rows, columns),
+    addTableRow: addRowAfter,
+    deleteTableRow: deleteRow,
+    addTableColumn: addColumnAfter,
+    deleteTableColumn: deleteColumn,
+    toggleTableHeaderRow: toggleHeaderRow,
+    deleteTable
   };
 }
 
@@ -158,6 +176,46 @@ function insertImage(schema: Schema, src: string, alt?: string, title?: string):
 
     if (dispatch) {
       dispatch(state.tr.replaceSelectionWith(image).scrollIntoView());
+    }
+
+    return true;
+  };
+}
+
+function setCodeBlock(schema: Schema, language?: string): Command {
+  const safeLanguage = sanitizeCodeLanguage(language) || null;
+  return setBlockType(schema.nodes.code_block, { language: safeLanguage });
+}
+
+function insertTable(schema: Schema, rows: number, columns: number): Command {
+  const rowCount = Math.max(1, Math.min(rows, 12));
+  const columnCount = Math.max(1, Math.min(columns, 8));
+
+  return (state, dispatch) => {
+    const { table, table_row: tableRow, table_cell: tableCell, paragraph } = schema.nodes;
+    const rowNodes = Array.from({ length: rowCount }, () => tableRow.create(null,
+      Array.from({ length: columnCount }, () => tableCell.create(null, paragraph.create()))));
+    const tableNode = table.create(null, rowNodes);
+
+    if (dispatch) {
+      const transaction = state.tr.replaceSelectionWith(tableNode);
+      let tablePos = findTable(transaction.selection.$from)?.pos;
+      if (typeof tablePos !== 'number') {
+        transaction.doc.descendants((node, pos) => {
+          if (node.type === schema.nodes.table) {
+            tablePos = pos;
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      if (typeof tablePos === 'number') {
+        transaction.setSelection(TextSelection.create(transaction.doc, tablePos + 4));
+      }
+
+      dispatch(transaction.scrollIntoView());
     }
 
     return true;

@@ -190,6 +190,76 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('creates a language-tagged code block from the toolbar dialog', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>const answer = 42;</p>'
+    });
+
+    (host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-dialog[aria-label="Code snippet"]') as HTMLDivElement;
+    const form = dialog.querySelector('form') as HTMLFormElement;
+    const languageSelect = dialog.querySelector('[name="language"]') as HTMLSelectElement;
+
+    expect(dialog.hidden).toBe(false);
+
+    languageSelect.value = 'javascript';
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+
+    expect(dialog.hidden).toBe(true);
+    expect(editor.getHTML()).toBe('<pre><code class="language-javascript">const answer = 42;</code></pre>');
+    expect((host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
+
+    editor.destroy();
+  });
+
+  it('inserts and edits a table from toolbar controls', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    (host.querySelector('[data-command="insertTable"]') as HTMLButtonElement).click();
+    expect(editor.getHTML()).toContain('<table>');
+    expect(editor.getHTML().match(/<tr>/g)).toHaveLength(3);
+    expect(editor.getHTML().match(/<td>/g)).toHaveLength(9);
+
+    (host.querySelector('[data-command="addTableRow"]') as HTMLButtonElement).click();
+    expect(editor.getHTML().match(/<tr>/g)).toHaveLength(4);
+
+    (host.querySelector('[data-command="toggleTableHeaderRow"]') as HTMLButtonElement).click();
+    expect(editor.getHTML()).toContain('<th>');
+
+    editor.destroy();
+  });
+
+  it('edits source HTML through the sanitizer-backed source dialog', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
+    const form = dialog.querySelector('form') as HTMLFormElement;
+    const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
+
+    expect(dialog.hidden).toBe(false);
+
+    sourceTextarea.value = '<p onclick="alert(1)">Clean <a href="javascript:alert(1)">link</a></p>';
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+
+    expect(dialog.hidden).toBe(true);
+    expect(editor.getHTML()).toBe('<p>Clean link</p>');
+
+    editor.destroy();
+  });
+
   it('rejects unsafe image command URLs', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({

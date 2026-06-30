@@ -21,6 +21,18 @@ describe('html parsing and serialization', () => {
     expect(roundTripHtml(moongladeSchema, html)).toBe('<h2 style="text-align: center;">Centered</h2><p style="text-align: right;">Right</p>');
   });
 
+  it('round-trips code blocks with highlight.js-compatible language classes', () => {
+    const html = '<pre><code class="language-csharp extra">Console.WriteLine("Hi");</code></pre>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<pre><code class="language-csharp">Console.WriteLine("Hi");</code></pre>');
+  });
+
+  it('round-trips basic tables', () => {
+    const html = '<table><tbody><tr><th>Title</th><td>Value</td></tr></tbody></table>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<table><tbody><tr><th><p>Title</p></th><td><p>Value</p></td></tr></tbody></table>');
+  });
+
   it('strips unsafe link protocols', () => {
     const html = '<p><a href="javascript:alert(1)">bad link</a></p>';
 
@@ -37,6 +49,12 @@ describe('html parsing and serialization', () => {
     const html = '<p style="text-align: match-parent;">bad alignment</p>';
 
     expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad alignment</p>');
+  });
+
+  it('drops unsupported code language values', () => {
+    const html = '<pre><code class="language-javascript:alert(1)">bad()</code></pre>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<pre><code>bad()</code></pre>');
   });
 
   it('adds lazy loading to safe images and strips unsafe image URLs', () => {

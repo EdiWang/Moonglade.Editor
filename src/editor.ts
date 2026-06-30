@@ -27,6 +27,8 @@ interface ToolbarElements {
   imageInput: HTMLInputElement;
   uploadStatus: HTMLDivElement;
   linkDialog: LinkDialogElements;
+  codeDialog: CodeDialogElements;
+  sourceDialog: SourceDialogElements;
 }
 
 interface ColorButton {
@@ -43,6 +45,20 @@ interface LinkDialogElements {
   titleInput: HTMLInputElement;
   error: HTMLDivElement;
   removeButton: HTMLButtonElement;
+  cancelButton: HTMLButtonElement;
+}
+
+interface CodeDialogElements {
+  root: HTMLDivElement;
+  form: HTMLFormElement;
+  languageSelect: HTMLSelectElement;
+  cancelButton: HTMLButtonElement;
+}
+
+interface SourceDialogElements {
+  root: HTMLDivElement;
+  form: HTMLFormElement;
+  sourceTextarea: HTMLTextAreaElement;
   cancelButton: HTMLButtonElement;
 }
 
@@ -334,6 +350,26 @@ export class MoongladeEditor {
       ['alignJustify', 'Justify', 'Justify text', this.commands.alignment('justify')]
     );
 
+    const codeGroup = document.createElement('div');
+    codeGroup.className = 'btn-group btn-group-sm';
+    codeGroup.setAttribute('role', 'group');
+
+    const codeButton = this.createToolbarButton('codeBlock', 'Code', 'Code snippet');
+    codeButton.addEventListener('click', () => this.openCodeDialog());
+    buttons.codeBlock = codeButton;
+    codeGroup.append(codeButton);
+    root.append(codeGroup);
+
+    addGroup(
+      ['insertTable', 'Table', 'Insert table', this.commands.insertTable()],
+      ['addTableRow', '+Row', 'Add table row', this.commands.addTableRow],
+      ['deleteTableRow', '-Row', 'Delete table row', this.commands.deleteTableRow],
+      ['addTableColumn', '+Col', 'Add table column', this.commands.addTableColumn],
+      ['deleteTableColumn', '-Col', 'Delete table column', this.commands.deleteTableColumn],
+      ['toggleTableHeaderRow', 'Head', 'Toggle table header row', this.commands.toggleTableHeaderRow],
+      ['deleteTable', 'Del Table', 'Delete table', this.commands.deleteTable]
+    );
+
     const linkGroup = document.createElement('div');
     linkGroup.className = 'btn-group btn-group-sm';
     linkGroup.setAttribute('role', 'group');
@@ -386,10 +422,21 @@ export class MoongladeEditor {
     uploadStatus.hidden = true;
     root.append(uploadStatus);
 
-    const linkDialog = this.createLinkDialog();
-    root.append(linkDialog.root);
+    const sourceGroup = document.createElement('div');
+    sourceGroup.className = 'btn-group btn-group-sm';
+    sourceGroup.setAttribute('role', 'group');
+    const sourceButton = this.createToolbarButton('htmlSource', 'HTML', 'Edit HTML source');
+    sourceButton.addEventListener('click', () => this.openSourceDialog());
+    buttons.htmlSource = sourceButton;
+    sourceGroup.append(sourceButton);
+    root.append(sourceGroup);
 
-    return { root, formatSelect, buttons, colorButtons, imageInput, uploadStatus, linkDialog };
+    const linkDialog = this.createLinkDialog();
+    const codeDialog = this.createCodeDialog();
+    const sourceDialog = this.createSourceDialog();
+    root.append(linkDialog.root, codeDialog.root, sourceDialog.root);
+
+    return { root, formatSelect, buttons, colorButtons, imageInput, uploadStatus, linkDialog, codeDialog, sourceDialog };
   }
 
   private execute(command: Command): void {
@@ -513,6 +560,100 @@ export class MoongladeEditor {
     return { root, form, hrefInput, titleInput, error, removeButton, cancelButton };
   }
 
+  private createCodeDialog(): CodeDialogElements {
+    const root = document.createElement('div');
+    root.className = 'mg-editor-dialog';
+    root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'Code snippet');
+
+    const form = document.createElement('form');
+    form.className = 'mg-editor-dialog-panel';
+
+    const languageSelect = document.createElement('select');
+    languageSelect.className = 'form-select form-select-sm';
+    languageSelect.name = 'language';
+    languageSelect.setAttribute('aria-label', 'Code language');
+
+    for (const language of codeLanguages) {
+      const option = document.createElement('option');
+      option.value = language.value;
+      option.textContent = language.label;
+      languageSelect.append(option);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'mg-editor-dialog-actions';
+
+    const applyButton = document.createElement('button');
+    applyButton.type = 'submit';
+    applyButton.className = 'btn btn-primary btn-sm';
+    applyButton.textContent = 'Apply';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'btn btn-outline-secondary btn-sm';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', () => this.closeCodeDialog(true));
+
+    actions.append(applyButton, cancelButton);
+    form.append(languageSelect, actions);
+    root.append(form);
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.executeWithSavedSelection(this.commands.codeBlock(languageSelect.value));
+      this.closeCodeDialog(false);
+    });
+
+    return { root, form, languageSelect, cancelButton };
+  }
+
+  private createSourceDialog(): SourceDialogElements {
+    const root = document.createElement('div');
+    root.className = 'mg-editor-dialog mg-editor-source-dialog';
+    root.hidden = true;
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', 'HTML source');
+
+    const form = document.createElement('form');
+    form.className = 'mg-editor-dialog-panel';
+
+    const sourceTextarea = document.createElement('textarea');
+    sourceTextarea.className = 'mg-editor-source-textarea form-control form-control-sm';
+    sourceTextarea.name = 'source';
+    sourceTextarea.spellcheck = false;
+    sourceTextarea.setAttribute('aria-label', 'HTML source');
+
+    const actions = document.createElement('div');
+    actions.className = 'mg-editor-dialog-actions';
+
+    const saveButton = document.createElement('button');
+    saveButton.type = 'submit';
+    saveButton.className = 'btn btn-primary btn-sm';
+    saveButton.textContent = 'Save';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'btn btn-outline-secondary btn-sm';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', () => this.closeSourceDialog(true));
+
+    actions.append(saveButton, cancelButton);
+    form.append(sourceTextarea, actions);
+    root.append(form);
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.setHTML(sourceTextarea.value);
+      this.closeSourceDialog(false);
+    });
+
+    return { root, form, sourceTextarea, cancelButton };
+  }
+
   private openLinkDialog(): void {
     this.savedSelection = this.view.state.selection.getBookmark();
     const activeLink = getActiveMark(this.view.state, this.schema.marks.link);
@@ -525,6 +666,46 @@ export class MoongladeEditor {
     linkDialog.root.hidden = false;
     linkDialog.hrefInput.focus();
     linkDialog.hrefInput.select();
+  }
+
+  private openCodeDialog(): void {
+    this.savedSelection = this.view.state.selection.getBookmark();
+    const { codeDialog } = this.toolbar;
+
+    codeDialog.languageSelect.value = getCurrentCodeLanguage(this.view.state);
+    codeDialog.root.hidden = false;
+    codeDialog.languageSelect.focus();
+  }
+
+  private closeCodeDialog(restoreSelection: boolean): void {
+    this.toolbar.codeDialog.root.hidden = true;
+
+    if (restoreSelection) {
+      this.restoreSavedSelection();
+    }
+
+    this.savedSelection = undefined;
+    this.view.focus();
+    this.updateToolbarState();
+  }
+
+  private openSourceDialog(): void {
+    const { sourceDialog } = this.toolbar;
+
+    sourceDialog.sourceTextarea.value = this.getHTML();
+    sourceDialog.root.hidden = false;
+    sourceDialog.sourceTextarea.focus();
+    sourceDialog.sourceTextarea.select();
+  }
+
+  private closeSourceDialog(focusEditor: boolean): void {
+    this.toolbar.sourceDialog.root.hidden = true;
+
+    if (focusEditor) {
+      this.view.focus();
+    }
+
+    this.updateToolbarState();
   }
 
   private closeLinkDialog(restoreSelection: boolean): void {
@@ -574,6 +755,14 @@ export class MoongladeEditor {
     setButtonState(buttons.alignCenter, getCurrentAlignment(state) === 'center', canRun(state, this.view, this.commands.alignment('center')));
     setButtonState(buttons.alignRight, getCurrentAlignment(state) === 'right', canRun(state, this.view, this.commands.alignment('right')));
     setButtonState(buttons.alignJustify, getCurrentAlignment(state) === 'justify', canRun(state, this.view, this.commands.alignment('justify')));
+    setButtonState(buttons.codeBlock, state.selection.$from.parent.type === this.schema.nodes.code_block, canRun(state, this.view, this.commands.codeBlock(getCurrentCodeLanguage(state))));
+    setButtonState(buttons.insertTable, false, canRun(state, this.view, this.commands.insertTable()));
+    setButtonState(buttons.addTableRow, false, canRun(state, this.view, this.commands.addTableRow));
+    setButtonState(buttons.deleteTableRow, false, canRun(state, this.view, this.commands.deleteTableRow));
+    setButtonState(buttons.addTableColumn, false, canRun(state, this.view, this.commands.addTableColumn));
+    setButtonState(buttons.deleteTableColumn, false, canRun(state, this.view, this.commands.deleteTableColumn));
+    setButtonState(buttons.toggleTableHeaderRow, false, canRun(state, this.view, this.commands.toggleTableHeaderRow));
+    setButtonState(buttons.deleteTable, false, canRun(state, this.view, this.commands.deleteTable));
     setButtonState(buttons.link, Boolean(activeLink), canEditLink(state, activeLink));
     setButtonState(buttons.removeLink, false, Boolean(activeLink));
 
@@ -585,6 +774,7 @@ export class MoongladeEditor {
     buttons.undo.disabled = !canRun(state, this.view, this.commands.undo);
     buttons.redo.disabled = !canRun(state, this.view, this.commands.redo);
     buttons.image.disabled = !this.uploadUrl;
+    buttons.htmlSource.disabled = false;
   }
 }
 
@@ -599,6 +789,19 @@ const colorPalette = [
   { label: 'Green', value: '#198754' },
   { label: 'Red', value: '#dc3545' },
   { label: 'Yellow', value: '#ffc107' }
+];
+
+const codeLanguages = [
+  { label: 'Plain text', value: '' },
+  { label: 'C#', value: 'csharp' },
+  { label: 'JavaScript', value: 'javascript' },
+  { label: 'TypeScript', value: 'typescript' },
+  { label: 'HTML', value: 'html' },
+  { label: 'CSS', value: 'css' },
+  { label: 'PowerShell', value: 'powershell' },
+  { label: 'SQL', value: 'sql' },
+  { label: 'JSON', value: 'json' },
+  { label: 'XML', value: 'xml' }
 ];
 
 function canRun(state: EditorState, view: EditorView, command: Command): boolean {
@@ -623,6 +826,17 @@ function getCurrentFormat(state: EditorState): string {
 function getCurrentAlignment(state: EditorState): string {
   const align = state.selection.$from.parent.attrs.align;
   return typeof align === 'string' && align ? align : 'left';
+}
+
+function getCurrentCodeLanguage(state: EditorState): string {
+  const { parent } = state.selection.$from;
+
+  if (parent.type.name !== 'code_block') {
+    return '';
+  }
+
+  const language = parent.attrs.language;
+  return typeof language === 'string' ? language : '';
 }
 
 function hasAncestor(state: EditorState, nodeType: NodeType): boolean {

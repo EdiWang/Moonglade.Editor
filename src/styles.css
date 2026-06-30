@@ -79,6 +79,16 @@
   font-size: .875rem;
 }
 
+.mg-editor-source-dialog {
+  width: min(42rem, calc(100% - 1rem));
+}
+
+.mg-editor-source-textarea {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  min-height: 14rem;
+  resize: vertical;
+}
+
 .mg-editor-body {
   display: flex;
   flex: 1;

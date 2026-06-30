@@ -55,9 +55,34 @@ const editor = createMoongladeEditor({
 editor.syncToTextarea();
 ```
 
+## Consuming From Moonglade
+
+Moonglade should consume prebuilt files from this repository and should not add a frontend build step.
+
+Static asset option:
+
+```html
+<link rel="stylesheet" href="/lib/moonglade-editor/moonglade-editor.css">
+<script src="/lib/moonglade-editor/moonglade-editor.global.js"></script>
+<script>
+  const editor = MoongladeEditor.createMoongladeEditor({
+    element: document.querySelector('#editor'),
+    textarea: document.querySelector('#post-content'),
+    uploadUrl: '/image'
+  });
+</script>
+```
+
+Package options that preserve the same contract:
+
+- Copy `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` into Moonglade `wwwroot` during release packaging.
+- Publish this project as an npm package only for release tooling, not for the Moonglade app build.
+- Publish a NuGet package with static web assets once the editor API is stable.
+- Use a submodule/subtree only if checked-in `dist` files remain the integration boundary.
+
 ## Status
 
-Initial scaffold. The schema, parser/serializer, editor shell, toolbar shell, basic formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, and build pipeline are present. Table controls, code snippet UX, source mode, consumption docs, and Moonglade integration are planned follow-up work.
+Initial scaffold. The schema, parser/serializer, editor shell, toolbar shell, basic formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, table controls, source mode, consumption docs, and build pipeline are present. Moonglade integration is planned follow-up work.
 
 ## License
 
