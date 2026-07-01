@@ -163,7 +163,9 @@ describe('editor toolbar', () => {
 
     blockquoteButton.click();
 
-    expect(editor.getHTML()).toBe('<blockquote><p>Hello</p></blockquote>');
+    expect(editor.getHTML()).toBe(`<blockquote>
+  <p>Hello</p>
+</blockquote>`);
     expect(blockquoteButton.getAttribute('aria-pressed')).toBe('true');
 
     blockquoteButton.click();
@@ -340,7 +342,8 @@ describe('editor toolbar', () => {
     const horizontalRuleButton = host.querySelector('[data-command="horizontalRule"]') as HTMLButtonElement;
     horizontalRuleButton.click();
 
-    expect(editor.getHTML()).toBe('<p>Hello</p><hr>');
+    expect(editor.getHTML()).toBe(`<p>Hello</p>
+<hr>`);
     expect(horizontalRuleButton.disabled).toBe(false);
 
     editor.destroy();

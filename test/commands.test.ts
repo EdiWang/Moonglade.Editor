@@ -73,7 +73,8 @@ describe('editor commands', () => {
     const { result, state: nextState } = runCommand(state, commands.alignment('right'));
 
     expect(result).toBe(true);
-    expect(getHtml(nextState)).toBe('<p style="text-align: right;">One</p><h2 style="text-align: right;">Two</h2>');
+    expect(getHtml(nextState)).toBe(`<p style="text-align: right;">One</p>
+<h2 style="text-align: right;">Two</h2>`);
   });
 
   it('sanitizes code block language attributes', () => {
@@ -89,7 +90,8 @@ describe('editor commands', () => {
     const { result, state: nextState } = runCommand(state, commands.insertHorizontalRule);
 
     expect(result).toBe(true);
-    expect(getHtml(nextState)).toBe('<p>Hello</p><hr>');
+    expect(getHtml(nextState)).toBe(`<p>Hello</p>
+<hr>`);
   });
 
   it('clamps inserted table dimensions', () => {

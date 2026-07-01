@@ -26,6 +26,7 @@ Current scaffold:
 - ProseMirror schema, HTML parse/serialize helpers, commands, and basic EditorView wrapper exist.
 - Framework-free toolbar shell, basic formatting controls, undo/redo, and selection state exist.
 - Link dialog, safe command URL validation, foreground/background color palette controls, text alignment controls, image upload controls, code snippet controls, horizontal rule insertion, table controls, and HTML source mode exist.
+- Serialized HTML is newline-formatted around block content and standalone image paragraphs for easier source editing.
 - Editor height is configurable through `createMoongladeEditor({ height })`, defaults to `500px`, and accepts CSS height strings.
 - Editor custom styles inherit Bootstrap CSS variables and follow the nearest host `data-bs-theme` scope.
 - esbuild emits ESM and browser-global bundles to dist/.

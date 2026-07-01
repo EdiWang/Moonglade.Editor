@@ -6,13 +6,16 @@ describe('html parsing and serialization', () => {
   it('round-trips basic post content', () => {
     const html = '<h1>Hello</h1><p><strong>Moonglade</strong> editor</p>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe('<h1>Hello</h1><p><strong>Moonglade</strong> editor</p>');
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<h1>Hello</h1>
+<p><strong>Moonglade</strong> editor</p>`);
   });
 
   it('round-trips horizontal rules', () => {
     const html = '<p>Before</p><hr><p>After</p>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>Before</p><hr><p>After</p>');
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<p>Before</p>
+<hr>
+<p>After</p>`);
   });
 
   it('supports underline, strike, and color marks', () => {
@@ -24,7 +27,8 @@ describe('html parsing and serialization', () => {
   it('round-trips supported text alignment on paragraphs and headings', () => {
     const html = '<h2 style="text-align: center;">Centered</h2><p align="right">Right</p>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe('<h2 style="text-align: center;">Centered</h2><p style="text-align: right;">Right</p>');
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<h2 style="text-align: center;">Centered</h2>
+<p style="text-align: right;">Right</p>`);
   });
 
   it('round-trips code blocks with highlight.js-compatible language classes', () => {
@@ -36,7 +40,18 @@ describe('html parsing and serialization', () => {
   it('round-trips basic tables', () => {
     const html = '<table><tbody><tr><th>Title</th><td>Value</td></tr></tbody></table>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe('<table><tbody><tr><th><p>Title</p></th><td><p>Value</p></td></tr></tbody></table>');
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<table>
+  <tbody>
+    <tr>
+      <th>
+        <p>Title</p>
+      </th>
+      <td>
+        <p>Value</p>
+      </td>
+    </tr>
+  </tbody>
+</table>`);
   });
 
   it('strips unsafe link protocols', () => {
@@ -77,10 +92,19 @@ describe('html parsing and serialization', () => {
 
   it('adds lazy loading to safe images and strips unsafe image URLs', () => {
     expect(roundTripHtml(moongladeSchema, '<p><img src="/media/photo.jpg" alt="Photo"></p>'))
-      .toBe('<p><img src="/media/photo.jpg" alt="Photo" loading="lazy"></p>');
+      .toBe(`<p>
+  <img src="/media/photo.jpg" alt="Photo" loading="lazy">
+</p>`);
     expect(roundTripHtml(moongladeSchema, '<p><img src="javascript:alert(1)" alt="Bad"></p>'))
       .toBe('<p></p>');
     expect(roundTripHtml(moongladeSchema, '<p><img src="mailto:hello@example.com" alt="Bad"></p>'))
       .toBe('<p></p>');
+  });
+
+  it('keeps formatted output stable after another parse and serialize pass', () => {
+    const html = '<h1>Hello</h1><p><strong>Moonglade</strong> editor</p><hr><p><img src="/media/photo.jpg" alt="Photo"></p>';
+    const formatted = roundTripHtml(moongladeSchema, html);
+
+    expect(roundTripHtml(moongladeSchema, formatted)).toBe(formatted);
   });
 });
