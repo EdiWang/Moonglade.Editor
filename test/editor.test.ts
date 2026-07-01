@@ -27,6 +27,38 @@ async function waitForExpectation(assertion: () => void): Promise<void> {
 }
 
 describe('editor toolbar', () => {
+  it('enables spellcheck by default and can toggle it after initialization', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    expect(editor.getSpellcheck()).toBe(true);
+    expect(editor.dom.getAttribute('spellcheck')).toBe('true');
+
+    editor.setSpellcheck(false);
+
+    expect(editor.getSpellcheck()).toBe(false);
+    expect(editor.dom.getAttribute('spellcheck')).toBe('false');
+
+    editor.destroy();
+  });
+
+  it('honors disabled spellcheck during initialization', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      spellcheck: false
+    });
+
+    expect(editor.getSpellcheck()).toBe(false);
+    expect(editor.dom.getAttribute('spellcheck')).toBe('false');
+
+    editor.destroy();
+  });
+
   it('renders a Bootstrap-compatible toolbar shell', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({

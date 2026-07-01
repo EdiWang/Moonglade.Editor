@@ -11,12 +11,16 @@
 </head>
 <body class="bg-body-tertiary">
   <main class="container py-4">
-    <h1 class="h3 mb-3">Moonglade.Editor Demo</h1>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <h1 class="h3 mb-0">Moonglade.Editor Demo</h1>
+      <button id="spellcheck-toggle" type="button" class="btn btn-outline-secondary btn-sm" aria-pressed="true">Spellcheck on</button>
+    </div>
     <div id="editor" class="mb-4"></div>
 
     <div class="mb-3">
       <label for="content" class="form-label h5">Synced HTML</label>
-      <textarea id="content" class="form-control font-monospace" rows="8"><h2>Hello from Moonglade.Editor</h2><p><strong>Bold</strong>, <em>italic</em>, and regular post content.</p><blockquote><p>A focused editor for blog posts.</p></blockquote></textarea>
+      <textarea id="content" class="form-control font-monospace" rows="8"><h1>Moonglade.Editor capability tour</h1><p>This default post shows a focused editing surface for Moonglade posts: <strong>bold</strong>, <em>italic</em>, <u>underline</u>, <s>strikethrough</s>, <span style="color: #0d6efd;">colored text</span>, and <span style="background-color: #ffc107;">highlighted text</span>. It also includes a <a href="https://github.com/EdiWang/Moonglade" title="Moonglade on GitHub">safe link</a> for link editing.</p><h2 style="text-align: center;">Centered heading level two</h2><p style="text-align: left;">Left aligned body text keeps the usual reading rhythm for long-form blog content.</p><p style="text-align: center;">Centered text is useful for short announcements, captions, or section breaks.</p><p style="text-align: right;">Right aligned text can support attribution lines or compact metadata.</p><p style="text-align: justify;">Justified text is represented with enough words to make the alignment visible across the editor width while still staying close to the kind of post content Moonglade is expected to publish.</p><h3>Lists and quotation</h3><ul><li><p>Bullet lists for quick notes and post outlines.</p></li><li><p>Nested styling still works with <strong>strong text</strong> and <span style="color: #198754;">palette colors</span>.</p></li></ul><ol><li><p>Numbered lists for ordered steps.</p></li><li><p>Each item remains plain, predictable HTML.</p></li></ol><blockquote><p>A focused editor should make common blog formatting feel natural without turning into a full word processor.</p></blockquote><hr><h3>Code snippet</h3><pre><code class="language-typescript">const publishPost = (title: string) =&gt; `Publishing ${title}`;
+console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3><table><tbody><tr><th><p>Capability</p></th><th><p>Demo content</p></th><th><p>Status</p></th></tr><tr><td><p>Formatting</p></td><td><p>Bold, italic, underline, strike, colors</p></td><td><p>Visible</p></td></tr><tr><td><p>Structure</p></td><td><p>Headings, lists, quote, rule, table</p></td><td><p>Visible</p></td></tr><tr><td><p>Source mode</p></td><td><p>Inspect and edit this sanitized HTML</p></td><td><p>Available</p></td></tr></tbody></table><h4>Heading level four</h4><p>Use this for subsections that need more depth than the main story flow.</p><h5>Heading level five</h5><p>Smaller headings can label compact notes or implementation details.</p><h6>Heading level six</h6><p>The smallest heading remains available for deeply nested post sections.</p></textarea>
     </div>
   </main>
 
@@ -24,11 +28,28 @@
   <script>
     const textarea = document.querySelector('#content');
 
-    MoongladeEditor.createMoongladeEditor({
+    const spellcheckToggle = document.querySelector('#spellcheck-toggle');
+    const editor = MoongladeEditor.createMoongladeEditor({
       element: document.querySelector('#editor'),
       textarea,
+      spellcheck: true,
       uploadUrl: '/image'
     });
+
+    const updateSpellcheckToggle = () => {
+      const enabled = editor.getSpellcheck();
+      spellcheckToggle.textContent = enabled ? 'Spellcheck on' : 'Spellcheck off';
+      spellcheckToggle.classList.toggle('btn-outline-secondary', enabled);
+      spellcheckToggle.classList.toggle('btn-outline-warning', !enabled);
+      spellcheckToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    };
+
+    spellcheckToggle.addEventListener('click', () => {
+      editor.setSpellcheck(!editor.getSpellcheck());
+      updateSpellcheckToggle();
+    });
+
+    updateSpellcheckToggle();
   </script>
 </body>
 </html>

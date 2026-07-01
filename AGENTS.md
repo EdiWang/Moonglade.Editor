@@ -102,12 +102,14 @@ const editor = createMoongladeEditor({
   element,
   textarea,
   uploadUrl: '/image',
+  spellcheck: true,
   content,
   onChange
 });
 
 editor.getHTML();
 editor.setHTML(html);
+editor.setSpellcheck(enabled);
 editor.syncToTextarea();
 editor.focus();
 editor.destroy();

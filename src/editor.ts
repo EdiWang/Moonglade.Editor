@@ -29,6 +29,7 @@ export interface MoongladeEditorOptions {
   textarea?: HTMLTextAreaElement;
   content?: string;
   schema?: Schema;
+  spellcheck?: boolean;
   uploadUrl?: string;
   uploadImage?: MoongladeImageUploader;
   onChange?: (html: string) => void;
@@ -43,6 +44,7 @@ export class MoongladeEditor {
   private readonly onChange?: (html: string) => void;
   private readonly uploadImage?: MoongladeImageUploader;
   private readonly toolbar: ToolbarElements;
+  private spellcheck: boolean;
   private readonly closeColorDropdownsOnDocumentPointerDown = (event: PointerEvent): void => {
     const target = event.target;
     if (target instanceof Node && this.toolbar.root.contains(target)) {
@@ -61,6 +63,7 @@ export class MoongladeEditor {
     this.uploadUrl = options.uploadUrl;
     this.uploadImage = createImageUploader(options);
     this.onChange = options.onChange;
+    this.spellcheck = options.spellcheck ?? true;
 
     const initialContent = options.content ?? options.textarea?.value ?? '';
     const doc = parseHtml(this.schema, initialContent);
@@ -111,6 +114,7 @@ export class MoongladeEditor {
           keymap(baseKeymap)
         ]
       }),
+      attributes: this.getEditorAttributes(),
       dispatchTransaction: (transaction) => this.dispatch(transaction),
       handleDOMEvents: {
         keyup: () => {
@@ -163,6 +167,17 @@ export class MoongladeEditor {
     this.view.focus();
   }
 
+  getSpellcheck(): boolean {
+    return this.spellcheck;
+  }
+
+  setSpellcheck(enabled: boolean): void {
+    this.spellcheck = enabled;
+    this.view.setProps({
+      attributes: this.getEditorAttributes()
+    });
+  }
+
   destroy(): void {
     document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     this.view.destroy();
@@ -189,6 +204,12 @@ export class MoongladeEditor {
     this.savedSelection = this.view.state.selection.getBookmark();
     void this.uploadAndInsertImage(file);
     return true;
+  }
+
+  private getEditorAttributes(): Record<string, string> {
+    return {
+      spellcheck: this.spellcheck ? 'true' : 'false'
+    };
   }
 
   private handleImageDrop(view: EditorView, event: DragEvent): boolean {

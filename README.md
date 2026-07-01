@@ -81,9 +81,11 @@ import { createMoongladeEditor } from '@moonglade/editor';
 const editor = createMoongladeEditor({
   element: document.querySelector('#editor')!,
   textarea: document.querySelector('#content')!,
+  spellcheck: true,
   uploadUrl: '/image'
 });
 
+editor.setSpellcheck(false);
 editor.syncToTextarea();
 ```
 
@@ -125,6 +127,7 @@ Static asset option:
   const editor = MoongladeEditor.createMoongladeEditor({
     element: document.querySelector('#editor'),
     textarea: document.querySelector('#post-content'),
+    spellcheck: true,
     uploadUrl: '/image'
   });
 </script>
