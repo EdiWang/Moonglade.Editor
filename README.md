@@ -4,28 +4,51 @@ Standalone ProseMirror-based rich text editor for Moonglade.
 
 This repository keeps editor source code, dependencies, tests, and build tooling outside the main Moonglade ASP.NET Core application. Moonglade can consume the compiled `dist/` assets without introducing a frontend build step into that repository.
 
-## Goals
+## Project Overview
 
-- Build a focused HTML editor for Moonglade blog posts.
-- Use ProseMirror directly.
-- Ship browser-ready JavaScript and CSS.
-- Keep Moonglade's storage model as HTML strings.
-- Avoid TinyMCE licensing and payload concerns.
+Moonglade.Editor is a focused HTML editor for Moonglade blog posts. It replaces the need for a large third-party hosted editor in the HTML post workflow while preserving Moonglade's existing content model: posts are stored as HTML strings and rendered by the main application.
+
+The main use cases are:
+
+- Editing Moonglade HTML blog post content.
+- Producing constrained, predictable HTML for Moonglade's raw HTML renderer.
+- Uploading and inserting post images through a configurable upload endpoint.
+- Shipping browser-ready JavaScript and CSS that Moonglade can reference as static assets.
+
+## Business Logic Overview
+
+The editor flow is intentionally narrow:
+
+1. The host page creates an editor with `createMoongladeEditor(...)`.
+2. Initial HTML is read from `content` or an attached `textarea`.
+3. HTML is parsed through the ProseMirror schema after unsafe URL attributes are removed or normalized.
+4. Users edit content through the ProseMirror `EditorView` and the framework-free toolbar.
+5. Commands update the document for headings, marks, links, colors, alignment, lists, blockquotes, code blocks, tables, source mode, and images.
+6. On document changes, the editor serializes the ProseMirror document back to HTML and syncs it to the attached `textarea` and optional `onChange` callback.
+
+Key concepts:
+
+- `MoongladeEditor` is the public editor wrapper.
+- `moongladeSchema` defines the allowed document structure and marks.
+- `parseHtml(...)` and `serializeHtml(...)` are the import/export boundary for stored HTML.
+- `safety.ts` contains URL, style, alignment, and code language constraints.
+- Image upload is configured with either `uploadUrl` or a custom `uploadImage` function.
+
+Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, code snippets, links, blockquotes, bullet/numbered lists, text alignment, and HTML source view/edit.
 
 ## Development
+
+Configured commands:
 
 ```powershell
 npm install
 npm test
 npm run build
+npm run dev
 npm run size
 ```
 
-For Codex continuation, read:
-
-- `AGENTS.md`
-- `docs/CODEX_HANDOFF.md`
-- `docs/tasks/task-moonglade-editor-implementation.md`
+These commands are defined in `package.json`. They were not re-run during this documentation-only update.
 
 To run the demo after building:
 
@@ -43,6 +66,12 @@ The build emits:
 - `dist/*.d.ts` - TypeScript declarations.
 
 `npm run build` also checks bundle size budgets for the generated JavaScript and CSS files.
+
+For Codex continuation, read:
+
+- `AGENTS.md`
+- `docs/CODEX_HANDOFF.md`
+- `docs/tasks/task-moonglade-editor-implementation.md`
 
 ## Main API
 
@@ -108,10 +137,14 @@ Package options that preserve the same contract:
 - Publish a NuGet package with static web assets once the editor API is stable.
 - Use a submodule/subtree only if checked-in `dist` files remain the integration boundary.
 
-## Status
+## Repository Status
 
-Initial scaffold. The schema, parser/serializer, editor shell, toolbar shell, basic formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, table controls, source mode, consumption docs, and build pipeline are present. Moonglade integration is planned follow-up work.
+The schema, parser/serializer, editor shell, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, table controls, source mode, consumption docs, tests, and build pipeline are present.
+
+Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
+
+This is a single-package repository, not a monorepo.
 
 ## License
 
-This scaffold is private and currently marked `UNLICENSED`. Choose the intended license before publishing the package or distributing it independently.
+This package is private and currently marked `UNLICENSED`. Choose the intended license before publishing the package or distributing it independently.
