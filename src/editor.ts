@@ -2,11 +2,24 @@ import { baseKeymap } from 'prosemirror-commands';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
-import type { Mark, MarkType, Node as ProseMirrorNode, NodeType, Schema } from 'prosemirror-model';
+import type { MarkType, Node as ProseMirrorNode, Schema } from 'prosemirror-model';
 import { EditorState, TextSelection, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { tableEditing } from 'prosemirror-tables';
 import { createCommands, type MoongladeEditorCommands } from './commands';
+import { blockFormats, codeLanguages, colorPalette } from './editor-options';
+import {
+  canEditLink,
+  canRun,
+  firstCommand,
+  getActiveMark,
+  getCurrentAlignment,
+  getCurrentCodeLanguage,
+  getCurrentFormat,
+  getPaletteColor,
+  hasAncestor,
+  isMarkActive
+} from './editor-state';
 import { parseHtml, serializeHtml } from './html';
 import { moongladeSchema } from './schema';
 
@@ -289,17 +302,7 @@ export class MoongladeEditor {
     formatSelect.className = 'mg-editor-format form-select form-select-sm';
     formatSelect.setAttribute('aria-label', 'Block format');
 
-    const formats = [
-      { value: 'paragraph', label: 'Paragraph' },
-      { value: 'heading:1', label: 'Heading 1' },
-      { value: 'heading:2', label: 'Heading 2' },
-      { value: 'heading:3', label: 'Heading 3' },
-      { value: 'heading:4', label: 'Heading 4' },
-      { value: 'heading:5', label: 'Heading 5' },
-      { value: 'heading:6', label: 'Heading 6' }
-    ];
-
-    for (const format of formats) {
+    for (const format of blockFormats) {
       const option = document.createElement('option');
       option.value = format.value;
       option.textContent = format.label;
@@ -907,143 +910,6 @@ export class MoongladeEditor {
 
 export function createMoongladeEditor(options: MoongladeEditorOptions): MoongladeEditor {
   return new MoongladeEditor(options);
-}
-
-const colorPalette = [
-  { label: 'Black', value: '#000000' },
-  { label: 'Dark', value: '#212529' },
-  { label: 'Gray', value: '#6c757d' },
-  { label: 'Light gray', value: '#ced4da' },
-  { label: 'White', value: '#ffffff' },
-  { label: 'Blue', value: '#0d6efd' },
-  { label: 'Green', value: '#198754' },
-  { label: 'Teal', value: '#20c997' },
-  { label: 'Cyan', value: '#0dcaf0' },
-  { label: 'Indigo', value: '#6610f2' },
-  { label: 'Purple', value: '#6f42c1' },
-  { label: 'Red', value: '#dc3545' },
-  { label: 'Pink', value: '#d63384' },
-  { label: 'Orange', value: '#fd7e14' },
-  { label: 'Yellow', value: '#ffc107' }
-];
-
-const codeLanguages = [
-  { label: 'Plain text', value: '' },
-  { label: 'C#', value: 'csharp' },
-  { label: 'JavaScript', value: 'javascript' },
-  { label: 'TypeScript', value: 'typescript' },
-  { label: 'HTML', value: 'html' },
-  { label: 'CSS', value: 'css' },
-  { label: 'PowerShell', value: 'powershell' },
-  { label: 'SQL', value: 'sql' },
-  { label: 'JSON', value: 'json' },
-  { label: 'XML', value: 'xml' }
-];
-
-function canRun(state: EditorState, view: EditorView, command: Command): boolean {
-  return command(state, undefined, view);
-}
-
-function firstCommand(commands: Map<string, Command>): Command | undefined {
-  return commands.values().next().value;
-}
-
-function getPaletteColor(value: unknown, commands: Map<string, Command>): string {
-  if (typeof value !== 'string') {
-    return '';
-  }
-
-  const normalized = value.trim().toLowerCase();
-  for (const color of commands.keys()) {
-    if (color.toLowerCase() === normalized) {
-      return color;
-    }
-  }
-
-  const rgb = normalized.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/);
-  if (!rgb) {
-    return '';
-  }
-
-  const hex = `#${rgb.slice(1, 4)
-    .map((channel) => Number(channel).toString(16).padStart(2, '0'))
-    .join('')}`;
-  for (const color of commands.keys()) {
-    if (color.toLowerCase() === hex) {
-      return color;
-    }
-  }
-
-  return '';
-}
-
-function canEditLink(state: EditorState, activeLink: Mark | null): boolean {
-  return Boolean(activeLink) || !state.selection.empty;
-}
-
-function getCurrentFormat(state: EditorState): string {
-  const { $from } = state.selection;
-  const parent = $from.parent;
-
-  if (parent.type.name === 'heading') {
-    return `heading:${parent.attrs.level}`;
-  }
-
-  return 'paragraph';
-}
-
-function getCurrentAlignment(state: EditorState): string {
-  const align = state.selection.$from.parent.attrs.align;
-  return typeof align === 'string' && align ? align : 'left';
-}
-
-function getCurrentCodeLanguage(state: EditorState): string {
-  const { parent } = state.selection.$from;
-
-  if (parent.type.name !== 'code_block') {
-    return '';
-  }
-
-  const language = parent.attrs.language;
-  return typeof language === 'string' ? language : '';
-}
-
-function hasAncestor(state: EditorState, nodeType: NodeType): boolean {
-  const { $from } = state.selection;
-
-  for (let depth = $from.depth; depth > 0; depth -= 1) {
-    if ($from.node(depth).type === nodeType) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function isMarkActive(state: EditorState, markType: MarkType): boolean {
-  const { empty, from, to, $from } = state.selection;
-
-  if (empty) {
-    return Boolean(markType.isInSet(state.storedMarks || $from.marks()));
-  }
-
-  return state.doc.rangeHasMark(from, to, markType);
-}
-
-function getActiveMark(state: EditorState, markType: MarkType): Mark | null {
-  const { empty, from, to, $from } = state.selection;
-
-  if (empty) {
-    return markType.isInSet(state.storedMarks || $from.marks()) ?? null;
-  }
-
-  let activeMark: Mark | null = null;
-  state.doc.nodesBetween(from, to, (node) => {
-    activeMark = markType.isInSet(node.marks) ?? null;
-    return !activeMark;
-  });
-
-  return activeMark;
 }
 
 function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boolean): void {
