@@ -2,7 +2,9 @@
   background-color: var(--bs-body-bg, #fff);
   border-color: var(--bs-border-color, #dee2e6);
   color: var(--bs-body-color, #212529);
-  min-height: 0;
+  min-height: 12rem;
+  overflow: hidden;
+  resize: vertical;
 }
 
 .mg-editor-toolbar {

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TextSelection } from 'prosemirror-state';
 import { createMoongladeEditor } from '../src/editor';
@@ -50,6 +52,14 @@ describe('editor toolbar', () => {
     expect(host.style.height).toBe('calc(100vh - 12rem)');
 
     editor.destroy();
+  });
+
+  it('keeps the editor shell vertically resizable', () => {
+    const css = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+    const editorRule = css.match(/\.mg-editor\s*\{[^}]+\}/)?.[0] ?? '';
+
+    expect(editorRule).toContain('resize: vertical;');
+    expect(editorRule).toContain('overflow: hidden;');
   });
 
   it('enables spellcheck by default and can toggle it after initialization', () => {
