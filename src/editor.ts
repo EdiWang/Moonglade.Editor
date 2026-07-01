@@ -2,12 +2,11 @@ import { baseKeymap } from 'prosemirror-commands';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
-import type { MarkType, Node as ProseMirrorNode, Schema } from 'prosemirror-model';
+import type { Node as ProseMirrorNode, Schema } from 'prosemirror-model';
 import { EditorState, TextSelection, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { tableEditing } from 'prosemirror-tables';
 import { createCommands, type MoongladeEditorCommands } from './commands';
-import { blockFormats, codeLanguages, colorPalette } from './editor-options';
 import {
   canEditLink,
   canRun,
@@ -22,6 +21,7 @@ import {
 } from './editor-state';
 import { parseHtml, serializeHtml } from './html';
 import { moongladeSchema } from './schema';
+import { closeColorDropdowns, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
 
 export interface MoongladeEditorOptions {
   element: HTMLElement;
@@ -30,53 +30,6 @@ export interface MoongladeEditorOptions {
   schema?: Schema;
   uploadUrl?: string;
   onChange?: (html: string) => void;
-}
-
-interface ToolbarElements {
-  root: HTMLDivElement;
-  formatSelect: HTMLSelectElement;
-  buttons: Record<string, HTMLButtonElement>;
-  colorDropdowns: ColorDropdown[];
-  imageInput: HTMLInputElement;
-  uploadStatus: HTMLDivElement;
-  linkDialog: LinkDialogElements;
-  codeDialog: CodeDialogElements;
-  sourceDialog: SourceDialogElements;
-}
-
-interface ColorDropdown {
-  button: HTMLButtonElement;
-  preview: HTMLSpanElement;
-  menu: HTMLDivElement;
-  markType: MarkType;
-  commands: Map<string, Command>;
-  colorButtons: Map<string, HTMLButtonElement>;
-  clearButton: HTMLButtonElement;
-  clearCommand: Command;
-}
-
-interface LinkDialogElements {
-  root: HTMLDivElement;
-  form: HTMLFormElement;
-  hrefInput: HTMLInputElement;
-  titleInput: HTMLInputElement;
-  error: HTMLDivElement;
-  removeButton: HTMLButtonElement;
-  cancelButton: HTMLButtonElement;
-}
-
-interface CodeDialogElements {
-  root: HTMLDivElement;
-  form: HTMLFormElement;
-  languageSelect: HTMLSelectElement;
-  cancelButton: HTMLButtonElement;
-}
-
-interface SourceDialogElements {
-  root: HTMLDivElement;
-  form: HTMLFormElement;
-  sourceTextarea: HTMLTextAreaElement;
-  cancelButton: HTMLButtonElement;
 }
 
 export class MoongladeEditor {
@@ -93,7 +46,7 @@ export class MoongladeEditor {
       return;
     }
 
-    this.closeColorDropdowns();
+    closeColorDropdowns(this.toolbar);
   };
   private savedSelection?: SelectionBookmark;
   private view: EditorView;
@@ -113,7 +66,28 @@ export class MoongladeEditor {
     options.element.classList.add('mg-editor', 'card', 'd-flex', 'flex-column', 'overflow-hidden');
     options.element.replaceChildren();
 
-    this.toolbar = this.createToolbar();
+    this.toolbar = createToolbar({
+      schema: this.schema,
+      commands: this.commands,
+      uploadConfigured: Boolean(this.uploadUrl),
+      actions: {
+        execute: (command) => this.execute(command),
+        executeWithSavedSelection: (command) => this.executeWithSavedSelection(command),
+        saveSelection: () => {
+          this.savedSelection = this.view.state.selection.getBookmark();
+        },
+        uploadFile: (file) => {
+          void this.uploadAndInsertImage(file);
+        },
+        openLinkDialog: () => this.openLinkDialog(),
+        closeLinkDialog: (restoreSelection) => this.closeLinkDialog(restoreSelection),
+        openCodeDialog: () => this.openCodeDialog(),
+        closeCodeDialog: (restoreSelection) => this.closeCodeDialog(restoreSelection),
+        openSourceDialog: () => this.openSourceDialog(),
+        closeSourceDialog: (focusEditor) => this.closeSourceDialog(focusEditor),
+        applySourceHtml: (html) => this.setHTML(html)
+      }
+    });
     document.addEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     options.element.append(this.toolbar.root, editorHost);
 
@@ -292,488 +266,10 @@ export class MoongladeEditor {
     this.updateToolbarState();
   }
 
-  private createToolbar(): ToolbarElements {
-    const root = document.createElement('div');
-    root.className = 'mg-editor-toolbar card-header btn-toolbar gap-2 p-2';
-    root.setAttribute('role', 'toolbar');
-    root.setAttribute('aria-label', 'Editor toolbar');
-
-    const formatSelect = document.createElement('select');
-    formatSelect.className = 'mg-editor-format form-select form-select-sm';
-    formatSelect.setAttribute('aria-label', 'Block format');
-
-    for (const format of blockFormats) {
-      const option = document.createElement('option');
-      option.value = format.value;
-      option.textContent = format.label;
-      formatSelect.append(option);
-    }
-
-    formatSelect.addEventListener('change', () => {
-      const [type, level] = formatSelect.value.split(':');
-      this.execute(type === 'heading'
-        ? this.commands.heading(Number(level))
-        : this.commands.paragraph);
-    });
-
-    const buttons: Record<string, HTMLButtonElement> = {};
-    const addGroup = (...items: Array<[string, string, string, Command]>): void => {
-      const group = document.createElement('div');
-      group.className = 'btn-group btn-group-sm';
-      group.setAttribute('role', 'group');
-
-      for (const [name, icon, ariaLabel, command] of items) {
-        const button = this.createToolbarButton(name, icon, ariaLabel);
-        button.addEventListener('click', () => this.execute(command));
-
-        buttons[name] = button;
-        group.append(button);
-      }
-
-      root.append(group);
-    };
-    const colorDropdowns: ColorDropdown[] = [];
-
-    const formatGroup = document.createElement('div');
-    formatGroup.className = 'mg-editor-format-group input-group input-group-sm';
-    formatGroup.append(formatSelect);
-    root.append(formatGroup);
-
-    addGroup(
-      ['undo', 'arrow-counterclockwise', 'Undo', this.commands.undo],
-      ['redo', 'arrow-clockwise', 'Redo', this.commands.redo]
-    );
-    addGroup(
-      ['bold', 'type-bold', 'Bold', this.commands.bold],
-      ['italic', 'type-italic', 'Italic', this.commands.italic],
-      ['underline', 'type-underline', 'Underline', this.commands.underline],
-      ['strike', 'type-strikethrough', 'Strikethrough', this.commands.strike]
-    );
-    addGroup(
-      ['blockquote', 'quote', 'Blockquote', this.commands.blockquote],
-      ['bulletList', 'list-ul', 'Bullet list', this.commands.bulletList],
-      ['orderedList', 'list-ol', 'Numbered list', this.commands.orderedList]
-    );
-    addGroup(
-      ['alignLeft', 'text-left', 'Align left', this.commands.alignment('left')],
-      ['alignCenter', 'text-center', 'Align center', this.commands.alignment('center')],
-      ['alignRight', 'text-right', 'Align right', this.commands.alignment('right')],
-      ['alignJustify', 'justify', 'Justify text', this.commands.alignment('justify')]
-    );
-
-    const codeGroup = document.createElement('div');
-    codeGroup.className = 'btn-group btn-group-sm';
-    codeGroup.setAttribute('role', 'group');
-
-    const codeButton = this.createToolbarButton('codeBlock', 'code-slash', 'Code snippet');
-    codeButton.addEventListener('click', () => this.openCodeDialog());
-    buttons.codeBlock = codeButton;
-    codeGroup.append(codeButton);
-    root.append(codeGroup);
-
-    addGroup(
-      ['insertTable', 'table', 'Insert table', this.commands.insertTable()]
-    );
-    addGroup(
-      ['addTableRow', 'plus-lg', 'Add table row', this.commands.addTableRow],
-      ['deleteTableRow', 'dash-lg', 'Delete table row', this.commands.deleteTableRow]
-    );
-    addGroup(
-      ['addTableColumn', 'plus-square', 'Add table column', this.commands.addTableColumn],
-      ['deleteTableColumn', 'dash-square', 'Delete table column', this.commands.deleteTableColumn]
-    );
-    addGroup(
-      ['toggleTableHeaderRow', 'layout-three-columns', 'Toggle table header row', this.commands.toggleTableHeaderRow],
-      ['deleteTable', 'trash', 'Delete table', this.commands.deleteTable]
-    );
-
-    const linkGroup = document.createElement('div');
-    linkGroup.className = 'btn-group btn-group-sm';
-    linkGroup.setAttribute('role', 'group');
-
-    const linkButton = this.createToolbarButton('link', 'link-45deg', 'Add or edit link');
-    linkButton.addEventListener('click', () => this.openLinkDialog());
-    const removeLinkButton = this.createToolbarButton('removeLink', 'link', 'Remove link');
-    removeLinkButton.addEventListener('click', () => this.execute(this.commands.removeLink));
-    buttons.link = linkButton;
-    buttons.removeLink = removeLinkButton;
-    linkGroup.append(linkButton, removeLinkButton);
-    root.append(linkGroup);
-
-    root.append(
-      this.createColorDropdown('Text color', 'A', this.schema.marks.text_color, (color) => this.commands.textColor(color), this.commands.clearTextColor, colorDropdowns),
-      this.createColorDropdown('Background color', 'ab', this.schema.marks.background_color, (color) => this.commands.backgroundColor(color), this.commands.clearBackgroundColor, colorDropdowns)
-    );
-
-    const imageGroup = document.createElement('div');
-    imageGroup.className = 'btn-group btn-group-sm';
-    imageGroup.setAttribute('role', 'group');
-
-    const imageButton = this.createToolbarButton('image', 'image', 'Upload image');
-    const imageInput = document.createElement('input');
-    imageInput.type = 'file';
-    imageInput.accept = 'image/*';
-    imageInput.hidden = true;
-    imageButton.disabled = !this.uploadUrl;
-    imageButton.addEventListener('click', () => {
-      this.savedSelection = this.view.state.selection.getBookmark();
-      imageInput.click();
-    });
-    imageInput.addEventListener('change', () => {
-      const file = getFirstImageFile(imageInput.files);
-      imageInput.value = '';
-
-      if (file) {
-        void this.uploadAndInsertImage(file);
-      }
-    });
-
-    buttons.image = imageButton;
-    imageGroup.append(imageButton, imageInput);
-    root.append(imageGroup);
-
-    const uploadStatus = document.createElement('div');
-    uploadStatus.className = 'mg-editor-upload-status small text-body-secondary align-self-center';
-    uploadStatus.setAttribute('role', 'status');
-    uploadStatus.setAttribute('aria-live', 'polite');
-    uploadStatus.hidden = true;
-    root.append(uploadStatus);
-
-    const sourceGroup = document.createElement('div');
-    sourceGroup.className = 'btn-group btn-group-sm';
-    sourceGroup.setAttribute('role', 'group');
-    const sourceButton = this.createToolbarButton('htmlSource', 'filetype-html', 'Edit HTML source');
-    sourceButton.addEventListener('click', () => this.openSourceDialog());
-    buttons.htmlSource = sourceButton;
-    sourceGroup.append(sourceButton);
-    root.append(sourceGroup);
-
-    const linkDialog = this.createLinkDialog();
-    const codeDialog = this.createCodeDialog();
-    const sourceDialog = this.createSourceDialog();
-    root.append(linkDialog.root, codeDialog.root, sourceDialog.root);
-
-    return { root, formatSelect, buttons, colorDropdowns, imageInput, uploadStatus, linkDialog, codeDialog, sourceDialog };
-  }
-
   private execute(command: Command): void {
     command(this.view.state, this.view.dispatch, this.view);
     this.view.focus();
     this.updateToolbarState();
-  }
-
-  private createToolbarButton(name: string, icon: string, ariaLabel: string): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'mg-editor-toolbar-button mg-editor-icon-button btn btn-outline-secondary';
-    button.dataset.command = name;
-    button.setAttribute('aria-label', ariaLabel);
-    button.setAttribute('aria-pressed', 'false');
-    button.title = ariaLabel;
-    button.addEventListener('mousedown', (event) => event.preventDefault());
-
-    if (icon) {
-      const iconElement = document.createElement('i');
-      iconElement.className = `bi bi-${icon}`;
-      iconElement.setAttribute('aria-hidden', 'true');
-      button.append(iconElement);
-    }
-
-    return button;
-  }
-
-  private createColorDropdown(
-    label: string,
-    symbol: string,
-    markType: MarkType,
-    commandFactory: (color: string) => Command,
-    clearCommand: Command,
-    colorDropdowns: ColorDropdown[]
-  ): HTMLDivElement {
-    const group = document.createElement('div');
-    group.className = 'mg-editor-color-dropdown btn-group btn-group-sm';
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', label);
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'mg-editor-toolbar-button mg-editor-color-trigger btn btn-outline-secondary';
-    button.dataset.command = markType.name;
-    button.setAttribute('aria-label', label);
-    button.setAttribute('aria-haspopup', 'menu');
-    button.setAttribute('aria-expanded', 'false');
-    button.setAttribute('aria-pressed', 'false');
-    button.title = label;
-
-    const symbolElement = document.createElement('span');
-    symbolElement.className = 'mg-editor-color-symbol';
-    symbolElement.textContent = symbol;
-    symbolElement.setAttribute('aria-hidden', 'true');
-
-    const preview = document.createElement('span');
-    preview.className = 'mg-editor-color-preview';
-    preview.setAttribute('aria-hidden', 'true');
-
-    const caret = document.createElement('i');
-    caret.className = 'bi bi-caret-down-fill mg-editor-color-caret';
-    caret.setAttribute('aria-hidden', 'true');
-
-    button.append(symbolElement, preview, caret);
-
-    const menu = document.createElement('div');
-    menu.className = 'mg-editor-color-menu dropdown-menu show p-2 shadow';
-    menu.hidden = true;
-    menu.setAttribute('role', 'menu');
-    menu.setAttribute('aria-label', `${label} palette`);
-
-    const grid = document.createElement('div');
-    grid.className = 'mg-editor-color-grid';
-    grid.setAttribute('role', 'group');
-    grid.setAttribute('aria-label', `${label} colors`);
-
-    const commands = new Map<string, Command>();
-    const colorButtons = new Map<string, HTMLButtonElement>();
-
-    for (const color of colorPalette) {
-      const command = commandFactory(color.value);
-      commands.set(color.value, command);
-
-      const colorButton = document.createElement('button');
-      colorButton.type = 'button';
-      colorButton.className = 'mg-editor-color-swatch btn';
-      colorButton.dataset.command = `${markType.name}:${color.value}`;
-      colorButton.style.setProperty('--mg-editor-swatch', color.value);
-      colorButton.setAttribute('aria-label', `${label}: ${color.label}`);
-      colorButton.setAttribute('aria-pressed', 'false');
-      colorButton.title = color.label;
-      colorButton.addEventListener('mousedown', (event) => event.preventDefault());
-      colorButton.addEventListener('click', () => {
-        this.executeWithSavedSelection(command);
-        this.closeColorDropdowns();
-      });
-      colorButtons.set(color.value, colorButton);
-      grid.append(colorButton);
-    }
-
-    const saveSelection = () => {
-      this.savedSelection = this.view.state.selection.getBookmark();
-    };
-    button.addEventListener('mousedown', (event) => event.preventDefault());
-    button.addEventListener('pointerdown', saveSelection);
-
-    const clearButton = document.createElement('button');
-    clearButton.type = 'button';
-    clearButton.className = 'mg-editor-color-swatch mg-editor-color-clear btn';
-    clearButton.dataset.command = `${markType.name}:clear`;
-    clearButton.setAttribute('aria-label', `Clear ${label.toLowerCase()}`);
-    clearButton.setAttribute('aria-pressed', 'false');
-    clearButton.title = `Clear ${label.toLowerCase()}`;
-    clearButton.addEventListener('mousedown', (event) => event.preventDefault());
-    clearButton.addEventListener('click', () => {
-      this.executeWithSavedSelection(clearCommand);
-      this.closeColorDropdowns();
-    });
-
-    const noColor = document.createElement('span');
-    noColor.className = 'mg-editor-no-color';
-    noColor.setAttribute('aria-hidden', 'true');
-    clearButton.append(noColor);
-
-    menu.append(grid, clearButton);
-
-    const dropdown = { button, preview, menu, markType, commands, colorButtons, clearButton, clearCommand };
-    button.addEventListener('click', () => this.toggleColorDropdown(dropdown));
-
-    colorDropdowns.push(dropdown);
-    group.append(button, menu);
-
-    return group;
-  }
-
-  private toggleColorDropdown(dropdown: ColorDropdown): void {
-    const shouldOpen = dropdown.menu.hidden;
-    this.closeColorDropdowns(dropdown);
-    dropdown.menu.hidden = !shouldOpen;
-    dropdown.button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-  }
-
-  private closeColorDropdowns(except?: ColorDropdown): void {
-    for (const dropdown of this.toolbar.colorDropdowns) {
-      if (dropdown === except) {
-        continue;
-      }
-
-      dropdown.menu.hidden = true;
-      dropdown.button.setAttribute('aria-expanded', 'false');
-    }
-  }
-
-  private createLinkDialog(): LinkDialogElements {
-    const root = document.createElement('div');
-    root.className = 'mg-editor-dialog dropdown-menu show p-3 shadow';
-    root.hidden = true;
-    root.setAttribute('role', 'dialog');
-    root.setAttribute('aria-modal', 'true');
-    root.setAttribute('aria-label', 'Link');
-
-    const form = document.createElement('form');
-    form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
-
-    const hrefInput = document.createElement('input');
-    hrefInput.type = 'text';
-    hrefInput.className = 'form-control form-control-sm';
-    hrefInput.name = 'href';
-    hrefInput.placeholder = 'https://example.com';
-    hrefInput.setAttribute('aria-label', 'Link URL');
-
-    const titleInput = document.createElement('input');
-    titleInput.type = 'text';
-    titleInput.className = 'form-control form-control-sm';
-    titleInput.name = 'title';
-    titleInput.placeholder = 'Title';
-    titleInput.setAttribute('aria-label', 'Link title');
-
-    const error = document.createElement('div');
-    error.className = 'mg-editor-dialog-error invalid-feedback d-block';
-    error.setAttribute('role', 'alert');
-    error.hidden = true;
-
-    const actions = document.createElement('div');
-    actions.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
-
-    const saveButton = document.createElement('button');
-    saveButton.type = 'submit';
-    saveButton.className = 'btn btn-primary btn-sm';
-    saveButton.textContent = 'Save';
-
-    const removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.className = 'btn btn-outline-danger btn-sm';
-    removeButton.textContent = 'Remove';
-    removeButton.addEventListener('click', () => {
-      this.executeWithSavedSelection(this.commands.removeLink);
-      this.closeLinkDialog(true);
-    });
-
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.className = 'btn btn-outline-secondary btn-sm';
-    cancelButton.textContent = 'Cancel';
-    cancelButton.addEventListener('click', () => this.closeLinkDialog(true));
-
-    actions.append(saveButton, removeButton, cancelButton);
-    form.append(hrefInput, titleInput, error, actions);
-    root.append(form);
-
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const applied = this.executeWithSavedSelection(this.commands.link(hrefInput.value, titleInput.value));
-
-      if (!applied) {
-        error.textContent = 'Enter a safe link URL.';
-        error.hidden = false;
-        hrefInput.focus();
-        return;
-      }
-
-      this.closeLinkDialog(false);
-    });
-
-    return { root, form, hrefInput, titleInput, error, removeButton, cancelButton };
-  }
-
-  private createCodeDialog(): CodeDialogElements {
-    const root = document.createElement('div');
-    root.className = 'mg-editor-dialog dropdown-menu show p-3 shadow';
-    root.hidden = true;
-    root.setAttribute('role', 'dialog');
-    root.setAttribute('aria-modal', 'true');
-    root.setAttribute('aria-label', 'Code snippet');
-
-    const form = document.createElement('form');
-    form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
-
-    const languageSelect = document.createElement('select');
-    languageSelect.className = 'form-select form-select-sm';
-    languageSelect.name = 'language';
-    languageSelect.setAttribute('aria-label', 'Code language');
-
-    for (const language of codeLanguages) {
-      const option = document.createElement('option');
-      option.value = language.value;
-      option.textContent = language.label;
-      languageSelect.append(option);
-    }
-
-    const actions = document.createElement('div');
-    actions.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
-
-    const applyButton = document.createElement('button');
-    applyButton.type = 'submit';
-    applyButton.className = 'btn btn-primary btn-sm';
-    applyButton.textContent = 'Apply';
-
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.className = 'btn btn-outline-secondary btn-sm';
-    cancelButton.textContent = 'Cancel';
-    cancelButton.addEventListener('click', () => this.closeCodeDialog(true));
-
-    actions.append(applyButton, cancelButton);
-    form.append(languageSelect, actions);
-    root.append(form);
-
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      this.executeWithSavedSelection(this.commands.codeBlock(languageSelect.value));
-      this.closeCodeDialog(false);
-    });
-
-    return { root, form, languageSelect, cancelButton };
-  }
-
-  private createSourceDialog(): SourceDialogElements {
-    const root = document.createElement('div');
-    root.className = 'mg-editor-dialog mg-editor-source-dialog dropdown-menu show p-3 shadow';
-    root.hidden = true;
-    root.setAttribute('role', 'dialog');
-    root.setAttribute('aria-modal', 'true');
-    root.setAttribute('aria-label', 'HTML source');
-
-    const form = document.createElement('form');
-    form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
-
-    const sourceTextarea = document.createElement('textarea');
-    sourceTextarea.className = 'mg-editor-source-textarea form-control form-control-sm';
-    sourceTextarea.name = 'source';
-    sourceTextarea.spellcheck = false;
-    sourceTextarea.setAttribute('aria-label', 'HTML source');
-
-    const actions = document.createElement('div');
-    actions.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
-
-    const saveButton = document.createElement('button');
-    saveButton.type = 'submit';
-    saveButton.className = 'btn btn-primary btn-sm';
-    saveButton.textContent = 'Save';
-
-    const cancelButton = document.createElement('button');
-    cancelButton.type = 'button';
-    cancelButton.className = 'btn btn-outline-secondary btn-sm';
-    cancelButton.textContent = 'Cancel';
-    cancelButton.addEventListener('click', () => this.closeSourceDialog(true));
-
-    actions.append(saveButton, cancelButton);
-    form.append(sourceTextarea, actions);
-    root.append(form);
-
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      this.setHTML(sourceTextarea.value);
-      this.closeSourceDialog(false);
-    });
-
-    return { root, form, sourceTextarea, cancelButton };
   }
 
   private openLinkDialog(): void {
@@ -916,8 +412,4 @@ function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boo
   button.classList.toggle('active', active);
   button.setAttribute('aria-pressed', active ? 'true' : 'false');
   button.disabled = !enabled;
-}
-
-function getFirstImageFile(files: FileList | null | undefined): File | null {
-  return Array.from(files ?? []).find((file) => file.type.startsWith('image/')) ?? null;
 }
