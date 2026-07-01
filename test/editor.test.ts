@@ -346,6 +346,53 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('uploads and inserts an image using a custom uploader', async () => {
+    const file = new File(['fake-image'], 'custom.jpg', { type: 'image/jpeg' });
+    const uploadImage = vi.fn(async (uploadedFile: File) => {
+      expect(uploadedFile).toBe(file);
+      return {
+        src: '/media/custom.jpg',
+        alt: 'Custom alt',
+        title: 'Custom title'
+      };
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage
+    });
+
+    const imageButton = host.querySelector('[data-command="image"]') as HTMLButtonElement;
+    expect(imageButton.disabled).toBe(false);
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    imageButton.click();
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForExpectation(() => {
+      expect(uploadImage).toHaveBeenCalledWith(file);
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/custom.jpg" alt="Custom alt" title="Custom title" loading="lazy"></p>');
+
+    editor.destroy();
+  });
+
   it('shows an upload error when the image response is unsafe', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ location: 'javascript:alert(1)' }), {
       status: 200,

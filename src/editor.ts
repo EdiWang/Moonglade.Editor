@@ -20,6 +20,7 @@ import {
   isMarkActive
 } from './editor-state';
 import { parseHtml, serializeHtml } from './html';
+import { createImageUploader, type MoongladeImageUploader } from './image-upload';
 import { moongladeSchema } from './schema';
 import { closeColorDropdowns, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
 
@@ -29,6 +30,7 @@ export interface MoongladeEditorOptions {
   content?: string;
   schema?: Schema;
   uploadUrl?: string;
+  uploadImage?: MoongladeImageUploader;
   onChange?: (html: string) => void;
 }
 
@@ -39,6 +41,7 @@ export class MoongladeEditor {
 
   private readonly textarea?: HTMLTextAreaElement;
   private readonly onChange?: (html: string) => void;
+  private readonly uploadImage?: MoongladeImageUploader;
   private readonly toolbar: ToolbarElements;
   private readonly closeColorDropdownsOnDocumentPointerDown = (event: PointerEvent): void => {
     const target = event.target;
@@ -56,6 +59,7 @@ export class MoongladeEditor {
     this.commands = createCommands(this.schema);
     this.textarea = options.textarea;
     this.uploadUrl = options.uploadUrl;
+    this.uploadImage = createImageUploader(options);
     this.onChange = options.onChange;
 
     const initialContent = options.content ?? options.textarea?.value ?? '';
@@ -69,7 +73,7 @@ export class MoongladeEditor {
     this.toolbar = createToolbar({
       schema: this.schema,
       commands: this.commands,
-      uploadConfigured: Boolean(this.uploadUrl),
+      uploadConfigured: Boolean(this.uploadImage),
       actions: {
         execute: (command) => this.execute(command),
         executeWithSavedSelection: (command) => this.executeWithSavedSelection(command),
@@ -177,7 +181,7 @@ export class MoongladeEditor {
   private handleImagePaste(event: ClipboardEvent): boolean {
     const file = getFirstImageFile(event.clipboardData?.files);
 
-    if (!file || !this.uploadUrl) {
+    if (!file || !this.uploadImage) {
       return false;
     }
 
@@ -190,7 +194,7 @@ export class MoongladeEditor {
   private handleImageDrop(view: EditorView, event: DragEvent): boolean {
     const file = getFirstImageFile(event.dataTransfer?.files);
 
-    if (!file || !this.uploadUrl) {
+    if (!file || !this.uploadImage) {
       return false;
     }
 
@@ -206,7 +210,7 @@ export class MoongladeEditor {
   }
 
   private async uploadAndInsertImage(file: File): Promise<boolean> {
-    if (!this.uploadUrl) {
+    if (!this.uploadImage) {
       this.setUploadStatus('Image upload is not configured.', true);
       return false;
     }
@@ -214,26 +218,8 @@ export class MoongladeEditor {
     this.setUploadStatus('Uploading image...');
 
     try {
-      const formData = new FormData();
-      formData.append('file', file, file.name);
-
-      const response = await fetch(this.uploadUrl, {
-        method: 'POST',
-        body: formData,
-        credentials: 'same-origin',
-        headers: {
-          Accept: 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Image upload failed with status ${response.status}.`);
-      }
-
-      const result = await response.json() as { location?: unknown; filename?: unknown };
-      const location = typeof result.location === 'string' ? result.location : '';
-      const filename = typeof result.filename === 'string' ? result.filename : file.name;
-      const inserted = this.executeWithSavedSelection(this.commands.insertImage(location, filename));
+      const result = await this.uploadImage(file);
+      const inserted = this.executeWithSavedSelection(this.commands.insertImage(result.src, result.alt, result.title));
 
       if (!inserted) {
         throw new Error('The uploaded image response did not include a safe image URL.');
@@ -399,7 +385,7 @@ export class MoongladeEditor {
 
     buttons.undo.disabled = !canRun(state, this.view, this.commands.undo);
     buttons.redo.disabled = !canRun(state, this.view, this.commands.redo);
-    buttons.image.disabled = !this.uploadUrl;
+    buttons.image.disabled = !this.uploadImage;
     buttons.htmlSource.disabled = false;
   }
 }

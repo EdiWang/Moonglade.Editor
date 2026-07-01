@@ -55,6 +55,21 @@ const editor = createMoongladeEditor({
 editor.syncToTextarea();
 ```
 
+For custom image upload flows, pass `uploadImage` instead of `uploadUrl`:
+
+```ts
+const editor = createMoongladeEditor({
+  element: document.querySelector('#editor')!,
+  uploadImage: async (file) => {
+    const result = await uploadPostImage(file);
+    return {
+      src: result.url,
+      alt: result.altText
+    };
+  }
+});
+```
+
 ## Consuming From Moonglade
 
 Moonglade should consume prebuilt files from this repository and should not add a frontend build step.
