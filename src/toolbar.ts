@@ -134,12 +134,12 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
   const formatGroup = document.createElement('div');
   formatGroup.className = 'mg-editor-format-group input-group input-group-sm';
   formatGroup.append(formatSelect);
-  root.append(formatGroup);
 
   addGroup(
     ['undo', 'arrow-counterclockwise', 'Undo', commands.undo],
     ['redo', 'arrow-clockwise', 'Redo', commands.redo]
   );
+  root.append(formatGroup);
   addGroup(
     ['bold', 'type-bold', 'Bold', commands.bold],
     ['italic', 'type-italic', 'Italic', commands.italic],
@@ -158,15 +158,40 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
     ['alignJustify', 'justify', 'Justify text', commands.alignment('justify')]
   );
 
-  const codeGroup = document.createElement('div');
-  codeGroup.className = 'btn-group btn-group-sm';
-  codeGroup.setAttribute('role', 'group');
+  const insertGroup = document.createElement('div');
+  insertGroup.className = 'btn-group btn-group-sm';
+  insertGroup.setAttribute('role', 'group');
+
+  const imageButton = createToolbarButton('image', 'image', 'Upload image');
+  const imageInput = document.createElement('input');
+  imageInput.type = 'file';
+  imageInput.accept = 'image/*';
+  imageInput.hidden = true;
+  imageButton.disabled = !uploadConfigured;
+  imageButton.addEventListener('click', () => {
+    actions.saveSelection();
+    imageInput.click();
+  });
+  imageInput.addEventListener('change', () => {
+    const file = getFirstImageFile(imageInput.files);
+    imageInput.value = '';
+
+    if (file) {
+      actions.uploadFile(file);
+    }
+  });
+  buttons.image = imageButton;
+
+  const linkButton = createToolbarButton('link', 'link-45deg', 'Add or edit link');
+  linkButton.addEventListener('click', () => actions.openLinkDialog());
+  buttons.link = linkButton;
 
   const codeButton = createToolbarButton('codeBlock', 'code-slash', 'Code snippet');
   codeButton.addEventListener('click', () => actions.openCodeDialog());
   buttons.codeBlock = codeButton;
-  codeGroup.append(codeButton);
-  root.append(codeGroup);
+
+  insertGroup.append(imageButton, imageInput, linkButton, codeButton);
+  root.append(insertGroup);
 
   addGroup(
     ['insertTable', 'table', 'Insert table', commands.insertTable()],
@@ -177,16 +202,6 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
     ['toggleTableHeaderRow', 'layout-three-columns', 'Toggle table header row', commands.toggleTableHeaderRow],
     ['deleteTable', 'trash', 'Delete table', commands.deleteTable]
   );
-
-  const linkGroup = document.createElement('div');
-  linkGroup.className = 'btn-group btn-group-sm';
-  linkGroup.setAttribute('role', 'group');
-
-  const linkButton = createToolbarButton('link', 'link-45deg', 'Add or edit link');
-  linkButton.addEventListener('click', () => actions.openLinkDialog());
-  buttons.link = linkButton;
-  linkGroup.append(linkButton);
-  root.append(linkGroup);
 
   const colorGroup = document.createElement('div');
   colorGroup.className = 'mg-editor-color-group btn-group btn-group-sm';
@@ -217,33 +232,6 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
     })
   );
   root.append(colorGroup);
-
-  const imageGroup = document.createElement('div');
-  imageGroup.className = 'btn-group btn-group-sm';
-  imageGroup.setAttribute('role', 'group');
-
-  const imageButton = createToolbarButton('image', 'image', 'Upload image');
-  const imageInput = document.createElement('input');
-  imageInput.type = 'file';
-  imageInput.accept = 'image/*';
-  imageInput.hidden = true;
-  imageButton.disabled = !uploadConfigured;
-  imageButton.addEventListener('click', () => {
-    actions.saveSelection();
-    imageInput.click();
-  });
-  imageInput.addEventListener('change', () => {
-    const file = getFirstImageFile(imageInput.files);
-    imageInput.value = '';
-
-    if (file) {
-      actions.uploadFile(file);
-    }
-  });
-
-  buttons.image = imageButton;
-  imageGroup.append(imageButton, imageInput);
-  root.append(imageGroup);
 
   const uploadStatus = document.createElement('div');
   uploadStatus.className = 'mg-editor-upload-status small text-body-secondary align-self-center';

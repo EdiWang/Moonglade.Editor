@@ -56,6 +56,16 @@ describe('editor toolbar', () => {
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();
 
+    const toolbar = host.querySelector('[role="toolbar"]') as HTMLElement;
+    expect(toolbar.children[0].querySelector('[data-command="undo"]')).not.toBeNull();
+    expect(toolbar.children[0].querySelector('[data-command="redo"]')).not.toBeNull();
+    expect(toolbar.children[1].querySelector('.mg-editor-format')).not.toBeNull();
+
+    const alignGroup = host.querySelector('[data-command="alignJustify"]')?.closest('.btn-group') as HTMLElement;
+    const insertCommands = Array.from(alignGroup.nextElementSibling?.querySelectorAll('button[data-command]') ?? [])
+      .map((button) => button.getAttribute('data-command'));
+    expect(insertCommands).toEqual(['image', 'link', 'codeBlock']);
+
     editor.destroy();
   });
 
