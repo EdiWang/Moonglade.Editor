@@ -282,6 +282,8 @@ describe('editor toolbar', () => {
     const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
 
     expect(dialog.hidden).toBe(false);
+    expect(dialog.classList.contains('dropdown-menu')).toBe(false);
+    expect(dialog.querySelector('.mg-editor-source-panel')).not.toBeNull();
 
     sourceTextarea.value = '<p onclick="alert(1)">Clean <a href="javascript:alert(1)">link</a></p>';
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));

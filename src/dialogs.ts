@@ -160,14 +160,18 @@ export function createCodeDialog(commands: MoongladeEditorCommands, actions: Edi
 
 export function createSourceDialog(actions: EditorDialogActions): SourceDialogElements {
   const root = document.createElement('div');
-  root.className = 'mg-editor-dialog mg-editor-source-dialog dropdown-menu show p-3 shadow';
+  root.className = 'mg-editor-source-dialog p-3';
   root.hidden = true;
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-modal', 'true');
   root.setAttribute('aria-label', 'HTML source');
 
   const form = document.createElement('form');
-  form.className = 'mg-editor-dialog-panel d-flex flex-column gap-2';
+  form.className = 'mg-editor-source-panel d-flex flex-column gap-3 p-3';
+
+  const title = document.createElement('h2');
+  title.className = 'h6 mb-0';
+  title.textContent = 'HTML source';
 
   const sourceTextarea = document.createElement('textarea');
   sourceTextarea.className = 'mg-editor-source-textarea form-control form-control-sm';
@@ -190,7 +194,7 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   cancelButton.addEventListener('click', () => actions.closeSourceDialog(true));
 
   actionsElement.append(saveButton, cancelButton);
-  form.append(sourceTextarea, actionsElement);
+  form.append(title, sourceTextarea, actionsElement);
   root.append(form);
 
   form.addEventListener('submit', (event) => {

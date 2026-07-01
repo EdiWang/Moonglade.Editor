@@ -144,14 +144,34 @@
   z-index: 1000;
 }
 
+.mg-editor-source-dialog[hidden] {
+  display: none !important;
+}
+
 .mg-editor-source-dialog {
-  max-width: min(42rem, calc(100% - 1rem));
-  width: min(42rem, calc(100% - 1rem));
+  align-items: center;
+  background: rgba(33, 37, 41, .35);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 1055;
+}
+
+.mg-editor-source-panel {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: .375rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  width: min(72rem, calc(100vw - 2rem));
 }
 
 .mg-editor-source-textarea {
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  min-height: 14rem;
+  height: clamp(16rem, 55vh, 34rem);
+  min-height: 0;
   resize: vertical;
 }
 
