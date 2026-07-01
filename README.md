@@ -18,6 +18,7 @@ This repository keeps editor source code, dependencies, tests, and build tooling
 npm install
 npm test
 npm run build
+npm run size
 ```
 
 For Codex continuation, read:
@@ -40,6 +41,8 @@ The build emits:
 - `dist/moonglade-editor.global.js` - bundled browser global entry.
 - `dist/moonglade-editor.css` - editor styles.
 - `dist/*.d.ts` - TypeScript declarations.
+
+`npm run build` also checks bundle size budgets for the generated JavaScript and CSS files.
 
 ## Main API
 
@@ -80,9 +83,13 @@ HTML source mode and imported HTML are constrained before entering the editor sc
 
 Moonglade should consume prebuilt files from this repository and should not add a frontend build step.
 
+The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `bi-*` icon classes. The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets.
+
 Static asset option:
 
 ```html
+<link rel="stylesheet" href="/lib/bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="/lib/bootstrap-icons/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="/lib/moonglade-editor/moonglade-editor.css">
 <script src="/lib/moonglade-editor/moonglade-editor.global.js"></script>
 <script>
