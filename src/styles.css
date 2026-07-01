@@ -1,5 +1,5 @@
 .mg-editor {
-  min-height: 320px;
+  min-height: 0;
 }
 
 .mg-editor-toolbar {
@@ -176,12 +176,13 @@
 }
 
 .mg-editor-body {
-  min-height: 260px;
+  min-height: 0;
+  overflow: auto;
 }
 
 .mg-editor .ProseMirror {
   flex: 1;
-  min-height: 260px;
+  min-height: 100%;
   padding: 1rem;
   outline: none;
   color: var(--bs-body-color, #212529);

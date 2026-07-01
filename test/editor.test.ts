@@ -27,6 +27,31 @@ async function waitForExpectation(assertion: () => void): Promise<void> {
 }
 
 describe('editor toolbar', () => {
+  it('uses a 500px editor height by default', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    expect(host.style.height).toBe('500px');
+
+    editor.destroy();
+  });
+
+  it('honors custom CSS editor height values', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      height: 'calc(100vh - 12rem)'
+    });
+
+    expect(host.style.height).toBe('calc(100vh - 12rem)');
+
+    editor.destroy();
+  });
+
   it('enables spellcheck by default and can toggle it after initialization', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({

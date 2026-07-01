@@ -101,6 +101,7 @@ Keep the main API centered on:
 const editor = createMoongladeEditor({
   element,
   textarea,
+  height: '500px',
   uploadUrl: '/image',
   spellcheck: true,
   content,
@@ -116,6 +117,8 @@ editor.destroy();
 ```
 
 `uploadImage` can replace `uploadUrl` for custom upload behavior. Uploaded images must return a safe URL through `{ src, alt?, title? }`.
+
+`height` defaults to `500px` and should accept ordinary CSS height values such as `px`, `vh`, and `calc(...)` strings.
 
 Do not require Moonglade to understand ProseMirror JSON as the storage format unless the main project explicitly decides to change its content model.
 

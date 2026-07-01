@@ -24,10 +24,13 @@ import { createImageUploader, type MoongladeImageUploader } from './image-upload
 import { moongladeSchema } from './schema';
 import { closeColorDropdowns, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
 
+const DEFAULT_EDITOR_HEIGHT = '500px';
+
 export interface MoongladeEditorOptions {
   element: HTMLElement;
   textarea?: HTMLTextAreaElement;
   content?: string;
+  height?: string;
   schema?: Schema;
   spellcheck?: boolean;
   uploadUrl?: string;
@@ -71,6 +74,7 @@ export class MoongladeEditor {
     editorHost.className = 'mg-editor-body card-body d-flex flex-grow-1 p-0';
 
     options.element.classList.add('mg-editor', 'card', 'd-flex', 'flex-column', 'overflow-hidden');
+    options.element.style.height = options.height ?? DEFAULT_EDITOR_HEIGHT;
     options.element.replaceChildren();
 
     this.toolbar = createToolbar({

@@ -81,6 +81,7 @@ import { createMoongladeEditor } from '@moonglade/editor';
 const editor = createMoongladeEditor({
   element: document.querySelector('#editor')!,
   textarea: document.querySelector('#content')!,
+  height: '500px',
   spellcheck: true,
   uploadUrl: '/image'
 });
@@ -110,6 +111,8 @@ HTML source mode and imported HTML are constrained before entering the editor sc
 - Images allow `http`, `https`, and relative/root URLs.
 - Text colors allow hex, `rgb(...)`, and `rgba(...)` values.
 
+The editor height defaults to `500px`. Hosts can pass any CSS height value through `height`, such as `640px`, `60vh`, or `calc(100vh - 12rem)`.
+
 ## Consuming From Moonglade
 
 Moonglade should consume prebuilt files from this repository and should not add a frontend build step.
@@ -127,6 +130,7 @@ Static asset option:
   const editor = MoongladeEditor.createMoongladeEditor({
     element: document.querySelector('#editor'),
     textarea: document.querySelector('#post-content'),
+    height: '500px',
     spellcheck: true,
     uploadUrl: '/image'
   });
