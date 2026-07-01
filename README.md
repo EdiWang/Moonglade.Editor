@@ -70,6 +70,12 @@ const editor = createMoongladeEditor({
 });
 ```
 
+HTML source mode and imported HTML are constrained before entering the editor schema:
+
+- Links allow `http`, `https`, `mailto`, `tel`, and relative/root/fragment URLs.
+- Images allow `http`, `https`, and relative/root URLs.
+- Text colors allow hex, `rgb(...)`, and `rgba(...)` values.
+
 ## Consuming From Moonglade
 
 Moonglade should consume prebuilt files from this repository and should not add a frontend build step.

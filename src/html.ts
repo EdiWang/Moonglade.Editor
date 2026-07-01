@@ -1,5 +1,5 @@
 import { DOMParser as ProseMirrorDOMParser, DOMSerializer, type Node as ProseMirrorNode, type Schema } from 'prosemirror-model';
-import { isSafeUrl } from './safety';
+import { sanitizeImageUrl, sanitizeLinkUrl } from './safety';
 
 function removeUnsafeAttributes(root: HTMLElement): void {
   for (const element of Array.from(root.querySelectorAll('*'))) {
@@ -12,8 +12,25 @@ function removeUnsafeAttributes(root: HTMLElement): void {
         continue;
       }
 
-      if ((name === 'href' || name === 'src') && !isSafeUrl(value)) {
-        element.removeAttribute(attribute.name);
+      if (name === 'href') {
+        const safeHref = sanitizeLinkUrl(value);
+        if (!safeHref) {
+          element.removeAttribute(attribute.name);
+          continue;
+        }
+
+        element.setAttribute(attribute.name, safeHref);
+        continue;
+      }
+
+      if (name === 'src') {
+        const safeSrc = sanitizeImageUrl(value);
+        if (!safeSrc) {
+          element.removeAttribute(attribute.name);
+          continue;
+        }
+
+        element.setAttribute(attribute.name, safeSrc);
       }
     }
   }

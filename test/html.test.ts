@@ -34,15 +34,27 @@ describe('html parsing and serialization', () => {
   });
 
   it('strips unsafe link protocols', () => {
-    const html = '<p><a href="javascript:alert(1)">bad link</a></p>';
+    const html = '<p><a href="javascript:alert(1)">bad link</a> <a href="ftp://example.com/file.txt">ftp</a></p>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad link</p>');
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad link ftp</p>');
+  });
+
+  it('preserves allow-listed link protocols and relative links', () => {
+    const html = '<p><a href="mailto:hello@example.com">Email</a> <a href="/posts/hello-world">Post</a> <a href="#comments">Comments</a></p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p><a href="mailto:hello@example.com">Email</a> <a href="/posts/hello-world">Post</a> <a href="#comments">Comments</a></p>');
+  });
+
+  it('normalizes safe URL attributes before parsing', () => {
+    const html = '<p><a href=" https://example.com/post ">Post</a><img src=" /media/photo.jpg " alt="Photo"></p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p><a href="https://example.com/post">Post</a><img src="/media/photo.jpg" alt="Photo" loading="lazy"></p>');
   });
 
   it('drops unsafe color styles', () => {
-    const html = '<p><span style="color: url(javascript:alert(1));">bad color</span></p>';
+    const html = '<p><span style="color: url(javascript:alert(1));">bad color</span> <span style="color: transparent;">named color</span></p>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad color</p>');
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>bad color named color</p>');
   });
 
   it('drops unsupported text alignment values', () => {
@@ -61,6 +73,8 @@ describe('html parsing and serialization', () => {
     expect(roundTripHtml(moongladeSchema, '<p><img src="/media/photo.jpg" alt="Photo"></p>'))
       .toBe('<p><img src="/media/photo.jpg" alt="Photo" loading="lazy"></p>');
     expect(roundTripHtml(moongladeSchema, '<p><img src="javascript:alert(1)" alt="Bad"></p>'))
+      .toBe('<p></p>');
+    expect(roundTripHtml(moongladeSchema, '<p><img src="mailto:hello@example.com" alt="Bad"></p>'))
       .toBe('<p></p>');
   });
 });

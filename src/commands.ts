@@ -13,7 +13,7 @@ import {
   toggleHeaderRow
 } from 'prosemirror-tables';
 import { TextSelection } from 'prosemirror-state';
-import { sanitizeCodeLanguage, sanitizeStyleValue, sanitizeTextAlign, sanitizeUrl, type TextAlignment } from './safety';
+import { sanitizeCodeLanguage, sanitizeImageUrl, sanitizeLinkUrl, sanitizeStyleValue, sanitizeTextAlign, type TextAlignment } from './safety';
 
 export function createCommands(schema: Schema) {
   return {
@@ -82,7 +82,7 @@ function hasAncestor(state: EditorState, nodeType: NodeType): boolean {
 }
 
 function setLink(markType: MarkType, href: string, title?: string): Command {
-  const safeHref = sanitizeUrl(href);
+  const safeHref = sanitizeLinkUrl(href);
   if (!safeHref) {
     return () => false;
   }
@@ -162,7 +162,7 @@ function setTextAlignment(schema: Schema, align: TextAlignment): Command {
 }
 
 function insertImage(schema: Schema, src: string, alt?: string, title?: string): Command {
-  const safeSrc = sanitizeUrl(src);
+  const safeSrc = sanitizeImageUrl(src);
   if (!safeSrc) {
     return () => false;
   }

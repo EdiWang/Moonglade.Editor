@@ -40,6 +40,17 @@ describe('editor commands', () => {
     expect(getHtml(nextState)).toBe('<p><a href="https://new.example" title="New">Hello</a> world</p>');
   });
 
+  it('allows mail links but rejects unsupported link protocols', () => {
+    const state = setSelection(createState('<p>Hello</p>'), 1, 6);
+    const linked = runCommand(state, commands.link('mailto:hello@example.com'));
+    const ftp = runCommand(state, commands.link('ftp://example.com/file.txt'));
+
+    expect(linked.result).toBe(true);
+    expect(getHtml(linked.state)).toBe('<p><a href="mailto:hello@example.com">Hello</a></p>');
+    expect(ftp.result).toBe(false);
+    expect(getHtml(ftp.state)).toBe('<p>Hello</p>');
+  });
+
   it('removes the full active link range when the cursor is inside a link', () => {
     const state = setSelection(createState('<p><a href="https://example.com">Hello</a> world</p>'), 3);
     const { result, state: nextState } = runCommand(state, commands.removeLink);
@@ -81,5 +92,13 @@ describe('editor commands', () => {
     expect(result).toBe(true);
     expect(html.match(/<tr>/g)).toHaveLength(12);
     expect(html.match(/<td>/g)).toHaveLength(96);
+  });
+
+  it('rejects unsupported image protocols', () => {
+    const state = setSelection(createState('<p>Hello</p>'), 1, 6);
+    const { result, state: nextState } = runCommand(state, commands.insertImage('mailto:hello@example.com', 'Bad'));
+
+    expect(result).toBe(false);
+    expect(getHtml(nextState)).toBe('<p>Hello</p>');
   });
 });
