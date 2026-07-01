@@ -23,7 +23,7 @@ interface ToolbarElements {
   root: HTMLDivElement;
   formatSelect: HTMLSelectElement;
   buttons: Record<string, HTMLButtonElement>;
-  colorButtons: ColorButton[];
+  colorDropdowns: ColorDropdown[];
   imageInput: HTMLInputElement;
   uploadStatus: HTMLDivElement;
   linkDialog: LinkDialogElements;
@@ -31,11 +31,15 @@ interface ToolbarElements {
   sourceDialog: SourceDialogElements;
 }
 
-interface ColorButton {
+interface ColorDropdown {
   button: HTMLButtonElement;
+  preview: HTMLSpanElement;
+  menu: HTMLDivElement;
   markType: MarkType;
-  color: string;
-  command: Command;
+  commands: Map<string, Command>;
+  colorButtons: Map<string, HTMLButtonElement>;
+  clearButton: HTMLButtonElement;
+  clearCommand: Command;
 }
 
 interface LinkDialogElements {
@@ -70,6 +74,14 @@ export class MoongladeEditor {
   private readonly textarea?: HTMLTextAreaElement;
   private readonly onChange?: (html: string) => void;
   private readonly toolbar: ToolbarElements;
+  private readonly closeColorDropdownsOnDocumentPointerDown = (event: PointerEvent): void => {
+    const target = event.target;
+    if (target instanceof Node && this.toolbar.root.contains(target)) {
+      return;
+    }
+
+    this.closeColorDropdowns();
+  };
   private savedSelection?: SelectionBookmark;
   private view: EditorView;
 
@@ -89,6 +101,7 @@ export class MoongladeEditor {
     options.element.replaceChildren();
 
     this.toolbar = this.createToolbar();
+    document.addEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     options.element.append(this.toolbar.root, editorHost);
 
     this.view = new EditorView(editorHost, {
@@ -160,6 +173,7 @@ export class MoongladeEditor {
   }
 
   destroy(): void {
+    document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     this.view.destroy();
   }
 
@@ -315,7 +329,7 @@ export class MoongladeEditor {
 
       root.append(group);
     };
-    const colorButtons: ColorButton[] = [];
+    const colorDropdowns: ColorDropdown[] = [];
 
     const formatGroup = document.createElement('div');
     formatGroup.className = 'mg-editor-format-group input-group input-group-sm';
@@ -384,8 +398,8 @@ export class MoongladeEditor {
     root.append(linkGroup);
 
     root.append(
-      this.createColorGroup('Text color', this.schema.marks.text_color, (color) => this.commands.textColor(color), this.commands.clearTextColor, colorButtons),
-      this.createColorGroup('Background color', this.schema.marks.background_color, (color) => this.commands.backgroundColor(color), this.commands.clearBackgroundColor, colorButtons)
+      this.createColorDropdown('Text color', 'A', this.schema.marks.text_color, (color) => this.commands.textColor(color), this.commands.clearTextColor, colorDropdowns),
+      this.createColorDropdown('Background color', 'ab', this.schema.marks.background_color, (color) => this.commands.backgroundColor(color), this.commands.clearBackgroundColor, colorDropdowns)
     );
 
     const imageGroup = document.createElement('div');
@@ -436,7 +450,7 @@ export class MoongladeEditor {
     const sourceDialog = this.createSourceDialog();
     root.append(linkDialog.root, codeDialog.root, sourceDialog.root);
 
-    return { root, formatSelect, buttons, colorButtons, imageInput, uploadStatus, linkDialog, codeDialog, sourceDialog };
+    return { root, formatSelect, buttons, colorDropdowns, imageInput, uploadStatus, linkDialog, codeDialog, sourceDialog };
   }
 
   private execute(command: Command): void {
@@ -465,33 +479,130 @@ export class MoongladeEditor {
     return button;
   }
 
-  private createColorGroup(
+  private createColorDropdown(
     label: string,
+    symbol: string,
     markType: MarkType,
     commandFactory: (color: string) => Command,
     clearCommand: Command,
-    colorButtons: ColorButton[]
+    colorDropdowns: ColorDropdown[]
   ): HTMLDivElement {
     const group = document.createElement('div');
-    group.className = 'mg-editor-color-group btn-group btn-group-sm';
+    group.className = 'mg-editor-color-dropdown btn-group btn-group-sm';
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', label);
 
-    const clearButton = this.createToolbarButton(`${markType.name}:clear`, 'eraser', `Clear ${label.toLowerCase()}`);
-    clearButton.addEventListener('click', () => this.execute(clearCommand));
-    group.append(clearButton);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mg-editor-toolbar-button mg-editor-color-trigger btn btn-outline-secondary';
+    button.dataset.command = markType.name;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('aria-haspopup', 'menu');
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-pressed', 'false');
+    button.title = label;
+
+    const symbolElement = document.createElement('span');
+    symbolElement.className = 'mg-editor-color-symbol';
+    symbolElement.textContent = symbol;
+    symbolElement.setAttribute('aria-hidden', 'true');
+
+    const preview = document.createElement('span');
+    preview.className = 'mg-editor-color-preview';
+    preview.setAttribute('aria-hidden', 'true');
+
+    const caret = document.createElement('i');
+    caret.className = 'bi bi-caret-down-fill mg-editor-color-caret';
+    caret.setAttribute('aria-hidden', 'true');
+
+    button.append(symbolElement, preview, caret);
+
+    const menu = document.createElement('div');
+    menu.className = 'mg-editor-color-menu dropdown-menu show p-2 shadow';
+    menu.hidden = true;
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', `${label} palette`);
+
+    const grid = document.createElement('div');
+    grid.className = 'mg-editor-color-grid';
+    grid.setAttribute('role', 'group');
+    grid.setAttribute('aria-label', `${label} colors`);
+
+    const commands = new Map<string, Command>();
+    const colorButtons = new Map<string, HTMLButtonElement>();
 
     for (const color of colorPalette) {
-      const button = this.createToolbarButton(`${markType.name}:${color.value}`, '', `${label}: ${color.label}`);
-      button.classList.add('mg-editor-color-button');
-      button.style.setProperty('--mg-editor-swatch', color.value);
       const command = commandFactory(color.value);
-      button.addEventListener('click', () => this.execute(command));
-      colorButtons.push({ button, markType, color: color.value, command });
-      group.append(button);
+      commands.set(color.value, command);
+
+      const colorButton = document.createElement('button');
+      colorButton.type = 'button';
+      colorButton.className = 'mg-editor-color-swatch btn';
+      colorButton.dataset.command = `${markType.name}:${color.value}`;
+      colorButton.style.setProperty('--mg-editor-swatch', color.value);
+      colorButton.setAttribute('aria-label', `${label}: ${color.label}`);
+      colorButton.setAttribute('aria-pressed', 'false');
+      colorButton.title = color.label;
+      colorButton.addEventListener('mousedown', (event) => event.preventDefault());
+      colorButton.addEventListener('click', () => {
+        this.executeWithSavedSelection(command);
+        this.closeColorDropdowns();
+      });
+      colorButtons.set(color.value, colorButton);
+      grid.append(colorButton);
     }
 
+    const saveSelection = () => {
+      this.savedSelection = this.view.state.selection.getBookmark();
+    };
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    button.addEventListener('pointerdown', saveSelection);
+
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.className = 'mg-editor-color-swatch mg-editor-color-clear btn';
+    clearButton.dataset.command = `${markType.name}:clear`;
+    clearButton.setAttribute('aria-label', `Clear ${label.toLowerCase()}`);
+    clearButton.setAttribute('aria-pressed', 'false');
+    clearButton.title = `Clear ${label.toLowerCase()}`;
+    clearButton.addEventListener('mousedown', (event) => event.preventDefault());
+    clearButton.addEventListener('click', () => {
+      this.executeWithSavedSelection(clearCommand);
+      this.closeColorDropdowns();
+    });
+
+    const noColor = document.createElement('span');
+    noColor.className = 'mg-editor-no-color';
+    noColor.setAttribute('aria-hidden', 'true');
+    clearButton.append(noColor);
+
+    menu.append(grid, clearButton);
+
+    const dropdown = { button, preview, menu, markType, commands, colorButtons, clearButton, clearCommand };
+    button.addEventListener('click', () => this.toggleColorDropdown(dropdown));
+
+    colorDropdowns.push(dropdown);
+    group.append(button, menu);
+
     return group;
+  }
+
+  private toggleColorDropdown(dropdown: ColorDropdown): void {
+    const shouldOpen = dropdown.menu.hidden;
+    this.closeColorDropdowns(dropdown);
+    dropdown.menu.hidden = !shouldOpen;
+    dropdown.button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+
+  private closeColorDropdowns(except?: ColorDropdown): void {
+    for (const dropdown of this.toolbar.colorDropdowns) {
+      if (dropdown === except) {
+        continue;
+      }
+
+      dropdown.menu.hidden = true;
+      dropdown.button.setAttribute('aria-expanded', 'false');
+    }
   }
 
   private createLinkDialog(): LinkDialogElements {
@@ -747,7 +858,7 @@ export class MoongladeEditor {
 
   private updateToolbarState(): void {
     const { state } = this.view;
-    const { buttons, colorButtons, formatSelect } = this.toolbar;
+    const { buttons, colorDropdowns, formatSelect } = this.toolbar;
     const activeLink = getActiveMark(state, this.schema.marks.link);
 
     formatSelect.value = getCurrentFormat(state);
@@ -774,9 +885,17 @@ export class MoongladeEditor {
     setButtonState(buttons.link, Boolean(activeLink), canEditLink(state, activeLink));
     setButtonState(buttons.removeLink, false, Boolean(activeLink));
 
-    for (const colorButton of colorButtons) {
-      const activeColor = getActiveMark(state, colorButton.markType)?.attrs.color;
-      setButtonState(colorButton.button, activeColor === colorButton.color, canRun(state, this.view, colorButton.command));
+    for (const colorDropdown of colorDropdowns) {
+      const activeColor = getActiveMark(state, colorDropdown.markType)?.attrs.color;
+      const paletteColor = getPaletteColor(activeColor, colorDropdown.commands);
+      const enabled = canRun(state, this.view, firstCommand(colorDropdown.commands) ?? colorDropdown.clearCommand);
+      setButtonState(colorDropdown.button, Boolean(paletteColor), enabled);
+      colorDropdown.preview.style.setProperty('--mg-editor-active-color', paletteColor || 'transparent');
+      colorDropdown.clearButton.disabled = !canRun(state, this.view, colorDropdown.clearCommand);
+
+      for (const [color, button] of colorDropdown.colorButtons) {
+        setButtonState(button, color === paletteColor, canRun(state, this.view, colorDropdown.commands.get(color) ?? colorDropdown.clearCommand));
+      }
     }
 
     buttons.undo.disabled = !canRun(state, this.view, this.commands.undo);
@@ -791,11 +910,20 @@ export function createMoongladeEditor(options: MoongladeEditorOptions): Moonglad
 }
 
 const colorPalette = [
+  { label: 'Black', value: '#000000' },
   { label: 'Dark', value: '#212529' },
   { label: 'Gray', value: '#6c757d' },
+  { label: 'Light gray', value: '#ced4da' },
+  { label: 'White', value: '#ffffff' },
   { label: 'Blue', value: '#0d6efd' },
   { label: 'Green', value: '#198754' },
+  { label: 'Teal', value: '#20c997' },
+  { label: 'Cyan', value: '#0dcaf0' },
+  { label: 'Indigo', value: '#6610f2' },
+  { label: 'Purple', value: '#6f42c1' },
   { label: 'Red', value: '#dc3545' },
+  { label: 'Pink', value: '#d63384' },
+  { label: 'Orange', value: '#fd7e14' },
   { label: 'Yellow', value: '#ffc107' }
 ];
 
@@ -814,6 +942,39 @@ const codeLanguages = [
 
 function canRun(state: EditorState, view: EditorView, command: Command): boolean {
   return command(state, undefined, view);
+}
+
+function firstCommand(commands: Map<string, Command>): Command | undefined {
+  return commands.values().next().value;
+}
+
+function getPaletteColor(value: unknown, commands: Map<string, Command>): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const normalized = value.trim().toLowerCase();
+  for (const color of commands.keys()) {
+    if (color.toLowerCase() === normalized) {
+      return color;
+    }
+  }
+
+  const rgb = normalized.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/);
+  if (!rgb) {
+    return '';
+  }
+
+  const hex = `#${rgb.slice(1, 4)
+    .map((channel) => Number(channel).toString(16).padStart(2, '0'))
+    .join('')}`;
+  for (const color of commands.keys()) {
+    if (color.toLowerCase() === hex) {
+      return color;
+    }
+  }
+
+  return '';
 }
 
 function canEditLink(state: EditorState, activeLink: Mark | null): boolean {

@@ -43,7 +43,10 @@ describe('editor toolbar', () => {
     expect(host.querySelector('[data-command="bold"]')?.textContent).toBe('');
     expect(host.querySelector('[data-command="bold"] .bi-type-bold')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"] .bi-arrow-counterclockwise')).not.toBeNull();
-    expect(host.querySelector('[data-command="text_color:clear"] .bi-eraser')).not.toBeNull();
+    expect(host.querySelector('[data-command="text_color"]')?.classList.contains('mg-editor-color-trigger')).toBe(true);
+    expect(host.querySelector('[data-command="background_color"]')?.classList.contains('mg-editor-color-trigger')).toBe(true);
+    expect(host.querySelector('[data-command="text_color:#0d6efd"]')?.classList.contains('mg-editor-color-swatch')).toBe(true);
+    expect(host.querySelector('[data-command="text_color:clear"] .mg-editor-no-color')).not.toBeNull();
     expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();
@@ -157,7 +160,7 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
-  it('applies foreground and background colors from toolbar swatches', () => {
+  it('applies foreground and background colors from toolbar dropdowns', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({
       element: host,
@@ -169,16 +172,31 @@ describe('editor toolbar', () => {
       return true;
     });
 
-    (host.querySelector('[aria-label="Text color: Blue"]') as HTMLButtonElement).click();
+    const textColorButton = host.querySelector('[data-command="text_color"]') as HTMLButtonElement;
+    textColorButton.click();
+    expect(textColorButton.getAttribute('aria-expanded')).toBe('true');
+
+    const blueButton = host.querySelector('[data-command="text_color:#0d6efd"]') as HTMLButtonElement;
+    blueButton.click();
+
     expect(editor.getHTML()).toBe('<p><span style="color: rgb(13, 110, 253);">Hello</span></p>');
+    expect(textColorButton.getAttribute('aria-pressed')).toBe('true');
+    expect(blueButton.classList.contains('active')).toBe(true);
 
     editor.run((state, dispatch) => {
       dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 1, 6)));
       return true;
     });
-    (host.querySelector('[aria-label="Background color: Yellow"]') as HTMLButtonElement).click();
+    const backgroundColorButton = host.querySelector('[data-command="background_color"]') as HTMLButtonElement;
+    backgroundColorButton.click();
+    expect(backgroundColorButton.getAttribute('aria-expanded')).toBe('true');
+
+    const yellowButton = host.querySelector('[data-command="background_color:#ffc107"]') as HTMLButtonElement;
+    yellowButton.click();
 
     expect(editor.getHTML()).toBe('<p><span style="color: rgb(13, 110, 253);"><span style="background-color: rgb(255, 193, 7);">Hello</span></span></p>');
+    expect(backgroundColorButton.getAttribute('aria-pressed')).toBe('true');
+    expect(yellowButton.classList.contains('active')).toBe(true);
 
     editor.destroy();
   });
