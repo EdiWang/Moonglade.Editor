@@ -48,6 +48,7 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 - Editor framework: ProseMirror core packages (`prosemirror-model`, `prosemirror-state`, `prosemirror-view`, commands, history, keymap, schema-list, tables, gapcursor).
 - UI framework: No SPA framework. Toolbar/dialogs are built with DOM APIs and Bootstrap-compatible classes.
 - Host UI dependencies: Bootstrap 5 CSS and Bootstrap Icons CSS are expected to be loaded by the consuming host page.
+- Theme behavior: Custom editor styles use Bootstrap CSS variables and should inherit the nearest host `data-bs-theme` scope. Keep theme switching host-owned; do not add editor-specific theme APIs unless explicitly requested.
 - Build tooling: esbuild via `scripts/build.mjs`; TypeScript declarations via `tsc -p tsconfig.build.json`.
 - Testing: Vitest with jsdom.
 - Type checking: `npm run types`.
@@ -188,7 +189,7 @@ For documentation-only changes, running the full build is usually not required. 
 
 Moonglade currently stores HTML post content as an HTML string and renders it as raw content. This editor must therefore produce constrained, predictable HTML and should not preserve arbitrary tags, event attributes, unsafe protocols, or unsafe styles.
 
-The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets.
+The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets. The editor automatically follows the nearest Bootstrap `data-bs-theme` scope through CSS variables; host pages should own theme switching.
 
 Preferred integration models remain:
 

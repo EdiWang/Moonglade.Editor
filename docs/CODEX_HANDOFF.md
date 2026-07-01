@@ -27,6 +27,7 @@ Current scaffold:
 - Framework-free toolbar shell, basic formatting controls, undo/redo, and selection state exist.
 - Link dialog, safe command URL validation, foreground/background color palette controls, text alignment controls, image upload controls, code snippet controls, horizontal rule insertion, table controls, and HTML source mode exist.
 - Editor height is configurable through `createMoongladeEditor({ height })`, defaults to `500px`, and accepts CSS height strings.
+- Editor custom styles inherit Bootstrap CSS variables and follow the nearest host `data-bs-theme` scope.
 - esbuild emits ESM and browser-global bundles to dist/.
 - Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link/image stripping, toolbar shell/format wiring, blockquote toggle state, link dialog/command safety, color controls, alignment controls, mocked image upload responses, code snippets, horizontal rule insertion, table controls, and source mode.
 - Demo page exists at demo/index.html and can be served from the repository root after npm run build.

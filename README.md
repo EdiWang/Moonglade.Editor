@@ -117,7 +117,7 @@ The editor height defaults to `500px`. Hosts can pass any CSS height value throu
 
 Moonglade should consume prebuilt files from this repository and should not add a frontend build step.
 
-The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `bi-*` icon classes. The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets.
+The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `bi-*` icon classes. The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets. Custom editor styles inherit Bootstrap CSS variables, so the editor follows the nearest host `data-bs-theme` scope; omit the attribute or set `data-bs-theme="light"` for the default light theme, and set `data-bs-theme="dark"` for dark mode.
 
 Static asset option:
 
@@ -146,7 +146,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, editor shell, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
 
 Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,7 +13,12 @@
   <main class="container py-4">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
       <h1 class="h3 mb-0">Moonglade.Editor Demo</h1>
-      <button id="spellcheck-toggle" type="button" class="btn btn-outline-secondary btn-sm" aria-pressed="true">Spellcheck on</button>
+      <div class="d-flex flex-wrap gap-2">
+        <button id="theme-toggle" type="button" class="btn btn-outline-secondary btn-sm" aria-pressed="false">
+          <i class="bi bi-moon-stars me-1" aria-hidden="true"></i><span>Dark theme</span>
+        </button>
+        <button id="spellcheck-toggle" type="button" class="btn btn-outline-secondary btn-sm" aria-pressed="true">Spellcheck on</button>
+      </div>
     </div>
     <div id="editor" class="mb-4"></div>
 
@@ -28,6 +33,9 @@ console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3>
   <script>
     const textarea = document.querySelector('#content');
 
+    const themeToggle = document.querySelector('#theme-toggle');
+    const themeIcon = themeToggle.querySelector('.bi');
+    const themeLabel = themeToggle.querySelector('span');
     const spellcheckToggle = document.querySelector('#spellcheck-toggle');
     const editor = MoongladeEditor.createMoongladeEditor({
       element: document.querySelector('#editor'),
@@ -37,6 +45,16 @@ console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3>
       uploadUrl: '/image'
     });
 
+    const getTheme = () => document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
+    const setTheme = (theme) => {
+      const dark = theme === 'dark';
+      document.documentElement.setAttribute('data-bs-theme', theme);
+      themeIcon.className = `bi ${dark ? 'bi-sun' : 'bi-moon-stars'} me-1`;
+      themeLabel.textContent = dark ? 'Light theme' : 'Dark theme';
+      themeToggle.title = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    };
+
     const updateSpellcheckToggle = () => {
       const enabled = editor.getSpellcheck();
       spellcheckToggle.textContent = enabled ? 'Spellcheck on' : 'Spellcheck off';
@@ -45,11 +63,16 @@ console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3>
       spellcheckToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
     };
 
+    themeToggle.addEventListener('click', () => {
+      setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    });
+
     spellcheckToggle.addEventListener('click', () => {
       editor.setSpellcheck(!editor.getSpellcheck());
       updateSpellcheckToggle();
     });
 
+    setTheme(getTheme());
     updateSpellcheckToggle();
   </script>
 </body>
