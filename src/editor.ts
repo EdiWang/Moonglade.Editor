@@ -368,7 +368,6 @@ export class MoongladeEditor {
     setButtonState(buttons.toggleTableHeaderRow, false, canRun(state, this.view, this.commands.toggleTableHeaderRow));
     setButtonState(buttons.deleteTable, false, canRun(state, this.view, this.commands.deleteTable));
     setButtonState(buttons.link, Boolean(activeLink), canEditLink(state, activeLink));
-    setButtonState(buttons.removeLink, false, Boolean(activeLink));
 
     for (const colorDropdown of colorDropdowns) {
       const activeColor = getActiveMark(state, colorDropdown.markType)?.attrs.color;

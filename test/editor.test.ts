@@ -45,8 +45,13 @@ describe('editor toolbar', () => {
     expect(host.querySelector('[data-command="undo"] .bi-arrow-counterclockwise')).not.toBeNull();
     expect(host.querySelector('[data-command="text_color"]')?.classList.contains('mg-editor-color-trigger')).toBe(true);
     expect(host.querySelector('[data-command="background_color"]')?.classList.contains('mg-editor-color-trigger')).toBe(true);
+    expect(host.querySelector('.mg-editor-color-group [data-command="text_color"]')).not.toBeNull();
+    expect(host.querySelector('.mg-editor-color-group [data-command="background_color"]')).not.toBeNull();
     expect(host.querySelector('[data-command="text_color:#0d6efd"]')?.classList.contains('mg-editor-color-swatch')).toBe(true);
     expect(host.querySelector('[data-command="text_color:clear"] .mg-editor-no-color')).not.toBeNull();
+    expect(host.querySelector('[data-command="removeLink"]')).toBeNull();
+    expect(host.querySelector('[data-command="insertTable"]')?.closest('.btn-group')).toBe(host.querySelector('[data-command="addTableRow"]')?.closest('.btn-group'));
+    expect(host.querySelector('[data-command="insertTable"]')?.closest('.btn-group')).toBe(host.querySelector('[data-command="deleteTable"]')?.closest('.btn-group'));
     expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();

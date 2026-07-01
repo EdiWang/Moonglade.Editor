@@ -35,7 +35,6 @@ export type ToolbarButtonId =
   | 'toggleTableHeaderRow'
   | 'deleteTable'
   | 'link'
-  | 'removeLink'
   | 'image'
   | 'htmlSource';
 
@@ -170,17 +169,11 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
   root.append(codeGroup);
 
   addGroup(
-    ['insertTable', 'table', 'Insert table', commands.insertTable()]
-  );
-  addGroup(
+    ['insertTable', 'table', 'Insert table', commands.insertTable()],
     ['addTableRow', 'plus-lg', 'Add table row', commands.addTableRow],
-    ['deleteTableRow', 'dash-lg', 'Delete table row', commands.deleteTableRow]
-  );
-  addGroup(
+    ['deleteTableRow', 'dash-lg', 'Delete table row', commands.deleteTableRow],
     ['addTableColumn', 'plus-square', 'Add table column', commands.addTableColumn],
-    ['deleteTableColumn', 'dash-square', 'Delete table column', commands.deleteTableColumn]
-  );
-  addGroup(
+    ['deleteTableColumn', 'dash-square', 'Delete table column', commands.deleteTableColumn],
     ['toggleTableHeaderRow', 'layout-three-columns', 'Toggle table header row', commands.toggleTableHeaderRow],
     ['deleteTable', 'trash', 'Delete table', commands.deleteTable]
   );
@@ -191,14 +184,15 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
 
   const linkButton = createToolbarButton('link', 'link-45deg', 'Add or edit link');
   linkButton.addEventListener('click', () => actions.openLinkDialog());
-  const removeLinkButton = createToolbarButton('removeLink', 'link', 'Remove link');
-  removeLinkButton.addEventListener('click', () => actions.execute(commands.removeLink));
   buttons.link = linkButton;
-  buttons.removeLink = removeLinkButton;
-  linkGroup.append(linkButton, removeLinkButton);
+  linkGroup.append(linkButton);
   root.append(linkGroup);
 
-  root.append(
+  const colorGroup = document.createElement('div');
+  colorGroup.className = 'mg-editor-color-group btn-group btn-group-sm';
+  colorGroup.setAttribute('role', 'group');
+  colorGroup.setAttribute('aria-label', 'Text colors');
+  colorGroup.append(
     createColorDropdown({
       label: 'Text color',
       symbol: 'A',
@@ -222,6 +216,7 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
       toggleColorDropdown: localToggleColorDropdown
     })
   );
+  root.append(colorGroup);
 
   const imageGroup = document.createElement('div');
   imageGroup.className = 'btn-group btn-group-sm';
@@ -333,7 +328,7 @@ function createColorDropdown({
   toggleColorDropdown
 }: CreateColorDropdownOptions): HTMLDivElement {
   const group = document.createElement('div');
-  group.className = 'mg-editor-color-dropdown btn-group btn-group-sm';
+  group.className = 'mg-editor-color-dropdown btn-group-sm';
   group.setAttribute('role', 'group');
   group.setAttribute('aria-label', label);
 

@@ -21,7 +21,19 @@
 }
 
 .mg-editor-color-dropdown {
+  display: inline-flex;
   position: relative;
+}
+
+.mg-editor-color-group > .mg-editor-color-dropdown:not(:first-child) .mg-editor-color-trigger {
+  border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
+  margin-left: -1px;
+}
+
+.mg-editor-color-group > .mg-editor-color-dropdown:not(:last-child) .mg-editor-color-trigger {
+  border-bottom-right-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .mg-editor-color-trigger {
