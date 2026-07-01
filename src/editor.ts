@@ -360,6 +360,7 @@ export class MoongladeEditor {
     setButtonState(buttons.alignRight, getCurrentAlignment(state) === 'right', canRun(state, this.view, this.commands.alignment('right')));
     setButtonState(buttons.alignJustify, getCurrentAlignment(state) === 'justify', canRun(state, this.view, this.commands.alignment('justify')));
     setButtonState(buttons.codeBlock, state.selection.$from.parent.type === this.schema.nodes.code_block, canRun(state, this.view, this.commands.codeBlock(getCurrentCodeLanguage(state))));
+    setButtonState(buttons.horizontalRule, false, canRun(state, this.view, this.commands.insertHorizontalRule));
     setButtonState(buttons.insertTable, false, canRun(state, this.view, this.commands.insertTable()));
     setButtonState(buttons.addTableRow, false, canRun(state, this.view, this.commands.addTableRow));
     setButtonState(buttons.deleteTableRow, false, canRun(state, this.view, this.commands.deleteTableRow));

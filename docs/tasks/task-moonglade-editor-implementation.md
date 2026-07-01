@@ -28,7 +28,7 @@ Current repository state:
 - `src/editor.ts` contains the first `MoongladeEditor` wrapper around `EditorView`.
 - `src/styles.css` contains basic editor styles.
 - `demo/index.html` loads `dist/moonglade-editor.js`.
-- Tests cover HTML round-trip behavior, sanitizer behavior, toolbar wiring, link/color/alignment controls, mocked image upload responses, code snippets, table controls, and source mode.
+- Tests cover HTML round-trip behavior, sanitizer behavior, toolbar wiring, link/color/alignment controls, mocked image upload responses, code snippets, horizontal rule insertion, table controls, and source mode.
 - `dist/` contains generated ESM, browser-global, CSS, sourcemap, and type declaration output.
 - Remote origin is `https://github.com/EdiWang/Moonglade.Editor.git`.
 
@@ -44,6 +44,7 @@ Implement the editor features Moonglade needs:
 - Insert code snippets.
 - Edit hyperlinks.
 - Blockquote.
+- Horizontal rules.
 - Bullet and numbered lists.
 - Text alignment.
 - HTML source view/edit.
@@ -118,9 +119,10 @@ The editor should:
 | 11 | Image upload | Button upload, paste, drag/drop, `/image` response handling | Mocked upload tests and demo check | Complete |
 | 12 | Code snippets | Language selector and highlight.js-compatible output | Serialization tests and Moonglade renderer check later | Complete |
 | 13 | Tables | Insert table, add/delete rows/columns, header toggle, merge/split if feasible | Demo manual check and command tests | Complete |
-| 14 | HTML source mode | Source view/edit through schema/sanitizer | Round-trip and unsafe HTML tests | Complete |
-| 15 | Moonglade consumption docs | Explain static asset/package options | README/docs update | Complete |
-| 16 | Moonglade integration | Happens in the main Moonglade repo after editor package is ready | Moonglade build and browser smoke test | Not started |
+| 14 | Horizontal rules | Insert standard `<hr>` block separators | HTML, command, and toolbar tests | Complete |
+| 15 | HTML source mode | Source view/edit through schema/sanitizer | Round-trip and unsafe HTML tests | Complete |
+| 16 | Moonglade consumption docs | Explain static asset/package options | README/docs update | Complete |
+| 17 | Moonglade integration | Happens in the main Moonglade repo after editor package is ready | Moonglade build and browser smoke test | Not started |
 
 ## Suggested Execution Order
 
@@ -151,6 +153,9 @@ The editor should:
 | 2026-06-30 | `npm test` | Passed | 24 Vitest/jsdom tests covering code block language serialization, table serialization/toolbar editing, and sanitizer-backed source mode. |
 | 2026-06-30 | `npm run build` | Passed | Regenerated ESM, browser-global, CSS, maps, and declarations under `dist/`. |
 | 2026-06-30 | Browser demo smoke check | Passed | Served `demo/` with no-cache headers, verified page identity, console health, code snippet dialog, table insertion/row/header controls, source sanitizer, and textarea sync with the Browser plugin. |
+| 2026-07-01 | `npm test` | Passed | 46 Vitest/jsdom tests covering horizontal rule parsing, command insertion, toolbar wiring, and existing behavior. |
+| 2026-07-01 | `npm run build` | Passed | Regenerated ESM, browser-global, CSS, maps, and declarations under `dist/`; size checks passed. |
+| 2026-07-01 | Browser demo smoke check | Passed | Served `demo/`, verified page identity, console health, horizontal rule toolbar insertion, textarea sync, screenshot evidence, and mobile button visibility. |
 
 ## Known Risks
 

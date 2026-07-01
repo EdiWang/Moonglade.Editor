@@ -16,6 +16,7 @@ The editor is built directly on ProseMirror and should stay focused on Moonglade
 - Code snippets.
 - Links.
 - Blockquotes.
+- Horizontal rules.
 - Bullet and numbered lists.
 - Text alignment.
 - HTML source view/edit.
@@ -75,7 +76,7 @@ Key source modules:
 - `src/schema.ts` defines the ProseMirror schema, including alignment-aware paragraphs/headings, code block language attributes, table nodes, underline/strike marks, and constrained color marks.
 - `src/html.ts` is the HTML import/export boundary. It removes unsafe URL/event attributes before schema parsing and adds lazy loading to serialized images.
 - `src/safety.ts` contains reusable sanitizers for links, image URLs, style color values, text alignment, and code language names.
-- `src/commands.ts` defines editor commands for block formats, marks, links, colors, alignment, images, code blocks, lists, blockquotes, history, and tables.
+- `src/commands.ts` defines editor commands for block formats, marks, links, colors, alignment, images, code blocks, lists, blockquotes, horizontal rules, history, and tables.
 - `src/editor-state.ts` contains helpers for command availability and toolbar active-state detection.
 - `src/toolbar.ts` creates the framework-free toolbar and color/image controls.
 - `src/dialogs.ts` creates link, code snippet, and HTML source dialogs.

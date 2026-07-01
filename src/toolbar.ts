@@ -27,6 +27,7 @@ export type ToolbarButtonId =
   | 'alignRight'
   | 'alignJustify'
   | 'codeBlock'
+  | 'horizontalRule'
   | 'insertTable'
   | 'addTableRow'
   | 'deleteTableRow'
@@ -190,7 +191,11 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
   codeButton.addEventListener('click', () => actions.openCodeDialog());
   buttons.codeBlock = codeButton;
 
-  insertGroup.append(imageButton, imageInput, linkButton, codeButton);
+  const horizontalRuleButton = createToolbarButton('horizontalRule', 'hr', 'Insert horizontal rule');
+  horizontalRuleButton.addEventListener('click', () => actions.execute(commands.insertHorizontalRule));
+  buttons.horizontalRule = horizontalRuleButton;
+
+  insertGroup.append(imageButton, imageInput, linkButton, codeButton, horizontalRuleButton);
   root.append(insertGroup);
 
   addGroup(

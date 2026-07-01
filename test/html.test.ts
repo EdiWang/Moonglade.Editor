@@ -9,6 +9,12 @@ describe('html parsing and serialization', () => {
     expect(roundTripHtml(moongladeSchema, html)).toBe('<h1>Hello</h1><p><strong>Moonglade</strong> editor</p>');
   });
 
+  it('round-trips horizontal rules', () => {
+    const html = '<p>Before</p><hr><p>After</p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>Before</p><hr><p>After</p>');
+  });
+
   it('supports underline, strike, and color marks', () => {
     const html = '<p><u>Under</u> <s>Strike</s> <span style="color: #0d6efd;">Blue</span> <span style="background-color: #ffc107;">Highlight</span></p>';
 

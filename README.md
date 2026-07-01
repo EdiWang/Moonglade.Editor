@@ -23,7 +23,7 @@ The editor flow is intentionally narrow:
 2. Initial HTML is read from `content` or an attached `textarea`.
 3. HTML is parsed through the ProseMirror schema after unsafe URL attributes are removed or normalized.
 4. Users edit content through the ProseMirror `EditorView` and the framework-free toolbar.
-5. Commands update the document for headings, marks, links, colors, alignment, lists, blockquotes, code blocks, tables, source mode, and images.
+5. Commands update the document for headings, marks, links, colors, alignment, lists, blockquotes, horizontal rules, code blocks, tables, source mode, and images.
 6. On document changes, the editor serializes the ProseMirror document back to HTML and syncs it to the attached `textarea` and optional `onChange` callback.
 
 Key concepts:
@@ -34,7 +34,7 @@ Key concepts:
 - `safety.ts` contains URL, style, alignment, and code language constraints.
 - Image upload is configured with either `uploadUrl` or a custom `uploadImage` function.
 
-Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, code snippets, links, blockquotes, bullet/numbered lists, text alignment, and HTML source view/edit.
+Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit.
 
 ## Development
 
@@ -139,7 +139,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, editor shell, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, table controls, source mode, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, editor shell, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
 
 Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

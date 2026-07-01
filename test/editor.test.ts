@@ -52,6 +52,7 @@ describe('editor toolbar', () => {
     expect(host.querySelector('[data-command="removeLink"]')).toBeNull();
     expect(host.querySelector('[data-command="insertTable"]')?.closest('.btn-group')).toBe(host.querySelector('[data-command="addTableRow"]')?.closest('.btn-group'));
     expect(host.querySelector('[data-command="insertTable"]')?.closest('.btn-group')).toBe(host.querySelector('[data-command="deleteTable"]')?.closest('.btn-group'));
+    expect(host.querySelector('[data-command="horizontalRule"] .bi-hr')).not.toBeNull();
     expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();
@@ -64,7 +65,7 @@ describe('editor toolbar', () => {
     const alignGroup = host.querySelector('[data-command="alignJustify"]')?.closest('.btn-group') as HTMLElement;
     const insertCommands = Array.from(alignGroup.nextElementSibling?.querySelectorAll('button[data-command]') ?? [])
       .map((button) => button.getAttribute('data-command'));
-    expect(insertCommands).toEqual(['image', 'link', 'codeBlock']);
+    expect(insertCommands).toEqual(['image', 'link', 'codeBlock', 'horizontalRule']);
 
     editor.destroy();
   });
@@ -253,6 +254,27 @@ describe('editor toolbar', () => {
     expect(dialog.hidden).toBe(true);
     expect(editor.getHTML()).toBe('<pre><code class="language-javascript">const answer = 42;</code></pre>');
     expect((host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
+
+    editor.destroy();
+  });
+
+  it('inserts a horizontal rule from the toolbar', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    const horizontalRuleButton = host.querySelector('[data-command="horizontalRule"]') as HTMLButtonElement;
+    horizontalRuleButton.click();
+
+    expect(editor.getHTML()).toBe('<p>Hello</p><hr>');
+    expect(horizontalRuleButton.disabled).toBe(false);
 
     editor.destroy();
   });

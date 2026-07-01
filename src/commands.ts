@@ -37,6 +37,7 @@ export function createCommands(schema: Schema) {
     alignment: (align: TextAlignment): Command => setTextAlignment(schema, align),
     insertImage: (src: string, alt?: string, title?: string): Command => insertImage(schema, src, alt, title),
     codeBlock: (language?: string): Command => setCodeBlock(schema, language),
+    insertHorizontalRule: insertHorizontalRule(schema),
     insertTable: (rows = 3, columns = 3): Command => insertTable(schema, rows, columns),
     addTableRow: addRowAfter,
     deleteTableRow: deleteRow,
@@ -185,6 +186,38 @@ function insertImage(schema: Schema, src: string, alt?: string, title?: string):
 function setCodeBlock(schema: Schema, language?: string): Command {
   const safeLanguage = sanitizeCodeLanguage(language) || null;
   return setBlockType(schema.nodes.code_block, { language: safeLanguage });
+}
+
+function insertHorizontalRule(schema: Schema): Command {
+  const horizontalRule = schema.nodes.horizontal_rule;
+  if (!horizontalRule) {
+    return () => false;
+  }
+
+  return (state, dispatch) => {
+    if (!canInsertNode(state, horizontalRule)) {
+      return false;
+    }
+
+    if (dispatch) {
+      dispatch(state.tr.replaceSelectionWith(horizontalRule.create()).scrollIntoView());
+    }
+
+    return true;
+  };
+}
+
+function canInsertNode(state: EditorState, nodeType: NodeType): boolean {
+  const { $from } = state.selection;
+
+  for (let depth = $from.depth; depth >= 0; depth -= 1) {
+    const index = $from.index(depth);
+    if ($from.node(depth).canReplaceWith(index, index, nodeType)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function insertTable(schema: Schema, rows: number, columns: number): Command {

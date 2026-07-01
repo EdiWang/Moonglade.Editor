@@ -84,6 +84,14 @@ describe('editor commands', () => {
     expect(getHtml(nextState)).toBe('<pre><code>alert(1)</code></pre>');
   });
 
+  it('inserts horizontal rules', () => {
+    const state = setSelection(createState('<p>Hello</p>'), 6);
+    const { result, state: nextState } = runCommand(state, commands.insertHorizontalRule);
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe('<p>Hello</p><hr>');
+  });
+
   it('clamps inserted table dimensions', () => {
     const state = setSelection(createState('<p>Hello</p>'), 1, 6);
     const { result, state: nextState } = runCommand(state, commands.insertTable(99, 99));
