@@ -129,6 +129,11 @@ describe('editor toolbar', () => {
     expect(toolbar.children[0].querySelector('[data-command="redo"]')).not.toBeNull();
     expect(toolbar.children[1].querySelector('.mg-editor-format')).not.toBeNull();
 
+    const inlineFormatGroup = host.querySelector('[data-command="strike"]')?.closest('.btn-group') as HTMLElement;
+    const colorGroup = inlineFormatGroup.nextElementSibling as HTMLElement;
+    expect(colorGroup.classList.contains('mg-editor-color-group')).toBe(true);
+    expect(colorGroup.querySelector('[data-command="text_color"]')).not.toBeNull();
+
     const alignGroup = host.querySelector('[data-command="alignJustify"]')?.closest('.btn-group') as HTMLElement;
     const insertCommands = Array.from(alignGroup.nextElementSibling?.querySelectorAll('button[data-command]') ?? [])
       .map((button) => button.getAttribute('data-command'));

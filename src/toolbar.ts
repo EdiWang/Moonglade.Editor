@@ -147,6 +147,37 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
     ['underline', 'type-underline', 'Underline', commands.underline],
     ['strike', 'type-strikethrough', 'Strikethrough', commands.strike]
   );
+
+  const colorGroup = document.createElement('div');
+  colorGroup.className = 'mg-editor-color-group btn-group btn-group-sm';
+  colorGroup.setAttribute('role', 'group');
+  colorGroup.setAttribute('aria-label', 'Text colors');
+  colorGroup.append(
+    createColorDropdown({
+      label: 'Text color',
+      symbol: 'A',
+      markType: schema.marks.text_color,
+      commandFactory: (color) => commands.textColor(color),
+      clearCommand: commands.clearTextColor,
+      colorDropdowns,
+      actions,
+      closeColorDropdowns: localCloseColorDropdowns,
+      toggleColorDropdown: localToggleColorDropdown
+    }),
+    createColorDropdown({
+      label: 'Background color',
+      symbol: 'ab',
+      markType: schema.marks.background_color,
+      commandFactory: (color) => commands.backgroundColor(color),
+      clearCommand: commands.clearBackgroundColor,
+      colorDropdowns,
+      actions,
+      closeColorDropdowns: localCloseColorDropdowns,
+      toggleColorDropdown: localToggleColorDropdown
+    })
+  );
+  root.append(colorGroup);
+
   addGroup(
     ['blockquote', 'quote', 'Blockquote', commands.blockquote],
     ['bulletList', 'list-ul', 'Bullet list', commands.bulletList],
@@ -207,36 +238,6 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
     ['toggleTableHeaderRow', 'layout-three-columns', 'Toggle table header row', commands.toggleTableHeaderRow],
     ['deleteTable', 'trash', 'Delete table', commands.deleteTable]
   );
-
-  const colorGroup = document.createElement('div');
-  colorGroup.className = 'mg-editor-color-group btn-group btn-group-sm';
-  colorGroup.setAttribute('role', 'group');
-  colorGroup.setAttribute('aria-label', 'Text colors');
-  colorGroup.append(
-    createColorDropdown({
-      label: 'Text color',
-      symbol: 'A',
-      markType: schema.marks.text_color,
-      commandFactory: (color) => commands.textColor(color),
-      clearCommand: commands.clearTextColor,
-      colorDropdowns,
-      actions,
-      closeColorDropdowns: localCloseColorDropdowns,
-      toggleColorDropdown: localToggleColorDropdown
-    }),
-    createColorDropdown({
-      label: 'Background color',
-      symbol: 'ab',
-      markType: schema.marks.background_color,
-      commandFactory: (color) => commands.backgroundColor(color),
-      clearCommand: commands.clearBackgroundColor,
-      colorDropdowns,
-      actions,
-      closeColorDropdowns: localCloseColorDropdowns,
-      toggleColorDropdown: localToggleColorDropdown
-    })
-  );
-  root.append(colorGroup);
 
   const uploadStatus = document.createElement('div');
   uploadStatus.className = 'mg-editor-upload-status small text-body-secondary align-self-center';
