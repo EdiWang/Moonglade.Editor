@@ -42,8 +42,8 @@ Not recommended now:
 
 | ID | Priority | Type | Location | Issue | Impact | Evidence | Recommended Direction |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| I-01 | P1 | Integration / release | `.gitignore`, `package.json`, `README.md`, `AGENTS.md`, `docs/tasks/task-moonglade-editor-implementation.md` | The repository contract says Moonglade can consume `dist/` assets directly, but `dist/` is ignored and not tracked. The intended release boundary is therefore ambiguous. | Moonglade integration may depend on local generated files, a package artifact, or a manual copy step that is not yet enforced by source control. This can cause stale or missing editor assets during handoff/release. | `.gitignore` contains `dist/`; `git ls-files dist` returned no tracked files; `package.json` exports point to `./dist/*`; README says Moonglade can consume compiled `dist/`; task docs note `dist/ is ignored by this repository`; Moonglade integration is still not started. User confirmed on 2026-07-02 that `dist` should not be ignored. | Stop ignoring `dist/`, rebuild generated assets through the normal build, and commit the generated browser-ready output in a separate implementation task. |
-| I-02 | P2 | Stability / host integration | `src/editor.ts` constructor, `syncToTextarea()` | Editor initialization calls `syncToTextarea()`, which dispatches a bubbling `input` event and invokes `onChange` even before a user edit. | Host pages may mark a post as dirty, trigger autosave, or run change handlers during initialization. This is especially relevant when integrating into the main Moonglade edit page. | Constructor calls `this.syncToTextarea()`; `syncToTextarea()` sets textarea value, dispatches `new Event('input', { bubbles: true })`, and calls `this.onChange?.(html)`. Tests cover sync behavior indirectly but do not assert initialization event semantics. User confirmed on 2026-07-02 that host dirty/autosave capability must be preserved. | Preserve `input`/`onChange` notifications for real content changes and explicit host sync, but avoid false dirty/autosave signals during initial construction. Add tests for both paths. |
+| I-01 | P1 | Integration / release | `.gitignore`, `package.json`, `README.md`, `AGENTS.md`, `dist/` | The repository contract says Moonglade can consume `dist/` assets directly; `dist/` must therefore remain tracked and generated deterministically. | Missing or stale editor assets would break direct Moonglade consumption. | User confirmed on 2026-07-02 that `dist` should not be ignored. Execution on 2026-07-02 verified `.gitignore` does not ignore `dist/`, `git check-ignore` reports `dist is not ignored`, and generated `dist` files are tracked. | Resolved for tracking. Continue rebuilding and committing generated `dist/` artifacts with source changes. |
+| I-02 | P2 | Stability / host integration | `src/editor.ts` constructor, `syncToTextarea()` | Editor initialization called `syncToTextarea()`, which dispatched a bubbling `input` event and invoked `onChange` before a user edit. | Host pages could mark a post as dirty, trigger autosave, or run change handlers during initialization. This is especially relevant when integrating into the main Moonglade edit page. | Initial code called `this.syncToTextarea()` from the constructor; `syncToTextarea()` set textarea value, dispatched `new Event('input', { bubbles: true })`, and called `this.onChange?.(html)`. User confirmed on 2026-07-02 that host dirty/autosave capability must be preserved. Execution on 2026-07-02 added tests for silent initialization and edit/setHTML/explicit sync notifications. | Resolved by silently writing initial textarea value while preserving host notifications for real edits, `setHTML`, and explicit `syncToTextarea()`. |
 | I-03 | P2 | Stability / async state | `src/editor.ts` `savedSelection`, `uploadAndInsertImage()` | Async image upload uses a shared `savedSelection` field that is also used by link, color, code, paste, and drop flows. A later interaction can overwrite or clear the selection before the upload resolves. | Uploaded images can be inserted at the wrong selection or fail to restore the intended cursor in multi-upload or user-interaction races. | `savedSelection` is a single field; image button/paste/drop assign it before starting `void this.uploadAndInsertImage(file)`; upload completion calls `executeWithSavedSelection(...)`, which restores the current shared field. Link/code/color flows also read/write the same field. | Capture the upload bookmark locally at upload start, pass it into insertion, and test delayed upload plus intervening selection/dialog changes. |
 | I-04 | P2 | Error handling / UX | `src/image-upload.ts`, `src/editor.ts` upload status | Upload response parsing assumes valid JSON and exposes low-level parse or custom error messages directly to the toolbar status. | Non-JSON responses, empty responses, or unexpected response shapes can show confusing technical text to users and make support harder. | `uploadImageToUrl()` calls `await response.json()` after `response.ok`; `uploadAndInsertImage()` displays `error.message` when any `Error` is thrown. Existing tests cover unsafe URL response but not invalid JSON, empty body, or unexpected content type. | Add focused tests for invalid JSON and missing `location`, then normalize user-facing upload errors while preserving useful developer details if needed. |
 | I-05 | P2 | Command behavior / test gap | `src/commands.ts` `toggleList()` | List toggling is simple and may not handle switching between bullet and ordered lists as users expect. | Users may get nested lists or no intuitive conversion when switching list type. | `toggleList(schema, listType)` only lifts when the current selection already has the same list type as an ancestor; otherwise it calls `wrapInList(listType)`. Tests do not cover switching between bullet and ordered lists or nested list behavior. User confirmed on 2026-07-02 that switching should convert the current list type. | Add characterization tests for bullet-to-ordered and ordered-to-bullet behavior, then implement the smallest conversion fix. |
@@ -56,8 +56,8 @@ Not recommended now:
 
 | No. | Task | Dependencies | Verification | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Stop ignoring and commit generated `dist` artifacts | User confirmed `dist` should not be ignored | `.gitignore` review; `npm run build`; git status includes generated assets | Not started |
-| 2 | Preserve dirty/autosave for edits while avoiding initialization false positives | User confirmed dirty/autosave capability must remain | Unit tests for constructor, textarea input event, `onChange`, `setHTML`, and document edits | Not started |
+| 1 | Stop ignoring and commit generated `dist` artifacts | User confirmed `dist` should not be ignored | `.gitignore` review; `npm run build`; git status includes generated assets | Completed |
+| 2 | Preserve dirty/autosave for edits while avoiding initialization false positives | User confirmed dirty/autosave capability must remain | Unit tests for constructor, textarea input event, `onChange`, `setHTML`, and document edits | Completed |
 | 3 | Harden async image upload selection handling | None after Task 2 decision | Unit tests with delayed uploader and intervening selection/dialog change; `npm test`; `npm run build` | Not started |
 | 4 | Normalize image upload response errors | None | Unit tests for invalid JSON, missing location, unsafe URL, HTTP failure; `npm test`; `npm run build` | Not started |
 | 5 | Characterize and fix list type switching as conversion | Characterization tests first | Unit tests for bullet-to-ordered, ordered-to-bullet, nested list behavior; `npm test`; `npm run build` | Not started |
@@ -81,6 +81,7 @@ Not recommended now:
 - **Rollback plan**: Revert `.gitignore` and generated `dist/` additions.
 - **Needs user confirmation**: No; user confirmed on 2026-07-02 that `dist` should not be ignored.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. `.gitignore` already did not ignore `dist/` in HEAD; `git check-ignore` confirmed `dist` is not ignored. `npm run build` regenerated tracked `dist` artifacts affected by Step 2.
 
 ### Task 2: Preserve dirty/autosave for edits while avoiding initialization false positives
 
@@ -95,6 +96,7 @@ Not recommended now:
 - **Rollback plan**: Restore current `syncToTextarea()` behavior.
 - **Needs user confirmation**: No; user confirmed on 2026-07-02 to preserve dirty/autosave capability and let the implementation choose the safest behavior.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. `src/editor.ts` now writes the initial textarea value without host notification and keeps `syncToTextarea()` as the notifying public method. `test/editor.test.ts` covers silent initialization plus edit, `setHTML`, and explicit sync notifications.
 
 ### Task 3: Harden async image upload selection handling
 
@@ -196,15 +198,18 @@ Not recommended now:
 
 ## Recommended Execution Order
 
-1. Task 1: Stop ignoring and commit generated `dist` artifacts before Moonglade integration work.
+1. Task 3: Harden async image upload selection handling.
+2. Task 4: Normalize image upload response errors.
+3. Task 6: Fix table insertion cursor recovery after adding a characterization test.
+4. Task 5: Characterize and adjust list type switching to convert the current list type.
+5. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
+6. Task 8: Improve dialog keyboard/focus behavior.
+7. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
+
+Completed:
+
+1. Task 1: Stop ignoring and commit generated `dist` artifacts.
 2. Task 2: Preserve dirty/autosave for edits while avoiding initialization false positives.
-3. Task 3: Harden async image upload selection handling.
-4. Task 4: Normalize image upload response errors.
-5. Task 6: Fix table insertion cursor recovery after adding a characterization test.
-6. Task 5: Characterize and adjust list type switching to convert the current list type.
-7. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
-8. Task 8: Improve dialog keyboard/focus behavior.
-9. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
 
 ## Deferred / Not Recommended Now
 
@@ -224,6 +229,14 @@ No open questions remain from this review plan.
 - 2026-07-02: Host dirty/autosave capability must be preserved. Implementation should avoid false initialization dirty signals while keeping real edit notifications.
 - 2026-07-02: Switching between bullet and ordered lists should convert the current list type.
 - 2026-07-02: Custom ProseMirror schema injection should not be supported as part of the public API; use the built-in Moonglade schema.
+
+## Execution Log
+
+| Date | Task | Command or Check | Result | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-07-02 | Task 1 | `git check-ignore -v dist\moonglade-editor.css` | Passed | `dist` is not ignored. |
+| 2026-07-02 | Task 1, Task 2 | `npm test` | Passed | 4 test files, 54 tests. |
+| 2026-07-02 | Task 1, Task 2 | `npm run build` | Passed | Regenerated tracked `dist` artifacts; JS/CSS size checks passed. |
 
 ## Notes for Future Execution
 

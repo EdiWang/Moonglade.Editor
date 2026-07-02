@@ -94,6 +94,66 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('syncs initial textarea content without notifying the host during initialization', () => {
+    const host = document.createElement('div');
+    const textarea = document.createElement('textarea');
+    const inputListener = vi.fn();
+    const onChange = vi.fn();
+    textarea.value = '<p>Original</p>';
+    textarea.addEventListener('input', inputListener);
+
+    const editor = createMoongladeEditor({
+      element: host,
+      textarea,
+      content: '<p>Hello</p>',
+      onChange
+    });
+
+    expect(textarea.value).toBe('<p>Hello</p>');
+    expect(inputListener).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+
+    editor.destroy();
+  });
+
+  it('notifies the host for edits, setHTML, and explicit textarea sync', () => {
+    const host = document.createElement('div');
+    const textarea = document.createElement('textarea');
+    const inputListener = vi.fn();
+    const onChange = vi.fn();
+    textarea.addEventListener('input', inputListener);
+
+    const editor = createMoongladeEditor({
+      element: host,
+      textarea,
+      content: '<p>Hello</p>',
+      onChange
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.insertText('!', 6));
+      return true;
+    });
+
+    expect(textarea.value).toBe('<p>Hello!</p>');
+    expect(inputListener).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith('<p>Hello!</p>');
+
+    editor.setHTML('<p>Updated</p>');
+
+    expect(textarea.value).toBe('<p>Updated</p>');
+    expect(inputListener).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenLastCalledWith('<p>Updated</p>');
+
+    editor.syncToTextarea();
+
+    expect(inputListener).toHaveBeenCalledTimes(3);
+    expect(onChange).toHaveBeenCalledTimes(3);
+    expect(onChange).toHaveBeenLastCalledWith('<p>Updated</p>');
+
+    editor.destroy();
+  });
+
   it('renders a Bootstrap-compatible toolbar shell', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({

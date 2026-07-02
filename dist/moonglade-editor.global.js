@@ -15837,7 +15837,7 @@ ${INDENT.repeat(depth)}</${node.tagName.toLowerCase()}>`;
         handlePaste: (_view, event) => this.handleImagePaste(event),
         handleDrop: (view, event) => this.handleImageDrop(view, event)
       });
-      this.syncToTextarea();
+      this.writeEditorValue(false);
       this.updateToolbarState();
     }
     get dom() {
@@ -15880,12 +15880,19 @@ ${INDENT.repeat(depth)}</${node.tagName.toLowerCase()}>`;
       this.view.destroy();
     }
     syncToTextarea() {
+      this.writeEditorValue(true);
+    }
+    writeEditorValue(notifyHost) {
       const html = this.getHTML();
       if (this.textarea) {
         this.textarea.value = html;
-        this.textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        if (notifyHost) {
+          this.textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        }
       }
-      this.onChange?.(html);
+      if (notifyHost) {
+        this.onChange?.(html);
+      }
     }
     handleImagePaste(event) {
       const file = getFirstImageFile(event.clipboardData?.files);

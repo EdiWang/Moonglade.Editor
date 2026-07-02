@@ -134,7 +134,7 @@ export class MoongladeEditor {
       handleDrop: (view, event) => this.handleImageDrop(view, event)
     });
 
-    this.syncToTextarea();
+    this.writeEditorValue(false);
     this.updateToolbarState();
   }
 
@@ -188,13 +188,21 @@ export class MoongladeEditor {
   }
 
   syncToTextarea(): void {
+    this.writeEditorValue(true);
+  }
+
+  private writeEditorValue(notifyHost: boolean): void {
     const html = this.getHTML();
     if (this.textarea) {
       this.textarea.value = html;
-      this.textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      if (notifyHost) {
+        this.textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }
 
-    this.onChange?.(html);
+    if (notifyHost) {
+      this.onChange?.(html);
+    }
   }
 
   private handleImagePaste(event: ClipboardEvent): boolean {

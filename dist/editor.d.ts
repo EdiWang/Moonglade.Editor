@@ -36,6 +36,7 @@ export declare class MoongladeEditor {
     setSpellcheck(enabled: boolean): void;
     destroy(): void;
     syncToTextarea(): void;
+    private writeEditorValue;
     private handleImagePaste;
     private getEditorAttributes;
     private handleImageDrop;
