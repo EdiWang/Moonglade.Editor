@@ -178,8 +178,12 @@ describe('editor toolbar', () => {
     expect(host.querySelector('[data-command="text_color:#0d6efd"]')?.classList.contains('mg-editor-color-swatch')).toBe(true);
     expect(host.querySelector('[data-command="text_color:clear"] .mg-editor-no-color')).not.toBeNull();
     expect(host.querySelector('[data-command="removeLink"]')).toBeNull();
-    expect(host.querySelector('[data-command="insertTable"]')?.closest('.btn-group')).toBe(host.querySelector('[data-command="addTableRow"]')?.closest('.btn-group'));
-    expect(host.querySelector('[data-command="insertTable"]')?.closest('.btn-group')).toBe(host.querySelector('[data-command="deleteTable"]')?.closest('.btn-group'));
+    expect(host.querySelector('[data-command="insertTable"]')?.classList.contains('mg-editor-table-trigger')).toBe(true);
+    expect(host.querySelector('[data-command="insertTable"]')?.querySelector('.bi-chevron-down')).not.toBeNull();
+    expect(host.querySelector('.mg-editor-table-menu')?.classList.contains('dropdown-menu')).toBe(true);
+    expect(host.querySelector('[data-command="addTableRow"]')?.closest('.mg-editor-table-menu')).not.toBeNull();
+    expect(host.querySelector('[data-command="deleteTable"]')?.closest('.mg-editor-table-menu')).not.toBeNull();
+    expect(host.querySelector('[data-command="insertTable:5x3"]')?.classList.contains('mg-editor-table-grid-cell')).toBe(true);
     expect(host.querySelector('[data-command="horizontalRule"] .bi-hr')).not.toBeNull();
     expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
@@ -476,14 +480,31 @@ describe('editor toolbar', () => {
       content: '<p>Hello</p>'
     });
 
-    (host.querySelector('[data-command="insertTable"]') as HTMLButtonElement).click();
+    const tableButton = host.querySelector('[data-command="insertTable"]') as HTMLButtonElement;
+    const tableMenu = host.querySelector('.mg-editor-table-menu') as HTMLDivElement;
+    const tableSizeLabel = host.querySelector('.mg-editor-table-size-label') as HTMLSpanElement;
+
+    tableButton.click();
+    expect(tableMenu.hidden).toBe(false);
+    expect(tableButton.getAttribute('aria-expanded')).toBe('true');
+
+    const fiveByThreeButton = host.querySelector('[data-command="insertTable:5x3"]') as HTMLButtonElement;
+    fiveByThreeButton.dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    expect(tableSizeLabel.textContent).toBe('5x3');
+    fiveByThreeButton.click();
+
+    expect(tableMenu.hidden).toBe(true);
     expect(editor.getHTML()).toContain('<table>');
     expect(editor.getHTML().match(/<tr>/g)).toHaveLength(3);
-    expect(editor.getHTML().match(/<td>/g)).toHaveLength(9);
+    expect(editor.getHTML().match(/<td>/g)).toHaveLength(15);
 
+    tableButton.click();
+    (host.querySelector('[data-table-panel="row"]') as HTMLButtonElement).click();
+    expect((host.querySelector('[data-panel="row"]') as HTMLDivElement).hidden).toBe(false);
     (host.querySelector('[data-command="addTableRow"]') as HTMLButtonElement).click();
     expect(editor.getHTML().match(/<tr>/g)).toHaveLength(4);
 
+    tableButton.click();
     (host.querySelector('[data-command="toggleTableHeaderRow"]') as HTMLButtonElement).click();
     expect(editor.getHTML()).toContain('<th>');
 

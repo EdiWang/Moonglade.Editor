@@ -28,7 +28,7 @@ import {
   type MoongladeImageUploader
 } from './image-upload';
 import { moongladeSchema } from './schema';
-import { closeColorDropdowns, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
+import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
 
@@ -62,6 +62,7 @@ export class MoongladeEditor {
     }
 
     closeColorDropdowns(this.toolbar);
+    closeTableDropdown(this.toolbar);
   };
   private savedSelection?: SelectionBookmark;
   private view: EditorView;
