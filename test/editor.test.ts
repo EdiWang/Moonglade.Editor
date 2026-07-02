@@ -506,6 +506,10 @@ describe('editor toolbar', () => {
     expect(dialog.hidden).toBe(false);
     expect(dialog.classList.contains('dropdown-menu')).toBe(false);
     expect(dialog.querySelector('.mg-editor-source-panel')).not.toBeNull();
+    expect(document.activeElement).toBe(sourceTextarea);
+    expect(sourceTextarea.selectionStart).toBe(0);
+    expect(sourceTextarea.selectionEnd).toBe(0);
+    expect(sourceTextarea.scrollTop).toBe(0);
 
     sourceTextarea.value = '<p onclick="alert(1)">Clean <a href="javascript:alert(1)">link</a></p>';
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));

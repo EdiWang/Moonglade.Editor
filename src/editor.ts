@@ -334,7 +334,8 @@ export class MoongladeEditor {
     sourceDialog.sourceTextarea.value = this.getHTML();
     sourceDialog.root.hidden = false;
     sourceDialog.sourceTextarea.focus();
-    sourceDialog.sourceTextarea.select();
+    sourceDialog.sourceTextarea.setSelectionRange(0, 0);
+    sourceDialog.sourceTextarea.scrollTop = 0;
   }
 
   private closeSourceDialog(focusEditor: boolean): void {
