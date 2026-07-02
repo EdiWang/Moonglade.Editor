@@ -10,6 +10,22 @@ const maxClassTokenLength = 128;
 
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
+const bootstrapTextAlignmentClasses: Record<TextAlignment, string> = {
+  left: 'text-start',
+  center: 'text-center',
+  right: 'text-end',
+  justify: 'text-justify'
+};
+
+const textAlignmentByClass = new Map<string, TextAlignment>([
+  ['text-start', 'left'],
+  ['text-left', 'left'],
+  ['text-center', 'center'],
+  ['text-end', 'right'],
+  ['text-right', 'right'],
+  ['text-justify', 'justify']
+]);
+
 export function isSafeUrl(value: string): boolean {
   return Boolean(sanitizeLinkUrl(value));
 }
@@ -47,6 +63,42 @@ export function sanitizeTextAlign(value: string | null | undefined): TextAlignme
   const normalized = value?.trim().toLowerCase();
   return normalized && safeTextAlignValues.has(normalized)
     ? normalized as TextAlignment
+    : false;
+}
+
+export function textAlignmentToClass(value: string | null | undefined): string | false {
+  const align = sanitizeTextAlign(value);
+  return align ? bootstrapTextAlignmentClasses[align] : false;
+}
+
+export function sanitizeTextAlignmentClass(value: string | null | undefined): TextAlignment | false {
+  const className = sanitizeClassAttribute(value);
+  if (!className) {
+    return false;
+  }
+
+  for (const token of className.split(/\s+/)) {
+    const align = textAlignmentByClass.get(token.toLowerCase());
+    if (align) {
+      return align;
+    }
+  }
+
+  return false;
+}
+
+export function removeTextAlignmentClasses(value: string | null | undefined): string | false {
+  const className = sanitizeClassAttribute(value);
+  if (!className) {
+    return false;
+  }
+
+  const classNames = className
+    .split(/\s+/)
+    .filter((token) => !textAlignmentByClass.has(token.toLowerCase()));
+
+  return classNames.length > 0
+    ? classNames.join(' ')
     : false;
 }
 

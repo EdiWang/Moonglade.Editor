@@ -74,7 +74,7 @@ Key source modules:
 
 - `src/index.ts` is the public package export surface.
 - `src/editor.ts` owns `MoongladeEditor`, `createMoongladeEditor(...)`, `EditorView` setup, plugins, toolbar wiring, textarea sync, source updates, and image paste/drop/upload integration.
-- `src/schema.ts` defines the ProseMirror schema, including alignment-aware paragraphs/headings, code block language attributes, table nodes, underline/strike marks, and constrained color marks.
+- `src/schema.ts` defines the ProseMirror schema, including alignment-aware paragraphs/headings that serialize Bootstrap text alignment classes, code block language attributes, table nodes, underline/strike marks, and constrained color marks.
 - `src/html.ts` is the HTML import/export boundary. It removes unsafe URL/event attributes before schema parsing, adds lazy loading to serialized images, and newline-formats block-oriented output for source editing.
 - `src/safety.ts` contains reusable sanitizers for links, image URLs, style color values, text alignment, code language names, and HTML class attributes.
 - `src/commands.ts` defines editor commands for block formats, marks, links, colors, alignment, images, code blocks, lists, blockquotes, horizontal rules, history, and tables.

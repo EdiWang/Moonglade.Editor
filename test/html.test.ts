@@ -25,10 +25,11 @@ describe('html parsing and serialization', () => {
   });
 
   it('round-trips supported text alignment on paragraphs and headings', () => {
-    const html = '<h2 style="text-align: center;">Centered</h2><p align="right">Right</p>';
+    const html = '<h2 style="text-align: center;">Centered</h2><p align="right">Right</p><p class="text-center lead">Classy</p>';
 
-    expect(roundTripHtml(moongladeSchema, html)).toBe(`<h2 style="text-align: center;">Centered</h2>
-<p style="text-align: right;">Right</p>`);
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<h2 class="text-center">Centered</h2>
+<p class="text-end">Right</p>
+<p class="text-center lead">Classy</p>`);
   });
 
   it('round-trips code blocks with highlight.js-compatible language classes', () => {
@@ -47,6 +48,23 @@ describe('html parsing and serialization', () => {
         <p>Title</p>
       </th>
       <td>
+        <p>Value</p>
+      </td>
+    </tr>
+  </tbody>
+</table>`);
+  });
+
+  it('round-trips table cell text alignment as Bootstrap classes', () => {
+    const html = '<table><tbody><tr><th class="text-end">Title</th><td class="summary" style="text-align: center;">Value</td></tr></tbody></table>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<table>
+  <tbody>
+    <tr>
+      <th class="text-end">
+        <p>Title</p>
+      </th>
+      <td class="text-center summary">
         <p>Value</p>
       </td>
     </tr>

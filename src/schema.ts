@@ -2,7 +2,15 @@ import { Schema, type Attrs, type DOMOutputSpec, type MarkSpec, type NodeSpec, t
 import { schema as basicSchema } from 'prosemirror-schema-basic';
 import { addListNodes } from 'prosemirror-schema-list';
 import { tableNodes } from 'prosemirror-tables';
-import { sanitizeClassAttribute, sanitizeCodeLanguage, sanitizeStyleValue, sanitizeTextAlign } from './safety';
+import {
+  removeTextAlignmentClasses,
+  sanitizeClassAttribute,
+  sanitizeCodeLanguage,
+  sanitizeStyleValue,
+  sanitizeTextAlign,
+  sanitizeTextAlignmentClass,
+  textAlignmentToClass
+} from './safety';
 
 const tableNodeSpecs = tableNodes({
   tableGroup: 'block',
@@ -11,11 +19,17 @@ const tableNodeSpecs = tableNodes({
     align: {
       default: null,
       getFromDOM(dom) {
-        return sanitizeTextAlign(dom.style.textAlign || dom.getAttribute('align')) || null;
+        return sanitizeTextAlign(dom.style.textAlign || dom.getAttribute('align')) ||
+          sanitizeTextAlignmentClass(dom.getAttribute('class')) ||
+          null;
       },
       setDOMAttr(value, attrs) {
-        if (value) {
-          attrs.style = `${attrs.style || ''}text-align: ${value};`;
+        const alignClass = typeof value === 'string'
+          ? textAlignmentToClass(value)
+          : false;
+
+        if (alignClass) {
+          addClassToAttrs(attrs, alignClass);
         }
       }
     }
@@ -127,7 +141,8 @@ function withAlignment(spec: NodeSpec): NodeSpec {
         }
 
         const element = dom instanceof HTMLElement ? dom : null;
-        const align = sanitizeTextAlign(element?.style.textAlign || element?.getAttribute('align'));
+        const align = sanitizeTextAlign(element?.style.textAlign || element?.getAttribute('align')) ||
+          sanitizeTextAlignmentClass(element?.getAttribute('class'));
         return {
           ...(originalAttrs || {}),
           align: align || null
@@ -136,14 +151,14 @@ function withAlignment(spec: NodeSpec): NodeSpec {
     })),
     toDOM(node) {
       const dom = spec.toDOM?.(node) ?? ['p', 0];
-      const align = sanitizeTextAlign(node.attrs.align);
+      const alignClass = textAlignmentToClass(node.attrs.align);
 
-      if (!Array.isArray(dom) || !align) {
+      if (!Array.isArray(dom) || !alignClass) {
         return dom;
       }
 
       const attrs = getDomOutputAttrs(dom);
-      attrs.style = `${attrs.style || ''}text-align: ${align};`;
+      addClassToAttrs(attrs, alignClass);
 
       return setDomOutputAttrs(dom, attrs);
     }
@@ -200,7 +215,9 @@ function withClassTagParseRule(rule: TagParseRule): TagParseRule {
         return false;
       }
 
-      const className = sanitizeClassAttribute(dom.getAttribute('class'));
+      const className = hasAlignmentAttr(originalAttrs)
+        ? removeTextAlignmentClasses(dom.getAttribute('class'))
+        : sanitizeClassAttribute(dom.getAttribute('class'));
       return {
         ...(originalAttrs || {}),
         class: className || null
@@ -214,21 +231,50 @@ function isTagParseRule(rule: ParseRule): rule is TagParseRule {
 }
 
 function addClassToDomOutput(dom: DOMOutputSpec, value: unknown): DOMOutputSpec {
-  const className = typeof value === 'string' ? sanitizeClassAttribute(value) : false;
-
-  if (!Array.isArray(dom) || !className) {
+  if (!Array.isArray(dom)) {
     return dom;
   }
 
   const attrs = getDomOutputAttrs(dom);
-  const existingClass = typeof attrs.class === 'string'
-    ? sanitizeClassAttribute(attrs.class)
-    : false;
-  attrs.class = existingClass
-    ? `${existingClass} ${className}`
-    : className;
+  addClassToAttrs(attrs, value);
 
   return setDomOutputAttrs(dom, attrs);
+}
+
+function addClassToAttrs(attrs: MutableAttrs, value: unknown): void {
+  const className = mergeClassAttributes(attrs.class, value);
+
+  if (className) {
+    attrs.class = className;
+  }
+}
+
+function mergeClassAttributes(...values: unknown[]): string | false {
+  const classNames: string[] = [];
+
+  for (const value of values) {
+    const className = typeof value === 'string'
+      ? sanitizeClassAttribute(value)
+      : false;
+
+    if (!className) {
+      continue;
+    }
+
+    for (const token of className.split(/\s+/)) {
+      if (!classNames.includes(token)) {
+        classNames.push(token);
+      }
+    }
+  }
+
+  return classNames.length > 0
+    ? classNames.join(' ')
+    : false;
+}
+
+function hasAlignmentAttr(value: unknown): boolean {
+  return Boolean(value && typeof value === 'object' && sanitizeTextAlign((value as Attrs).align));
 }
 
 function getDomOutputAttrs(dom: readonly unknown[]): MutableAttrs {

@@ -396,7 +396,7 @@ describe('editor toolbar', () => {
 
     centerButton.click();
 
-    expect(editor.getHTML()).toBe('<p style="text-align: center;">Hello</p>');
+    expect(editor.getHTML()).toBe('<p class="text-center">Hello</p>');
     expect(centerButton.getAttribute('aria-pressed')).toBe('true');
 
     editor.destroy();

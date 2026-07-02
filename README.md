@@ -126,6 +126,7 @@ HTML source mode and imported HTML are constrained before entering the editor sc
 - Links allow `http`, `https`, `mailto`, `tel`, and relative/root/fragment URLs.
 - Images allow `http`, `https`, and relative/root URLs.
 - Text colors allow hex, `rgb(...)`, and `rgba(...)` values.
+- Text alignment imports legacy `style`/`align` values and Bootstrap alignment classes, then serializes as Bootstrap classes such as `text-center`.
 - Schema-supported elements preserve safe custom `class` tokens, such as `ul class="abc"` and `table class="custom-table"`, while unsupported tags and unsafe class tokens are still dropped.
 
 Serialized editor output is newline-formatted around block content such as headings, paragraphs, horizontal rules, blockquotes, tables, and standalone image paragraphs so the synced HTML remains practical to hand-edit.

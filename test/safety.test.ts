@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   isSafeUrl,
+  removeTextAlignmentClasses,
   sanitizeClassAttribute,
   sanitizeImageUrl,
   sanitizeLinkUrl,
   sanitizeCodeLanguage,
   sanitizeStyleValue,
   sanitizeTextAlign,
+  sanitizeTextAlignmentClass,
+  textAlignmentToClass,
   sanitizeUrl
 } from '../src/safety';
 
@@ -64,6 +67,24 @@ describe('safety helpers', () => {
     expect(sanitizeTextAlign(' Center ')).toBe('center');
     expect(sanitizeTextAlign('justify')).toBe('justify');
     expect(sanitizeTextAlign('match-parent')).toBe(false);
+  });
+
+  it('maps text alignment values to Bootstrap classes', () => {
+    expect(textAlignmentToClass('center')).toBe('text-center');
+    expect(textAlignmentToClass('right')).toBe('text-end');
+    expect(textAlignmentToClass('match-parent')).toBe(false);
+  });
+
+  it('normalizes Bootstrap text alignment classes', () => {
+    expect(sanitizeTextAlignmentClass('lead text-center')).toBe('center');
+    expect(sanitizeTextAlignmentClass('text-end')).toBe('right');
+    expect(sanitizeTextAlignmentClass('text-left')).toBe('left');
+    expect(sanitizeTextAlignmentClass('lead')).toBe(false);
+  });
+
+  it('removes text alignment classes from custom class values', () => {
+    expect(removeTextAlignmentClasses('lead text-center custom')).toBe('lead custom');
+    expect(removeTextAlignmentClasses('text-end')).toBe(false);
   });
 
   it('normalizes constrained code language values', () => {
