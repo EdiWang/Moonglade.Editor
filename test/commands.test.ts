@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EditorState, TextSelection } from 'prosemirror-state';
 import type { Command } from 'prosemirror-state';
+import { findTable } from 'prosemirror-tables';
 import { createCommands } from '../src/commands';
 import { parseHtml, serializeHtml } from '../src/html';
 import { moongladeSchema } from '../src/schema';
@@ -27,6 +28,37 @@ function setSelection(state: EditorState, from: number, to = from): EditorState 
 
 function getHtml(state: EditorState): string {
   return serializeHtml(moongladeSchema, state.doc);
+}
+
+function findTextPosition(state: EditorState, text: string): number {
+  let textPosition = -1;
+  state.doc.descendants((node, pos) => {
+    if (node.isText && node.text?.includes(text)) {
+      textPosition = pos + node.text.indexOf(text);
+      return false;
+    }
+
+    return true;
+  });
+
+  if (textPosition === -1) {
+    throw new Error(`Unable to find text "${text}".`);
+  }
+
+  return textPosition;
+}
+
+function getTablePositions(state: EditorState): number[] {
+  const positions: number[] = [];
+  state.doc.descendants((node, pos) => {
+    if (node.type === moongladeSchema.nodes.table) {
+      positions.push(pos);
+    }
+
+    return true;
+  });
+
+  return positions;
 }
 
 describe('editor commands', () => {
@@ -102,6 +134,18 @@ describe('editor commands', () => {
     expect(result).toBe(true);
     expect(html.match(/<tr>/g)).toHaveLength(12);
     expect(html.match(/<td>/g)).toHaveLength(96);
+  });
+
+  it('places the selection inside the newly inserted table when another table already exists', () => {
+    const state = createState('<table><tbody><tr><td><p>Existing</p></td></tr></tbody></table><p>Insert here</p>');
+    const insertionPoint = findTextPosition(state, 'Insert here') + 'Insert here'.length;
+    const { result, state: nextState } = runCommand(setSelection(state, insertionPoint), commands.insertTable(2, 2));
+    const tablePositions = getTablePositions(nextState);
+    const activeTable = findTable(nextState.selection.$from);
+
+    expect(result).toBe(true);
+    expect(tablePositions).toHaveLength(2);
+    expect(activeTable?.pos).toBe(tablePositions[1]);
   });
 
   it('rejects unsupported image protocols', () => {

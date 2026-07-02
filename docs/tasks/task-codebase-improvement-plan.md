@@ -47,7 +47,7 @@ Not recommended now:
 | I-03 | P2 | Stability / async state | `src/editor.ts` `savedSelection`, `uploadAndInsertImage()` | Async image upload used a shared `savedSelection` field that is also used by link, color, code, paste, and drop flows. A later interaction could overwrite or clear the selection before the upload resolved. | Uploaded images could be inserted at the wrong selection or fail to restore the intended cursor in multi-upload or user-interaction races. | Initial code assigned `savedSelection` before image button/paste/drop upload and upload completion restored that shared field. Link/code/color flows also read/write the same field. Execution on 2026-07-02 added per-upload selection bookmarks and a delayed uploader test that opens the link dialog before upload completion. | Resolved by capturing an upload-specific bookmark at upload start and passing it through the async upload path. |
 | I-04 | P2 | Error handling / UX | `src/image-upload.ts`, `src/editor.ts` upload status | Upload response parsing assumed valid JSON and did not validate response shape before returning the upload result. | Non-JSON responses, empty responses, or missing `location` values could show confusing technical text or flow into later image insertion validation. | Initial `uploadImageToUrl()` called `await response.json()` after `response.ok` and returned an empty `src` when `location` was missing. Execution on 2026-07-02 added normalized errors for HTTP failure, invalid JSON, and missing image URL while preserving unsafe URL rejection. | Resolved by validating URL upload responses in `src/image-upload.ts` and adding upload error edge-case tests. |
 | I-05 | P2 | Command behavior / test gap | `src/commands.ts` `toggleList()` | List toggling is simple and may not handle switching between bullet and ordered lists as users expect. | Users may get nested lists or no intuitive conversion when switching list type. | `toggleList(schema, listType)` only lifts when the current selection already has the same list type as an ancestor; otherwise it calls `wrapInList(listType)`. Tests do not cover switching between bullet and ordered lists or nested list behavior. User confirmed on 2026-07-02 that switching should convert the current list type. | Add characterization tests for bullet-to-ordered and ordered-to-bullet behavior, then implement the smallest conversion fix. |
-| I-06 | P2 | Command behavior / edge case | `src/commands.ts` `insertTable()` | After table insertion, fallback selection recovery scans the document and picks the first table if `findTable(...)` cannot locate the inserted one. | In documents with existing tables, inserting another table could move the cursor into the wrong table. | `insertTable()` calls `findTable(transaction.selection.$from)?.pos`; if unavailable it runs `transaction.doc.descendants(...)` and assigns the first `schema.nodes.table` position. Existing tests only insert one table. | Add a test for inserting a second table after an existing table. Track the inserted position directly instead of global first-table fallback if the test confirms the issue. |
+| I-06 | P2 | Command behavior / edge case | `src/commands.ts` `insertTable()` | After table insertion, fallback selection recovery scanned the document and picked the first table if `findTable(...)` could not locate the inserted one. | In documents with existing tables, fallback behavior could move the cursor into the wrong table. | Initial `insertTable()` fallback ran `transaction.doc.descendants(...)` and assigned the first `schema.nodes.table` position. Execution on 2026-07-02 added a regression test with an existing table and changed fallback selection targeting to prefer a table at or after the original insertion point. | Resolved by targeting the inserted table near the mapped insertion point instead of globally falling back to the first table. |
 | I-07 | P2 | Public API / architecture | `src/editor.ts`, `src/index.ts`, `src/commands.ts` | `MoongladeEditorOptions` exposes `schema?: Schema`, but the rest of the package assumes the full Moonglade schema shape. | Passing a custom schema can crash or create missing toolbar commands, widening the public API beyond the documented stable surface. | `MoongladeEditorOptions` includes `schema?: Schema`; constructor passes it to `createCommands`; commands immediately reference nodes/marks such as `paragraph`, `heading`, `bullet_list`, `ordered_list`, `table`, `image`, `text_color`; README public API does not document custom schema usage. User confirmed on 2026-07-02 that custom schema should not be a supported public API. | Remove or hide the custom schema option from the public API before wider release, keeping the built-in `moongladeSchema` as the supported schema. |
 | I-08 | P3 | Accessibility / dialog UX | `src/dialogs.ts`, `src/editor.ts` | Dialogs declare modal semantics but do not implement keyboard dismissal, focus trapping, or focus return consistency for all paths. | Keyboard and screen reader users may have a rougher dialog experience, especially in source mode. This is not a core data-safety issue but matters before wider release. | Link/code/source roots set `role="dialog"` and `aria-modal="true"`; close behavior is wired only through explicit buttons/forms; keyword search found no Escape handler or focus trap tests. | Add a small dialog interaction task: Escape close, predictable focus return, and tests. Avoid a full modal framework unless Bootstrap integration later requires it. |
 | I-09 | P3 | Maintainability | `src/editor.ts`, `src/toolbar.ts`, `test/editor.test.ts` | The largest files concentrate many responsibilities: editor lifecycle/state/UI wiring, toolbar construction, and broad editor interaction tests. | Future changes may become harder to review and test, but the current size is still manageable. Refactoring now would be lower priority than behavior hardening. | Line counts: `src/toolbar.ts` 363 lines, `src/editor.ts` 360 lines, `test/editor.test.ts` 423 lines. `editor.ts` owns setup, transactions, dialogs, upload, toolbar state; `toolbar.ts` builds all button groups and color controls. | After behavioral fixes, extract only clear seams such as upload selection handling, toolbar state mapping, or dialog helpers. Keep changes small and covered by tests. |
@@ -61,7 +61,7 @@ Not recommended now:
 | 3 | Harden async image upload selection handling | None after Task 2 decision | Unit tests with delayed uploader and intervening selection/dialog change; `npm test`; `npm run build` | Completed |
 | 4 | Normalize image upload response errors | None | Unit tests for invalid JSON, missing location, unsafe URL, HTTP failure; `npm test`; `npm run build` | Completed |
 | 5 | Characterize and fix list type switching as conversion | Characterization tests first | Unit tests for bullet-to-ordered, ordered-to-bullet, nested list behavior; `npm test`; `npm run build` | Not started |
-| 6 | Fix table insertion cursor recovery for multiple tables | Characterization test first | Unit test for inserting after an existing table; `npm test`; `npm run build` | Not started |
+| 6 | Fix table insertion cursor recovery for multiple tables | Characterization test first | Unit test for inserting after an existing table; `npm test`; `npm run build` | Completed |
 | 7 | Remove unsupported custom schema API surface | User confirmed custom schema should not be supported publicly | Type/API review; `npm run types`; `npm run build` | Not started |
 | 8 | Improve dialog keyboard/focus behavior | None | jsdom tests for Escape/cancel/save focus behavior; browser demo smoke check | Not started |
 | 9 | Small maintainability extraction after behavior is covered | Tasks 2-8 as relevant | Existing tests unchanged plus focused tests for extracted units; `npm test`; `npm run build` | Not started |
@@ -155,6 +155,7 @@ Not recommended now:
 - **Rollback plan**: Revert table selection logic.
 - **Needs user confirmation**: No.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. `src/commands.ts` now uses the original insertion point as fallback context when locating the inserted table, and `test/commands.test.ts` verifies selection lands in the newly inserted table when another table already exists.
 
 ### Task 7: Remove unsupported custom schema API surface
 
@@ -200,11 +201,10 @@ Not recommended now:
 
 ## Recommended Execution Order
 
-1. Task 6: Fix table insertion cursor recovery after adding a characterization test.
-2. Task 5: Characterize and adjust list type switching to convert the current list type.
-3. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
-4. Task 8: Improve dialog keyboard/focus behavior.
-5. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
+1. Task 5: Characterize and adjust list type switching to convert the current list type.
+2. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
+3. Task 8: Improve dialog keyboard/focus behavior.
+4. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
 
 Completed:
 
@@ -212,6 +212,7 @@ Completed:
 2. Task 2: Preserve dirty/autosave for edits while avoiding initialization false positives.
 3. Task 3: Harden async image upload selection handling.
 4. Task 4: Normalize image upload response errors.
+5. Task 6: Fix table insertion cursor recovery for multiple tables.
 
 ## Deferred / Not Recommended Now
 
@@ -243,6 +244,8 @@ No open questions remain from this review plan.
 | 2026-07-02 | Task 3 | `npm run build` | Passed | Regenerated `dist` artifacts; JS/CSS size checks passed. |
 | 2026-07-02 | Task 4 | `npm test` | Passed | 4 test files, 58 tests. |
 | 2026-07-02 | Task 4 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
+| 2026-07-02 | Task 6 | `npm test` | Passed | 4 test files, 59 tests. |
+| 2026-07-02 | Task 6 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
 
 ## Notes for Future Execution
 

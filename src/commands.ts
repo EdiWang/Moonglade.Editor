@@ -231,18 +231,10 @@ function insertTable(schema: Schema, rows: number, columns: number): Command {
     const tableNode = table.create(null, rowNodes);
 
     if (dispatch) {
+      const insertionPoint = state.selection.from;
       const transaction = state.tr.replaceSelectionWith(tableNode);
-      let tablePos = findTable(transaction.selection.$from)?.pos;
-      if (typeof tablePos !== 'number') {
-        transaction.doc.descendants((node, pos) => {
-          if (node.type === schema.nodes.table) {
-            tablePos = pos;
-            return false;
-          }
-
-          return true;
-        });
-      }
+      const tablePos = findTable(transaction.selection.$from)?.pos
+        ?? findTableAtOrAfter(transaction.doc, table, transaction.mapping.map(insertionPoint, -1));
 
       if (typeof tablePos === 'number') {
         transaction.setSelection(TextSelection.create(transaction.doc, tablePos + 4));
@@ -253,6 +245,27 @@ function insertTable(schema: Schema, rows: number, columns: number): Command {
 
     return true;
   };
+}
+
+function findTableAtOrAfter(doc: ProseMirrorNode, tableType: NodeType, startPos: number): number | undefined {
+  let fallbackBefore: number | undefined;
+  let tablePos: number | undefined;
+
+  doc.descendants((node, pos) => {
+    if (node.type !== tableType) {
+      return true;
+    }
+
+    if (pos >= startPos) {
+      tablePos = pos;
+      return false;
+    }
+
+    fallbackBefore = pos;
+    return true;
+  });
+
+  return tablePos ?? fallbackBefore;
 }
 
 function getAlignableBlocks(state: EditorState, schema: Schema): Array<{ node: ProseMirrorNode; pos: number }> {
