@@ -31,7 +31,7 @@ Key concepts:
 - `MoongladeEditor` is the public editor wrapper.
 - `moongladeSchema` defines the allowed document structure and marks.
 - `parseHtml(...)` and `serializeHtml(...)` are the import/export boundary for stored HTML.
-- `safety.ts` contains URL, style, alignment, and code language constraints.
+- `safety.ts` contains URL, style, alignment, code language, and HTML class attribute constraints.
 - Image upload is configured with either `uploadUrl` or a custom `uploadImage` function, with upload file extensions constrained by `allowedImageExtensions`.
 - Code snippet languages are configured through `codesample_languages`, with values filtered by the same code language sanitizer used for stored HTML.
 
@@ -126,6 +126,7 @@ HTML source mode and imported HTML are constrained before entering the editor sc
 - Links allow `http`, `https`, `mailto`, `tel`, and relative/root/fragment URLs.
 - Images allow `http`, `https`, and relative/root URLs.
 - Text colors allow hex, `rgb(...)`, and `rgba(...)` values.
+- Schema-supported elements preserve safe custom `class` tokens, such as `ul class="abc"` and `table class="custom-table"`, while unsupported tags and unsafe class tokens are still dropped.
 
 Serialized editor output is newline-formatted around block content such as headings, paragraphs, horizontal rules, blockquotes, tables, and standalone image paragraphs so the synced HTML remains practical to hand-edit.
 

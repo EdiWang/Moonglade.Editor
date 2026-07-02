@@ -579,6 +579,33 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('preserves custom classes edited in source HTML', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<table><tbody><tr><td>Value</td></tr></tbody></table><ul><li><p>Item</p></li></ul>'
+    });
+
+    (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
+    const form = dialog.querySelector('form') as HTMLFormElement;
+    const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
+
+    sourceTextarea.value = sourceTextarea.value
+      .replace('<table>', '<table class="custom-table">')
+      .replace('<ul>', '<ul class="abc">');
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+
+    (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
+
+    expect(sourceTextarea.value).toContain('<table class="custom-table">');
+    expect(sourceTextarea.value).toContain('<ul class="abc">');
+
+    editor.destroy();
+  });
+
   it('closes the source dialog with Escape and returns focus to the editor', () => {
     const host = document.createElement('div');
     document.body.append(host);

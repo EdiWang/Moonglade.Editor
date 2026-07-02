@@ -54,6 +54,41 @@ describe('html parsing and serialization', () => {
 </table>`);
   });
 
+  it('round-trips supported table classes', () => {
+    const html = '<table class="table table-striped custom"><tbody><tr><td>Value</td></tr></tbody></table>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<table class="table table-striped custom">
+  <tbody>
+    <tr>
+      <td>
+        <p>Value</p>
+      </td>
+    </tr>
+  </tbody>
+</table>`);
+  });
+
+  it('round-trips custom classes on supported structural elements', () => {
+    const html = '<h2 class="post-title">Title</h2><ul class="abc"><li class="item"><p class="lead">Value</p></li></ul><blockquote class="quote"><p>Note</p></blockquote><hr class="wide">';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<h2 class="post-title">Title</h2>
+<ul class="abc">
+  <li class="item">
+    <p class="lead">Value</p>
+  </li>
+</ul>
+<blockquote class="quote">
+  <p>Note</p>
+</blockquote>
+<hr class="wide">`);
+  });
+
+  it('round-trips custom classes on supported inline elements', () => {
+    const html = '<p><a class="external" href="/post">Post</a><img class="hero-image" src="/media/photo.jpg" alt="Photo"></p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p><a href="/post" class="external">Post</a><img src="/media/photo.jpg" alt="Photo" class="hero-image" loading="lazy"></p>');
+  });
+
   it('strips unsafe link protocols', () => {
     const html = '<p><a href="javascript:alert(1)">bad link</a> <a href="ftp://example.com/file.txt">ftp</a></p>';
 

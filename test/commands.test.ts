@@ -72,6 +72,14 @@ describe('editor commands', () => {
     expect(getHtml(nextState)).toBe('<p><a href="https://new.example" title="New">Hello</a> world</p>');
   });
 
+  it('preserves existing link classes when editing the active link', () => {
+    const state = setSelection(createState('<p><a class="external" href="https://old.example">Hello</a></p>'), 3);
+    const { result, state: nextState } = runCommand(state, commands.link('https://new.example'));
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe('<p><a href="https://new.example" class="external">Hello</a></p>');
+  });
+
   it('allows mail links but rejects unsupported link protocols', () => {
     const state = setSelection(createState('<p>Hello</p>'), 1, 6);
     const linked = runCommand(state, commands.link('mailto:hello@example.com'));

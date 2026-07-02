@@ -1,9 +1,12 @@
 const protocolPattern = /^([a-z][a-z0-9+.-]*):/i;
 const unsafeUrlCharacterPattern = /[\u0000-\u001f\u007f\s]/;
+const unsafeClassCharacterPattern = /[\u0000-\u001f\u007f\s"'`=<>\\]/;
 const safeLinkProtocols = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 const safeImageProtocols = new Set(['http:', 'https:']);
 const safeTextAlignValues = new Set(['left', 'center', 'right', 'justify']);
 const codeLanguagePattern = /^[a-z0-9_+-]{1,32}$/i;
+const maxClassAttributeLength = 1024;
+const maxClassTokenLength = 128;
 
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
@@ -51,6 +54,25 @@ export function sanitizeCodeLanguage(value: string | null | undefined): string |
   const normalized = value?.trim().toLowerCase();
   return normalized && codeLanguagePattern.test(normalized)
     ? normalized
+    : false;
+}
+
+export function sanitizeClassAttribute(value: string | null | undefined): string | false {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return false;
+  }
+
+  const safeClasses = normalized.slice(0, maxClassAttributeLength)
+    .split(/\s+/)
+    .filter((className, index, classNames) =>
+      className.length > 0 &&
+      className.length <= maxClassTokenLength &&
+      !unsafeClassCharacterPattern.test(className) &&
+      classNames.indexOf(className) === index);
+
+  return safeClasses.length > 0
+    ? safeClasses.join(' ')
     : false;
 }
 

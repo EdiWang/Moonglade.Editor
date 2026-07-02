@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isSafeUrl,
+  sanitizeClassAttribute,
   sanitizeImageUrl,
   sanitizeLinkUrl,
   sanitizeCodeLanguage,
@@ -69,5 +70,11 @@ describe('safety helpers', () => {
     expect(sanitizeCodeLanguage(' TypeScript ')).toBe('typescript');
     expect(sanitizeCodeLanguage('csharp')).toBe('csharp');
     expect(sanitizeCodeLanguage('javascript:alert(1)')).toBe(false);
+  });
+
+  it('keeps safe custom class names', () => {
+    expect(sanitizeClassAttribute(' abc table-striped custom-class abc ')).toBe('abc table-striped custom-class');
+    expect(sanitizeClassAttribute('sm:w-1/2 hover:bg-primary')).toBe('sm:w-1/2 hover:bg-primary');
+    expect(sanitizeClassAttribute('bad<class ok')).toBe('ok');
   });
 });

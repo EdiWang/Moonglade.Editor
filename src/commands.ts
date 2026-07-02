@@ -130,7 +130,11 @@ function setLink(markType: MarkType, href: string, title?: string): Command {
       const markTo = range?.to ?? to;
       transaction
         .removeMark(markFrom, markTo, markType)
-        .addMark(markFrom, markTo, markType.create({ href: safeHref, title: title?.trim() || null }));
+        .addMark(markFrom, markTo, markType.create({
+          href: safeHref,
+          title: title?.trim() || null,
+          class: range?.mark.attrs.class || null
+        }));
       dispatch(transaction);
     }
 
