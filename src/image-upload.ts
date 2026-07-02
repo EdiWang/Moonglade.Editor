@@ -6,8 +6,11 @@ export interface MoongladeImageUploadResult {
 
 export type MoongladeImageUploader = (file: File) => Promise<MoongladeImageUploadResult>;
 
+export const DEFAULT_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.png', '.webp', '.svg'] as const;
+
 const invalidJsonMessage = 'Image upload failed because the server returned invalid JSON.';
 const missingUrlMessage = 'Image upload response did not include an image URL.';
+const imageExtensionPattern = /^\.[a-z0-9]+$/;
 
 interface CreateImageUploaderOptions {
   uploadUrl?: string;
@@ -24,6 +27,29 @@ export function createImageUploader({ uploadUrl, uploadImage }: CreateImageUploa
   }
 
   return (file) => uploadImageToUrl(uploadUrl, file);
+}
+
+export function normalizeAllowedImageExtensions(extensions?: readonly string[]): string[] {
+  const source = extensions ?? DEFAULT_ALLOWED_IMAGE_EXTENSIONS;
+  const normalized: string[] = [];
+
+  for (const extension of source) {
+    const value = normalizeImageExtension(extension);
+    if (value && !normalized.includes(value)) {
+      normalized.push(value);
+    }
+  }
+
+  return normalized;
+}
+
+export function hasAllowedImageUploadExtension(file: File, allowedExtensions: readonly string[]): boolean {
+  const extension = getFileExtension(file.name);
+  return Boolean(extension && allowedExtensions.includes(extension));
+}
+
+export function formatAllowedImageExtensions(allowedExtensions: readonly string[]): string {
+  return allowedExtensions.join(', ');
 }
 
 export async function uploadImageToUrl(uploadUrl: string, file: File): Promise<MoongladeImageUploadResult> {
@@ -63,4 +89,20 @@ export async function uploadImageToUrl(uploadUrl: string, file: File): Promise<M
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+function normalizeImageExtension(extension: string): string | null {
+  const value = extension.trim().toLowerCase();
+  const normalized = value.startsWith('.') ? value : `.${value}`;
+
+  return imageExtensionPattern.test(normalized) ? normalized : null;
+}
+
+function getFileExtension(fileName: string): string | null {
+  const extensionIndex = fileName.lastIndexOf('.');
+  if (extensionIndex < 0 || extensionIndex === fileName.length - 1) {
+    return null;
+  }
+
+  return fileName.slice(extensionIndex).toLowerCase();
 }

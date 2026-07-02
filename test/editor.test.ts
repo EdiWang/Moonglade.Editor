@@ -184,6 +184,7 @@ describe('editor toolbar', () => {
     expect(host.querySelector('.mg-editor-dialog')?.classList.contains('dropdown-menu')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"]')).not.toBeNull();
+    expect((host.querySelector('input[type="file"]') as HTMLInputElement).accept).toBe('.jpg,.png,.webp,.svg');
 
     const toolbar = host.querySelector('[role="toolbar"]') as HTMLElement;
     expect(toolbar.children[0].querySelector('[data-command="undo"]')).not.toBeNull();
@@ -647,6 +648,77 @@ describe('editor toolbar', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(editor.getHTML()).toBe('<p>Hello<img src="/media/custom.jpg" alt="Custom alt" title="Custom title" loading="lazy"></p>');
+
+    editor.destroy();
+  });
+
+  it('rejects unsupported image upload extensions by default', () => {
+    const uploadImage = vi.fn(async () => ({
+      src: '/media/animation.gif'
+    }));
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage
+    });
+    const file = new File(['fake-image'], 'animation.gif', { type: 'image/gif' });
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const uploadStatus = host.querySelector('.mg-editor-upload-status') as HTMLDivElement;
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(editor.getHTML()).toBe('<p>Hello</p>');
+    expect(uploadStatus.hidden).toBe(false);
+    expect(uploadStatus.textContent).toBe('Image uploads only support .jpg, .png, .webp, .svg.');
+
+    editor.destroy();
+  });
+
+  it('uses custom image upload extensions for picker filtering and upload validation', async () => {
+    const file = new File(['fake-image'], 'animation.GIF', { type: 'image/gif' });
+    const uploadImage = vi.fn(async (uploadedFile: File) => {
+      expect(uploadedFile).toBe(file);
+      return {
+        src: '/media/animation.gif',
+        alt: 'Animation'
+      };
+    });
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage,
+      allowedImageExtensions: ['gif']
+    });
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+
+    expect(input.accept).toBe('.gif');
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForExpectation(() => {
+      expect(uploadImage).toHaveBeenCalledWith(file);
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/animation.gif" alt="Animation" loading="lazy"></p>');
 
     editor.destroy();
   });

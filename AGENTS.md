@@ -104,6 +104,7 @@ const editor = createMoongladeEditor({
   textarea,
   height: '500px',
   uploadUrl: '/image',
+  allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg'],
   spellcheck: true,
   content,
   onChange
@@ -118,6 +119,7 @@ editor.destroy();
 ```
 
 `uploadImage` can replace `uploadUrl` for custom upload behavior. Uploaded images must return a safe URL through `{ src, alt?, title? }`.
+`allowedImageExtensions` constrains the client-side upload file picker, paste, and drag/drop flows. It defaults to `.jpg`, `.png`, `.webp`, and `.svg`; hosts can override it with case-insensitive extension strings with or without the leading dot. Server-side upload handlers must still validate file content and extension.
 
 `height` defaults to `500px` and should accept ordinary CSS height values such as `px`, `vh`, and `calc(...)` strings.
 
@@ -131,6 +133,7 @@ Do not require Moonglade to understand ProseMirror JSON as the storage format un
 - Treat HTML source mode and pasted/imported HTML as untrusted input that must pass through the schema and sanitizer.
 - Preserve safe URL handling for links and images. Reject script-like protocols.
 - Keep image upload integration configurable through options; Moonglade will pass `/image`.
+- Keep image upload extension filtering configurable through `allowedImageExtensions`; default to `.jpg`, `.png`, `.webp`, and `.svg`.
 - Keep dependency licenses permissive and documented. Verify license changes before adding new dependencies.
 - Commit `package-lock.json` whenever dependencies change.
 - Do not edit generated `dist/` files by hand; update source or build scripts and rebuild for verification or release packaging.

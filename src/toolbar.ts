@@ -11,6 +11,7 @@ import {
   type SourceDialogElements
 } from './dialogs';
 import { blockFormats, colorPalette } from './editor-options';
+import { hasAllowedImageUploadExtension } from './image-upload';
 
 export type ToolbarButtonId =
   | 'undo'
@@ -68,6 +69,7 @@ interface CreateToolbarOptions {
   schema: Schema;
   commands: MoongladeEditorCommands;
   uploadConfigured: boolean;
+  allowedImageExtensions: readonly string[];
   actions: ToolbarActions;
 }
 
@@ -80,7 +82,7 @@ interface ToolbarActions extends EditorDialogActions {
   openSourceDialog(): void;
 }
 
-export function createToolbar({ schema, commands, uploadConfigured, actions }: CreateToolbarOptions): ToolbarElements {
+export function createToolbar({ schema, commands, uploadConfigured, allowedImageExtensions, actions }: CreateToolbarOptions): ToolbarElements {
   const root = document.createElement('div');
   root.className = 'mg-editor-toolbar card-header btn-toolbar gap-2 p-2';
   root.setAttribute('role', 'toolbar');
@@ -197,7 +199,7 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
   const imageButton = createToolbarButton('image', 'image', 'Upload image');
   const imageInput = document.createElement('input');
   imageInput.type = 'file';
-  imageInput.accept = 'image/*';
+  imageInput.accept = allowedImageExtensions.join(',');
   imageInput.hidden = true;
   imageButton.disabled = !uploadConfigured;
   imageButton.addEventListener('click', () => {
@@ -205,7 +207,7 @@ export function createToolbar({ schema, commands, uploadConfigured, actions }: C
     imageInput.click();
   });
   imageInput.addEventListener('change', () => {
-    const file = getFirstImageFile(imageInput.files);
+    const file = getFirstImageFile(imageInput.files, allowedImageExtensions);
     imageInput.value = '';
 
     if (file) {
@@ -274,8 +276,8 @@ export function closeColorDropdowns(toolbar: Pick<ToolbarElements, 'colorDropdow
   }
 }
 
-export function getFirstImageFile(files: FileList | null | undefined): File | null {
-  return Array.from(files ?? []).find((file) => file.type.startsWith('image/')) ?? null;
+export function getFirstImageFile(files: FileList | File[] | null | undefined, allowedImageExtensions: readonly string[]): File | null {
+  return Array.from(files ?? []).find((file) => file.type.startsWith('image/') || hasAllowedImageUploadExtension(file, allowedImageExtensions)) ?? null;
 }
 
 function createToolbarButton(name: ToolbarButtonId, icon: string, ariaLabel: string): HTMLButtonElement {

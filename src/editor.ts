@@ -20,7 +20,13 @@ import {
   isMarkActive
 } from './editor-state';
 import { parseHtml, serializeHtml } from './html';
-import { createImageUploader, type MoongladeImageUploader } from './image-upload';
+import {
+  createImageUploader,
+  formatAllowedImageExtensions,
+  hasAllowedImageUploadExtension,
+  normalizeAllowedImageExtensions,
+  type MoongladeImageUploader
+} from './image-upload';
 import { moongladeSchema } from './schema';
 import { closeColorDropdowns, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
 
@@ -34,6 +40,7 @@ export interface MoongladeEditorOptions {
   spellcheck?: boolean;
   uploadUrl?: string;
   uploadImage?: MoongladeImageUploader;
+  allowedImageExtensions?: readonly string[];
   onChange?: (html: string) => void;
 }
 
@@ -45,6 +52,7 @@ export class MoongladeEditor {
   private readonly textarea?: HTMLTextAreaElement;
   private readonly onChange?: (html: string) => void;
   private readonly uploadImage?: MoongladeImageUploader;
+  private readonly allowedImageExtensions: readonly string[];
   private readonly toolbar: ToolbarElements;
   private spellcheck: boolean;
   private readonly closeColorDropdownsOnDocumentPointerDown = (event: PointerEvent): void => {
@@ -64,6 +72,7 @@ export class MoongladeEditor {
     this.textarea = options.textarea;
     this.uploadUrl = options.uploadUrl;
     this.uploadImage = createImageUploader(options);
+    this.allowedImageExtensions = normalizeAllowedImageExtensions(options.allowedImageExtensions);
     this.onChange = options.onChange;
     this.spellcheck = options.spellcheck ?? true;
 
@@ -79,7 +88,8 @@ export class MoongladeEditor {
     this.toolbar = createToolbar({
       schema: this.schema,
       commands: this.commands,
-      uploadConfigured: Boolean(this.uploadImage),
+      uploadConfigured: Boolean(this.uploadImage) && this.allowedImageExtensions.length > 0,
+      allowedImageExtensions: this.allowedImageExtensions,
       actions: {
         execute: (command) => this.execute(command),
         executeWithSavedSelection: (command) => this.executeWithSavedSelection(command),
@@ -207,7 +217,7 @@ export class MoongladeEditor {
   }
 
   private handleImagePaste(event: ClipboardEvent): boolean {
-    const file = getFirstImageFile(event.clipboardData?.files);
+    const file = getFirstImageFile(event.clipboardData?.files, this.allowedImageExtensions);
 
     if (!file || !this.uploadImage) {
       return false;
@@ -226,7 +236,7 @@ export class MoongladeEditor {
   }
 
   private handleImageDrop(view: EditorView, event: DragEvent): boolean {
-    const file = getFirstImageFile(event.dataTransfer?.files);
+    const file = getFirstImageFile(event.dataTransfer?.files, this.allowedImageExtensions);
 
     if (!file || !this.uploadImage) {
       return false;
@@ -246,6 +256,11 @@ export class MoongladeEditor {
   private async uploadAndInsertImage(file: File, uploadSelection: SelectionBookmark): Promise<boolean> {
     if (!this.uploadImage) {
       this.setUploadStatus('Image upload is not configured.', true);
+      return false;
+    }
+
+    if (!hasAllowedImageUploadExtension(file, this.allowedImageExtensions)) {
+      this.setUploadStatus(this.getUnsupportedImageFormatMessage(), true);
       return false;
     }
 
@@ -429,8 +444,15 @@ export class MoongladeEditor {
 
     buttons.undo.disabled = !canRun(state, this.view, this.commands.undo);
     buttons.redo.disabled = !canRun(state, this.view, this.commands.redo);
-    buttons.image.disabled = !this.uploadImage;
+    buttons.image.disabled = !this.uploadImage || this.allowedImageExtensions.length === 0;
     buttons.htmlSource.disabled = false;
+  }
+
+  private getUnsupportedImageFormatMessage(): string {
+    const allowedExtensions = formatAllowedImageExtensions(this.allowedImageExtensions);
+    return allowedExtensions
+      ? `Image uploads only support ${allowedExtensions}.`
+      : 'Image uploads are disabled because no image formats are allowed.';
   }
 }
 

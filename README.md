@@ -32,7 +32,7 @@ Key concepts:
 - `moongladeSchema` defines the allowed document structure and marks.
 - `parseHtml(...)` and `serializeHtml(...)` are the import/export boundary for stored HTML.
 - `safety.ts` contains URL, style, alignment, and code language constraints.
-- Image upload is configured with either `uploadUrl` or a custom `uploadImage` function.
+- Image upload is configured with either `uploadUrl` or a custom `uploadImage` function, with upload file extensions constrained by `allowedImageExtensions`.
 
 Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit.
 
@@ -85,7 +85,8 @@ const editor = createMoongladeEditor({
   textarea: document.querySelector('#content')!,
   height: '500px',
   spellcheck: true,
-  uploadUrl: '/image'
+  uploadUrl: '/image',
+  allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg']
 });
 
 editor.setSpellcheck(false);
@@ -106,6 +107,8 @@ const editor = createMoongladeEditor({
   }
 });
 ```
+
+Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Hosts can override that list with `allowedImageExtensions`; values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the file picker, paste, and drag/drop upload flows, but upload endpoints should still validate file content server-side.
 
 HTML source mode and imported HTML are constrained before entering the editor schema:
 
@@ -136,7 +139,8 @@ Static asset option:
     textarea: document.querySelector('#post-content'),
     height: '500px',
     spellcheck: true,
-    uploadUrl: '/image'
+    uploadUrl: '/image',
+    allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg']
   });
 </script>
 ```
