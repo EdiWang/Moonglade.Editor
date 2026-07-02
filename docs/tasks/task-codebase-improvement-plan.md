@@ -34,6 +34,7 @@ The following items are no longer active tasks:
 - Switching between bullet and ordered lists now converts the current list type.
 - Unsupported custom schema injection was removed from `MoongladeEditorOptions`.
 - Link, code, and source dialogs now support Escape-to-close, and source save returns focus to the editor.
+- Toolbar construction was split from a long all-in-one `src/toolbar.ts` implementation into a 105-line assembly layer plus focused tool modules under `src/toolbar/`.
 
 Latest completed verification from the hardening pass:
 
@@ -49,7 +50,7 @@ Latest completed verification from the hardening pass:
 | R-01 | P2 | Release / integration | `README.md`, `AGENTS.md`, `package.json`, `dist/` | The project now relies on ignored local `dist/` output being attached to GitHub Releases, but the exact release artifact checklist is still informal. | A release could accidentally omit CSS, declarations, source maps, or use stale locally generated assets. Moonglade integration would then depend on manual recovery. | `README.md` and `AGENTS.md` state that `dist/` is ignored and release artifacts should be attached to GitHub Releases, while no dedicated release checklist or release task record exists yet. | Add a small release checklist or release task record that names the build command, artifact list, smoke checks, and manual Moonglade copy expectation. Avoid automation until the manual process is proven. |
 | R-02 | P2 | Release / legal | `package.json`, `README.md`, `AGENTS.md` | The package is still marked `UNLICENSED`, but the current strategy includes distributing build artifacts through GitHub Releases. | Public or independent distribution may be unclear until the intended license is chosen. | `package.json` has `"license": "UNLICENSED"`; `README.md` and `AGENTS.md` both say to choose a license before independent distribution. | Ask the owner to choose whether releases are private/internal only or which public license should apply before public distribution. Treat license changes as a separate confirmed task. |
 | R-03 | P3 | QA / release confidence | `demo/index.html`, browser runtime | The completed behavior changes are covered by jsdom/unit tests, but the updated dialog, focus, upload, table, list, and source-mode flows have not yet had a fresh browser demo smoke pass in this baseline. | Unit tests can miss real browser focus, selection, and layout behavior. | The latest verification is `npm test` and `npm run build`; no browser smoke entry was added after the Step 7/8 pass. Prior task records show browser smoke checks are the project convention for interaction-heavy changes. | Before release, run a demo smoke pass against the built assets and record the result in this task file or a release task record. |
-| R-04 | P3 | Maintainability | `src/editor.ts`, `src/toolbar.ts`, `test/editor.test.ts` | The largest files still concentrate several responsibilities. This is manageable, but future changes may become harder to review if these files keep growing. | Moderate long-term maintenance cost, but no current correctness issue. | Current line counts: `src/editor.ts` 375 lines, `src/toolbar.ts` 363 lines, `test/editor.test.ts` 617 lines. `editor.ts` owns lifecycle, transactions, toolbar wiring, dialogs, upload, source mode, and textarea sync. | Defer broad refactoring. If future edits touch the same areas, consider small internal extractions with no public API change and full test/build verification. |
+| R-04 | P3 | Maintainability | `src/editor.ts`, `test/editor.test.ts` | `src/editor.ts` and the main editor test file still concentrate several responsibilities. Toolbar construction has been extracted already, so future maintainability work should focus only where a new change naturally exposes a clearer boundary. | Moderate long-term maintenance cost, but no current correctness issue. | Current line counts: `src/editor.ts` 473 lines and `test/editor.test.ts` 945 lines. `src/toolbar.ts` is now a 105-line assembly layer backed by focused modules under `src/toolbar/`. | Defer broad refactoring. If future edits touch editor lifecycle, upload/dialog orchestration, toolbar state mapping, or large test setup, consider focused internal extractions with no public API change and full test/build verification. |
 
 ## Remaining Task Breakdown
 
@@ -58,7 +59,7 @@ Latest completed verification from the hardening pass:
 | A | Define the release artifact checklist | R-01 | Current ignored-`dist` decision | Documentation review; optionally `npm run build` when validating artifact names | Not started |
 | B | Decide distribution/license policy before public release | R-02 | Owner decision | `package.json`/README/AGENTS consistency if a license changes | Waiting for confirmation |
 | C | Run and record a browser demo smoke pass | R-03 | Built assets from `npm run build` | Browser smoke check for dialog Escape/focus, source save, list conversion, table insertion, image upload error display, and mobile layout sanity | Not started |
-| D | Optional small maintainability extraction | R-04 | Prefer after release checklist and smoke pass | Focused tests plus `npm test` and `npm run build` | Deferred |
+| D | Optional editor/test maintainability extraction | R-04 | Prefer after release checklist and smoke pass | Focused tests plus `npm test` and `npm run build` | Deferred |
 
 ## Detailed Improvement Plan
 
@@ -104,12 +105,12 @@ Latest completed verification from the hardening pass:
 - **Needs user confirmation**: Yes before running build/browser commands if you want to keep this turn documentation-only.
 - **Questions to confirm**: None once command execution is allowed.
 
-### Task D: Optional small maintainability extraction
+### Task D: Optional editor/test maintainability extraction
 
 - **Priority**: P3
 - **Related issues**: R-04
 - **Goal**: Reduce future review risk only where a small internal extraction clearly helps.
-- **Change scope**: Possible examples include upload selection helpers, dialog helper tests, or toolbar state mapping. Keep all changes internal.
+- **Change scope**: Possible examples include upload selection helpers, dialog orchestration helpers, toolbar state mapping, or test setup helpers. Keep all changes internal.
 - **Not included**: Public API changes, schema changes, framework migration, folder-wide restructuring, dependency changes.
 - **Expected result**: Slightly smaller focused units with unchanged behavior.
 - **Verification**: Focused tests for extracted helpers where useful, plus `npm test` and `npm run build`.

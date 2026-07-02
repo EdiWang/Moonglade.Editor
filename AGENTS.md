@@ -79,7 +79,8 @@ Key source modules:
 - `src/safety.ts` contains reusable sanitizers for links, image URLs, style color values, text alignment, code language names, and HTML class attributes.
 - `src/commands.ts` defines editor commands for block formats, marks, links, colors, alignment, images, code blocks, lists, blockquotes, horizontal rules, history, and tables.
 - `src/editor-state.ts` contains helpers for command availability and toolbar active-state detection.
-- `src/toolbar.ts` creates the framework-free toolbar and color/image controls.
+- `src/toolbar.ts` assembles the framework-free toolbar and preserves the narrow toolbar export surface used by `src/editor.ts`.
+- `src/toolbar/` contains toolbar contracts, shared DOM helpers, and focused tool modules for history, block format selection, inline marks, colors, blocks/lists, alignment, insertion, tables, source mode, dialogs, and upload status. Add new toolbar tools by creating or extending a focused tool module and registering it from `src/toolbar.ts`.
 - `src/dialogs.ts` creates link, code snippet, and HTML source dialogs.
 - `src/editor-options.ts` contains supported block formats, color palette values, and code language options.
 - `src/image-upload.ts` contains upload URL and custom uploader integration.
