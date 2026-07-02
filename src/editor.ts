@@ -19,6 +19,7 @@ import {
   hasAncestor,
   isMarkActive
 } from './editor-state';
+import { normalizeCodeSampleLanguages, type CodeSampleLanguageOption } from './editor-options';
 import { parseHtml, serializeHtml } from './html';
 import {
   createImageUploader,
@@ -41,6 +42,7 @@ export interface MoongladeEditorOptions {
   uploadUrl?: string;
   uploadImage?: MoongladeImageUploader;
   allowedImageExtensions?: readonly string[];
+  codesample_languages?: readonly CodeSampleLanguageOption[];
   onChange?: (html: string) => void;
 }
 
@@ -53,6 +55,7 @@ export class MoongladeEditor {
   private readonly onChange?: (html: string) => void;
   private readonly uploadImage?: MoongladeImageUploader;
   private readonly allowedImageExtensions: readonly string[];
+  private readonly codeSampleLanguages: readonly CodeSampleLanguageOption[];
   private readonly toolbar: ToolbarElements;
   private spellcheck: boolean;
   private readonly closeColorDropdownsOnDocumentPointerDown = (event: PointerEvent): void => {
@@ -74,6 +77,7 @@ export class MoongladeEditor {
     this.uploadUrl = options.uploadUrl;
     this.uploadImage = createImageUploader(options);
     this.allowedImageExtensions = normalizeAllowedImageExtensions(options.allowedImageExtensions);
+    this.codeSampleLanguages = normalizeCodeSampleLanguages(options.codesample_languages);
     this.onChange = options.onChange;
     this.spellcheck = options.spellcheck ?? true;
 
@@ -91,6 +95,7 @@ export class MoongladeEditor {
       commands: this.commands,
       uploadConfigured: Boolean(this.uploadImage) && this.allowedImageExtensions.length > 0,
       allowedImageExtensions: this.allowedImageExtensions,
+      codeSampleLanguages: this.codeSampleLanguages,
       actions: {
         execute: (command) => this.execute(command),
         executeWithSavedSelection: (command) => this.executeWithSavedSelection(command),

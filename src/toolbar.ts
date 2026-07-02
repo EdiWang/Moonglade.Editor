@@ -10,7 +10,7 @@ import {
   type LinkDialogElements,
   type SourceDialogElements
 } from './dialogs';
-import { blockFormats, colorPalette } from './editor-options';
+import { blockFormats, colorPalette, type CodeSampleLanguageOption } from './editor-options';
 import { hasAllowedImageUploadExtension } from './image-upload';
 
 export type ToolbarButtonId =
@@ -87,6 +87,7 @@ interface CreateToolbarOptions {
   commands: MoongladeEditorCommands;
   uploadConfigured: boolean;
   allowedImageExtensions: readonly string[];
+  codeSampleLanguages: readonly CodeSampleLanguageOption[];
   actions: ToolbarActions;
 }
 
@@ -99,7 +100,14 @@ interface ToolbarActions extends EditorDialogActions {
   openSourceDialog(): void;
 }
 
-export function createToolbar({ schema, commands, uploadConfigured, allowedImageExtensions, actions }: CreateToolbarOptions): ToolbarElements {
+export function createToolbar({
+  schema,
+  commands,
+  uploadConfigured,
+  allowedImageExtensions,
+  codeSampleLanguages,
+  actions
+}: CreateToolbarOptions): ToolbarElements {
   const root = document.createElement('div');
   root.className = 'mg-editor-toolbar card-header btn-toolbar gap-2 p-2';
   root.setAttribute('role', 'toolbar');
@@ -280,7 +288,7 @@ export function createToolbar({ schema, commands, uploadConfigured, allowedImage
   root.append(sourceGroup);
 
   const linkDialog = createLinkDialog(commands, actions);
-  const codeDialog = createCodeDialog(commands, actions);
+  const codeDialog = createCodeDialog(commands, actions, codeSampleLanguages);
   const sourceDialog = createSourceDialog(actions);
   root.append(linkDialog.root, codeDialog.root, sourceDialog.root);
 

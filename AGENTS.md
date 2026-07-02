@@ -105,6 +105,10 @@ const editor = createMoongladeEditor({
   height: '500px',
   uploadUrl: '/image',
   allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg'],
+  codesample_languages: [
+    { text: 'Bash', value: 'bash' },
+    { text: 'TypeScript', value: 'typescript' }
+  ],
   spellcheck: true,
   content,
   onChange
@@ -120,6 +124,7 @@ editor.destroy();
 
 `uploadImage` can replace `uploadUrl` for custom upload behavior. Uploaded images must return a safe URL through `{ src, alt?, title? }`.
 `allowedImageExtensions` constrains the client-side upload file picker, paste, and drag/drop flows. It defaults to `.jpg`, `.png`, `.webp`, and `.svg`; hosts can override it with case-insensitive extension strings with or without the leading dot. Server-side upload handlers must still validate file content and extension.
+`codesample_languages` configures the code snippet dialog language dropdown with `{ text, value }` entries. Values are normalized through the code language sanitizer before rendering and do not relax imported HTML safety rules.
 
 `height` defaults to `500px` and should accept ordinary CSS height values such as `px`, `vh`, and `calc(...)` strings.
 

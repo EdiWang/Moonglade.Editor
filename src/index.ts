@@ -4,4 +4,5 @@ export { createCommands } from './commands';
 export type { MoongladeEditorCommands } from './commands';
 export { parseHtml, roundTripHtml, serializeHtml } from './html';
 export type { MoongladeImageUploader, MoongladeImageUploadResult } from './image-upload';
+export type { CodeSampleLanguageOption } from './editor-options';
 export { moongladeSchema } from './schema';

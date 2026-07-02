@@ -1,3 +1,10 @@
+import { sanitizeCodeLanguage } from './safety';
+
+export interface CodeSampleLanguageOption {
+  text: string;
+  value: string;
+}
+
 export const blockFormats = [
   { value: 'paragraph', label: 'Paragraph' },
   { value: 'heading:1', label: 'Heading 1' },
@@ -26,15 +33,38 @@ export const colorPalette = [
   { label: 'Yellow', value: '#ffc107' }
 ] as const;
 
-export const codeLanguages = [
-  { label: 'Plain text', value: '' },
-  { label: 'C#', value: 'csharp' },
-  { label: 'JavaScript', value: 'javascript' },
-  { label: 'TypeScript', value: 'typescript' },
-  { label: 'HTML', value: 'html' },
-  { label: 'CSS', value: 'css' },
-  { label: 'PowerShell', value: 'powershell' },
-  { label: 'SQL', value: 'sql' },
-  { label: 'JSON', value: 'json' },
-  { label: 'XML', value: 'xml' }
+export const defaultCodeSampleLanguages: readonly CodeSampleLanguageOption[] = [
+  { text: 'Plain text', value: '' },
+  { text: 'C#', value: 'csharp' },
+  { text: 'JavaScript', value: 'javascript' },
+  { text: 'TypeScript', value: 'typescript' },
+  { text: 'HTML', value: 'html' },
+  { text: 'CSS', value: 'css' },
+  { text: 'PowerShell', value: 'powershell' },
+  { text: 'SQL', value: 'sql' },
+  { text: 'JSON', value: 'json' },
+  { text: 'XML', value: 'xml' }
 ] as const;
+
+export function normalizeCodeSampleLanguages(
+  languages: readonly CodeSampleLanguageOption[] | undefined
+): readonly CodeSampleLanguageOption[] {
+  const source = languages ?? defaultCodeSampleLanguages;
+
+  return source.reduce<CodeSampleLanguageOption[]>((normalizedLanguages, language) => {
+    const option = language as Partial<CodeSampleLanguageOption> | null | undefined;
+    const text = typeof option?.text === 'string' ? option.text.trim() : '';
+    const rawValue = option?.value;
+    const value = rawValue === ''
+      ? ''
+      : typeof rawValue === 'string'
+        ? sanitizeCodeLanguage(rawValue)
+        : false;
+
+    if (text && value !== false) {
+      normalizedLanguages.push({ text, value });
+    }
+
+    return normalizedLanguages;
+  }, []);
+}

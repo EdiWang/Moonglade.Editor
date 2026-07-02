@@ -427,6 +427,42 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('uses configured code sample languages in the toolbar dialog', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>param appName string</p>',
+      codesample_languages: [
+        { text: ' Bicep ', value: ' Bicep ' },
+        { text: 'Kusto', value: 'kusto' },
+        { text: 'Unsafe', value: 'javascript:alert(1)' },
+        { text: '', value: 'typescript' }
+      ]
+    });
+
+    (host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-dialog[aria-label="Code snippet"]') as HTMLDivElement;
+    const form = dialog.querySelector('form') as HTMLFormElement;
+    const languageSelect = dialog.querySelector('[name="language"]') as HTMLSelectElement;
+    const options = Array.from(languageSelect.options).map((option) => ({
+      text: option.textContent,
+      value: option.value
+    }));
+
+    expect(options).toEqual([
+      { text: 'Bicep', value: 'bicep' },
+      { text: 'Kusto', value: 'kusto' }
+    ]);
+
+    languageSelect.value = 'bicep';
+    form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+
+    expect(editor.getHTML()).toBe('<pre><code class="language-bicep">param appName string</code></pre>');
+
+    editor.destroy();
+  });
+
   it('closes the code dialog with Escape and returns focus to the editor', () => {
     const host = document.createElement('div');
     document.body.append(host);

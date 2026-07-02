@@ -33,6 +33,7 @@ Key concepts:
 - `parseHtml(...)` and `serializeHtml(...)` are the import/export boundary for stored HTML.
 - `safety.ts` contains URL, style, alignment, and code language constraints.
 - Image upload is configured with either `uploadUrl` or a custom `uploadImage` function, with upload file extensions constrained by `allowedImageExtensions`.
+- Code snippet languages are configured through `codesample_languages`, with values filtered by the same code language sanitizer used for stored HTML.
 
 Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit.
 
@@ -86,7 +87,15 @@ const editor = createMoongladeEditor({
   height: '500px',
   spellcheck: true,
   uploadUrl: '/image',
-  allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg']
+  allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg'],
+  codesample_languages: [
+    { text: 'Bash', value: 'bash' },
+    { text: 'Bicep', value: 'bicep' },
+    { text: 'C#', value: 'csharp' },
+    { text: 'JavaScript', value: 'javascript' },
+    { text: 'Plain Text', value: 'plaintext' },
+    { text: 'TypeScript', value: 'typescript' }
+  ]
 });
 
 editor.setSpellcheck(false);
@@ -109,6 +118,8 @@ const editor = createMoongladeEditor({
 ```
 
 Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Hosts can override that list with `allowedImageExtensions`; values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the file picker, paste, and drag/drop upload flows, but upload endpoints should still validate file content server-side.
+
+Code snippet languages use the default built-in dropdown unless hosts pass `codesample_languages`. Each entry uses `{ text, value }`, where `text` is the displayed label and `value` becomes the sanitized code language class suffix, such as `language-bicep`.
 
 HTML source mode and imported HTML are constrained before entering the editor schema:
 
@@ -140,7 +151,15 @@ Static asset option:
     height: '500px',
     spellcheck: true,
     uploadUrl: '/image',
-    allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg']
+    allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg'],
+    codesample_languages: [
+      { text: 'Bash', value: 'bash' },
+      { text: 'Bicep', value: 'bicep' },
+      { text: 'C#', value: 'csharp' },
+      { text: 'JavaScript', value: 'javascript' },
+      { text: 'Plain Text', value: 'plaintext' },
+      { text: 'TypeScript', value: 'typescript' }
+    ]
   });
 </script>
 ```

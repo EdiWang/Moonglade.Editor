@@ -1,6 +1,6 @@
 import type { Command } from 'prosemirror-state';
 import type { MoongladeEditorCommands } from './commands';
-import { codeLanguages } from './editor-options';
+import type { CodeSampleLanguageOption } from './editor-options';
 
 export interface EditorDialogActions {
   executeWithSavedSelection(command: Command): boolean;
@@ -109,7 +109,11 @@ export function createLinkDialog(commands: MoongladeEditorCommands, actions: Edi
   return { root, form, hrefInput, titleInput, error, removeButton, cancelButton };
 }
 
-export function createCodeDialog(commands: MoongladeEditorCommands, actions: EditorDialogActions): CodeDialogElements {
+export function createCodeDialog(
+  commands: MoongladeEditorCommands,
+  actions: EditorDialogActions,
+  codeSampleLanguages: readonly CodeSampleLanguageOption[]
+): CodeDialogElements {
   const root = document.createElement('div');
   root.className = 'mg-editor-dialog dropdown-menu show p-3 shadow';
   root.hidden = true;
@@ -125,10 +129,10 @@ export function createCodeDialog(commands: MoongladeEditorCommands, actions: Edi
   languageSelect.name = 'language';
   languageSelect.setAttribute('aria-label', 'Code language');
 
-  for (const language of codeLanguages) {
+  for (const language of codeSampleLanguages) {
     const option = document.createElement('option');
     option.value = language.value;
-    option.textContent = language.label;
+    option.textContent = language.text;
     languageSelect.append(option);
   }
 

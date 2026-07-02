@@ -48,7 +48,40 @@ console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3>
       textarea,
       height: 'auto',
       spellcheck: true,
-      uploadUrl: '/image'
+      uploadUrl: '/image',
+      codesample_languages: [
+        { text: 'Bash', value: 'bash' },
+        { text: 'Bicep', value: 'bicep' },
+        { text: 'C#', value: 'csharp' },
+        { text: 'C', value: 'c' },
+        { text: 'C++', value: 'cpp' },
+        { text: 'CSS', value: 'css' },
+        { text: 'Dockerfile', value: 'dockerfile' },
+        { text: 'Go', value: 'go' },
+        { text: 'GraphQL', value: 'graphql' },
+        { text: 'HTML/XML', value: 'xml' },
+        { text: 'JavaScript', value: 'javascript' },
+        { text: 'Json', value: 'json' },
+        { text: 'Kotlin', value: 'kotlin' },
+        { text: 'Kusto', value: 'kusto' },
+        { text: 'LaTeX', value: 'latex' },
+        { text: 'Lua', value: 'lua' },
+        { text: 'Markdown', value: 'markdown' },
+        { text: 'Nginx', value: 'nginx' },
+        { text: 'PowerShell', value: 'powershell' },
+        { text: 'Plain Text', value: 'plaintext' },
+        { text: 'Puppet', value: 'puppet' },
+        { text: 'Python', value: 'python' },
+        { text: 'R', value: 'r' },
+        { text: 'Rust', value: 'rust' },
+        { text: 'SCSS', value: 'scss' },
+        { text: 'Shell', value: 'shell' },
+        { text: 'SQL', value: 'sql' },
+        { text: 'Swift', value: 'swift' },
+        { text: 'TypeScript', value: 'typescript' },
+        { text: 'WASM', value: 'wasm' },
+        { text: 'YAML', value: 'yaml' }
+      ]
     });
 
     const getTheme = () => document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
