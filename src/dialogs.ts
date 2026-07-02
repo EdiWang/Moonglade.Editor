@@ -104,6 +104,7 @@ export function createLinkDialog(commands: MoongladeEditorCommands, actions: Edi
 
     actions.closeLinkDialog(false);
   });
+  closeOnEscape(root, () => actions.closeLinkDialog(true));
 
   return { root, form, hrefInput, titleInput, error, removeButton, cancelButton };
 }
@@ -154,6 +155,7 @@ export function createCodeDialog(commands: MoongladeEditorCommands, actions: Edi
     actions.executeWithSavedSelection(commands.codeBlock(languageSelect.value));
     actions.closeCodeDialog(false);
   });
+  closeOnEscape(root, () => actions.closeCodeDialog(true));
 
   return { root, form, languageSelect, cancelButton };
 }
@@ -200,8 +202,21 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     actions.applySourceHtml(sourceTextarea.value);
-    actions.closeSourceDialog(false);
+    actions.closeSourceDialog(true);
   });
+  closeOnEscape(root, () => actions.closeSourceDialog(true));
 
   return { root, form, sourceTextarea, cancelButton };
+}
+
+function closeOnEscape(root: HTMLElement, close: () => void): void {
+  root.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || root.hidden) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    close();
+  });
 }

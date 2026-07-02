@@ -48,8 +48,8 @@ Not recommended now:
 | I-04 | P2 | Error handling / UX | `src/image-upload.ts`, `src/editor.ts` upload status | Upload response parsing assumed valid JSON and did not validate response shape before returning the upload result. | Non-JSON responses, empty responses, or missing `location` values could show confusing technical text or flow into later image insertion validation. | Initial `uploadImageToUrl()` called `await response.json()` after `response.ok` and returned an empty `src` when `location` was missing. Execution on 2026-07-02 added normalized errors for HTTP failure, invalid JSON, and missing image URL while preserving unsafe URL rejection. | Resolved by validating URL upload responses in `src/image-upload.ts` and adding upload error edge-case tests. |
 | I-05 | P2 | Command behavior / test gap | `src/commands.ts` `toggleList()` | List toggling did not convert between bullet and ordered lists as users expect. | Users could get nested lists or no intuitive conversion when switching list type. | Initial `toggleList(schema, listType)` only lifted when the current selection already had the same list type as an ancestor; otherwise it called `wrapInList(listType)`. User confirmed on 2026-07-02 that switching should convert the current list type. Execution on 2026-07-02 added bullet-to-ordered and ordered-to-bullet conversion tests. | Resolved by converting the active list node type when switching between bullet and ordered lists, while preserving same-type toggle behavior. |
 | I-06 | P2 | Command behavior / edge case | `src/commands.ts` `insertTable()` | After table insertion, fallback selection recovery scanned the document and picked the first table if `findTable(...)` could not locate the inserted one. | In documents with existing tables, fallback behavior could move the cursor into the wrong table. | Initial `insertTable()` fallback ran `transaction.doc.descendants(...)` and assigned the first `schema.nodes.table` position. Execution on 2026-07-02 added a regression test with an existing table and changed fallback selection targeting to prefer a table at or after the original insertion point. | Resolved by targeting the inserted table near the mapped insertion point instead of globally falling back to the first table. |
-| I-07 | P2 | Public API / architecture | `src/editor.ts`, `src/index.ts`, `src/commands.ts` | `MoongladeEditorOptions` exposes `schema?: Schema`, but the rest of the package assumes the full Moonglade schema shape. | Passing a custom schema can crash or create missing toolbar commands, widening the public API beyond the documented stable surface. | `MoongladeEditorOptions` includes `schema?: Schema`; constructor passes it to `createCommands`; commands immediately reference nodes/marks such as `paragraph`, `heading`, `bullet_list`, `ordered_list`, `table`, `image`, `text_color`; README public API does not document custom schema usage. User confirmed on 2026-07-02 that custom schema should not be a supported public API. | Remove or hide the custom schema option from the public API before wider release, keeping the built-in `moongladeSchema` as the supported schema. |
-| I-08 | P3 | Accessibility / dialog UX | `src/dialogs.ts`, `src/editor.ts` | Dialogs declare modal semantics but do not implement keyboard dismissal, focus trapping, or focus return consistency for all paths. | Keyboard and screen reader users may have a rougher dialog experience, especially in source mode. This is not a core data-safety issue but matters before wider release. | Link/code/source roots set `role="dialog"` and `aria-modal="true"`; close behavior is wired only through explicit buttons/forms; keyword search found no Escape handler or focus trap tests. | Add a small dialog interaction task: Escape close, predictable focus return, and tests. Avoid a full modal framework unless Bootstrap integration later requires it. |
+| I-07 | P2 | Public API / architecture | `src/editor.ts`, `src/index.ts`, `src/commands.ts` | `MoongladeEditorOptions` exposed `schema?: Schema`, but the rest of the package assumes the full Moonglade schema shape. | Passing a custom schema could crash or create missing toolbar commands, widening the public API beyond the documented stable surface. | Initial `MoongladeEditorOptions` included `schema?: Schema`; constructor passed it to `createCommands`; commands immediately referenced Moonglade-specific nodes/marks. User confirmed on 2026-07-02 that custom schema should not be a supported public API. Execution on 2026-07-02 removed the option and fixed the editor to use `moongladeSchema`. | Resolved by removing custom schema injection from `createMoongladeEditor` options. |
+| I-08 | P3 | Accessibility / dialog UX | `src/dialogs.ts`, `src/editor.ts` | Dialogs declared modal semantics but did not implement keyboard dismissal or consistent focus return for source save. | Keyboard users had a rougher dialog experience, especially in source mode. | Link/code/source roots set `role="dialog"` and `aria-modal="true"`; close behavior was wired only through explicit buttons/forms; keyword search found no Escape handler or focus return tests. Execution on 2026-07-02 added Escape handlers and focus return coverage. | Resolved for lightweight keyboard dismissal and focus return. Full focus trapping remains out of scope unless later required. |
 | I-09 | P3 | Maintainability | `src/editor.ts`, `src/toolbar.ts`, `test/editor.test.ts` | The largest files concentrate many responsibilities: editor lifecycle/state/UI wiring, toolbar construction, and broad editor interaction tests. | Future changes may become harder to review and test, but the current size is still manageable. Refactoring now would be lower priority than behavior hardening. | Line counts: `src/toolbar.ts` 363 lines, `src/editor.ts` 360 lines, `test/editor.test.ts` 423 lines. `editor.ts` owns setup, transactions, dialogs, upload, toolbar state; `toolbar.ts` builds all button groups and color controls. | After behavioral fixes, extract only clear seams such as upload selection handling, toolbar state mapping, or dialog helpers. Keep changes small and covered by tests. |
 
 ## Task Breakdown
@@ -62,8 +62,8 @@ Not recommended now:
 | 4 | Normalize image upload response errors | None | Unit tests for invalid JSON, missing location, unsafe URL, HTTP failure; `npm test`; `npm run build` | Completed |
 | 5 | Characterize and fix list type switching as conversion | Characterization tests first | Unit tests for bullet-to-ordered, ordered-to-bullet, nested list behavior; `npm test`; `npm run build` | Completed |
 | 6 | Fix table insertion cursor recovery for multiple tables | Characterization test first | Unit test for inserting after an existing table; `npm test`; `npm run build` | Completed |
-| 7 | Remove unsupported custom schema API surface | User confirmed custom schema should not be supported publicly | Type/API review; `npm run types`; `npm run build` | Not started |
-| 8 | Improve dialog keyboard/focus behavior | None | jsdom tests for Escape/cancel/save focus behavior; browser demo smoke check | Not started |
+| 7 | Remove unsupported custom schema API surface | User confirmed custom schema should not be supported publicly | Type/API review; `npm run types`; `npm run build` | Completed |
+| 8 | Improve dialog keyboard/focus behavior | None | jsdom tests for Escape/cancel/save focus behavior; browser demo smoke check | Completed |
 | 9 | Small maintainability extraction after behavior is covered | Tasks 2-8 as relevant | Existing tests unchanged plus focused tests for extracted units; `npm test`; `npm run build` | Not started |
 
 ## Detailed Improvement Plan
@@ -171,6 +171,7 @@ Not recommended now:
 - **Rollback plan**: Restore the option and current behavior.
 - **Needs user confirmation**: No; user confirmed on 2026-07-02 that custom schema should not be supported publicly.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. Removed `schema?: Schema` from `MoongladeEditorOptions` and fixed construction to use the built-in `moongladeSchema`.
 
 ### Task 8: Improve dialog keyboard and focus behavior
 
@@ -185,6 +186,7 @@ Not recommended now:
 - **Rollback plan**: Revert dialog event handling.
 - **Needs user confirmation**: No.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. Added Escape-to-close handling for link, code, and source dialogs. Source save now returns focus to the editor. Tests cover Escape behavior and source save focus return.
 
 ### Task 9: Small maintainability extraction after behavior is covered
 
@@ -202,9 +204,7 @@ Not recommended now:
 
 ## Recommended Execution Order
 
-1. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
-2. Task 8: Improve dialog keyboard/focus behavior.
-3. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
+1. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
 
 Completed:
 
@@ -214,6 +214,8 @@ Completed:
 4. Task 4: Normalize image upload response errors.
 5. Task 6: Fix table insertion cursor recovery for multiple tables.
 6. Task 5: Characterize and fix list type switching as conversion.
+7. Task 7: Remove unsupported custom schema API surface.
+8. Task 8: Improve dialog keyboard/focus behavior.
 
 ## Deferred / Not Recommended Now
 
@@ -249,6 +251,8 @@ No open questions remain from this review plan.
 | 2026-07-02 | Task 6 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
 | 2026-07-02 | Task 5 | `npm test` | Passed | 4 test files, 61 tests. |
 | 2026-07-02 | Task 5 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
+| 2026-07-02 | Task 7, Task 8 | `npm test` | Passed | 4 test files, 64 tests. |
+| 2026-07-02 | Task 7, Task 8 | `npm run build` | Passed | Type declarations, bundles, and JS/CSS size checks passed. |
 
 ## Notes for Future Execution
 

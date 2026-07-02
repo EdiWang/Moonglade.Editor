@@ -31,7 +31,6 @@ export interface MoongladeEditorOptions {
   textarea?: HTMLTextAreaElement;
   content?: string;
   height?: string;
-  schema?: Schema;
   spellcheck?: boolean;
   uploadUrl?: string;
   uploadImage?: MoongladeImageUploader;
@@ -60,7 +59,7 @@ export class MoongladeEditor {
   private view: EditorView;
 
   constructor(options: MoongladeEditorOptions) {
-    this.schema = options.schema || moongladeSchema;
+    this.schema = moongladeSchema;
     this.commands = createCommands(this.schema);
     this.textarea = options.textarea;
     this.uploadUrl = options.uploadUrl;

@@ -6,6 +6,7 @@ import { createMoongladeEditor } from '../src/editor';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  document.body.replaceChildren();
 });
 
 function waitForAsyncWork(): Promise<void> {
@@ -310,6 +311,35 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('closes the link dialog with Escape and returns focus to the editor', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello world</p>'
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 1, 6)));
+      return true;
+    });
+
+    (host.querySelector('[data-command="link"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-dialog[aria-label="Link"]') as HTMLDivElement;
+    const hrefInput = dialog.querySelector('[name="href"]') as HTMLInputElement;
+
+    expect(dialog.hidden).toBe(false);
+    expect(document.activeElement).toBe(hrefInput);
+
+    hrefInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(dialog.hidden).toBe(true);
+    expect(document.activeElement).toBe(editor.dom);
+
+    editor.destroy();
+  });
+
   it('applies foreground and background colors from toolbar dropdowns', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({
@@ -392,6 +422,30 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('closes the code dialog with Escape and returns focus to the editor', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>const answer = 42;</p>'
+    });
+
+    (host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-dialog[aria-label="Code snippet"]') as HTMLDivElement;
+    const languageSelect = dialog.querySelector('[name="language"]') as HTMLSelectElement;
+
+    expect(dialog.hidden).toBe(false);
+    expect(document.activeElement).toBe(languageSelect);
+
+    languageSelect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(dialog.hidden).toBe(true);
+    expect(document.activeElement).toBe(editor.dom);
+
+    editor.destroy();
+  });
+
   it('inserts a horizontal rule from the toolbar', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({
@@ -437,6 +491,7 @@ describe('editor toolbar', () => {
 
   it('edits source HTML through the sanitizer-backed source dialog', () => {
     const host = document.createElement('div');
+    document.body.append(host);
     const editor = createMoongladeEditor({
       element: host,
       content: '<p>Hello</p>'
@@ -457,6 +512,31 @@ describe('editor toolbar', () => {
 
     expect(dialog.hidden).toBe(true);
     expect(editor.getHTML()).toBe('<p>Clean link</p>');
+    expect(document.activeElement).toBe(editor.dom);
+
+    editor.destroy();
+  });
+
+  it('closes the source dialog with Escape and returns focus to the editor', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
+    const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
+
+    expect(dialog.hidden).toBe(false);
+    expect(document.activeElement).toBe(sourceTextarea);
+
+    sourceTextarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(dialog.hidden).toBe(true);
+    expect(document.activeElement).toBe(editor.dom);
 
     editor.destroy();
   });
