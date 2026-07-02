@@ -88,7 +88,9 @@ export class MoongladeEditor {
           this.savedSelection = this.view.state.selection.getBookmark();
         },
         uploadFile: (file) => {
-          void this.uploadAndInsertImage(file);
+          const uploadSelection = this.savedSelection ?? this.view.state.selection.getBookmark();
+          this.savedSelection = undefined;
+          void this.uploadAndInsertImage(file, uploadSelection);
         },
         openLinkDialog: () => this.openLinkDialog(),
         closeLinkDialog: (restoreSelection) => this.closeLinkDialog(restoreSelection),
@@ -213,8 +215,8 @@ export class MoongladeEditor {
     }
 
     event.preventDefault();
-    this.savedSelection = this.view.state.selection.getBookmark();
-    void this.uploadAndInsertImage(file);
+    const uploadSelection = this.view.state.selection.getBookmark();
+    void this.uploadAndInsertImage(file, uploadSelection);
     return true;
   }
 
@@ -237,12 +239,12 @@ export class MoongladeEditor {
     }
 
     event.preventDefault();
-    this.savedSelection = this.view.state.selection.getBookmark();
-    void this.uploadAndInsertImage(file);
+    const uploadSelection = this.view.state.selection.getBookmark();
+    void this.uploadAndInsertImage(file, uploadSelection);
     return true;
   }
 
-  private async uploadAndInsertImage(file: File): Promise<boolean> {
+  private async uploadAndInsertImage(file: File, uploadSelection: SelectionBookmark): Promise<boolean> {
     if (!this.uploadImage) {
       this.setUploadStatus('Image upload is not configured.', true);
       return false;
@@ -252,17 +254,18 @@ export class MoongladeEditor {
 
     try {
       const result = await this.uploadImage(file);
-      const inserted = this.executeWithSavedSelection(this.commands.insertImage(result.src, result.alt, result.title));
+      const inserted = this.executeWithSelection(
+        this.commands.insertImage(result.src, result.alt, result.title),
+        uploadSelection
+      );
 
       if (!inserted) {
         throw new Error('The uploaded image response did not include a safe image URL.');
       }
 
-      this.savedSelection = undefined;
       this.setUploadStatus('');
       return true;
     } catch (error) {
-      this.savedSelection = undefined;
       const message = error instanceof Error ? error.message : 'Image upload failed.';
       this.setUploadStatus(message, true);
       return false;
@@ -358,7 +361,11 @@ export class MoongladeEditor {
   }
 
   private executeWithSavedSelection(command: Command): boolean {
-    this.restoreSavedSelection();
+    return this.executeWithSelection(command, this.savedSelection);
+  }
+
+  private executeWithSelection(command: Command, selectionBookmark?: SelectionBookmark): boolean {
+    this.restoreSelection(selectionBookmark);
     const result = command(this.view.state, this.view.dispatch, this.view);
     this.view.focus();
     this.updateToolbarState();
@@ -366,11 +373,15 @@ export class MoongladeEditor {
   }
 
   private restoreSavedSelection(): void {
-    if (!this.savedSelection) {
+    this.restoreSelection(this.savedSelection);
+  }
+
+  private restoreSelection(selectionBookmark?: SelectionBookmark): void {
+    if (!selectionBookmark) {
       return;
     }
 
-    const selection = this.savedSelection.resolve(this.view.state.doc);
+    const selection = selectionBookmark.resolve(this.view.state.doc);
     this.view.dispatch(this.view.state.tr.setSelection(selection));
   }
 

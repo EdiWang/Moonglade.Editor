@@ -15761,7 +15761,9 @@ var MoongladeEditor = class {
           this.savedSelection = this.view.state.selection.getBookmark();
         },
         uploadFile: (file) => {
-          void this.uploadAndInsertImage(file);
+          const uploadSelection = this.savedSelection ?? this.view.state.selection.getBookmark();
+          this.savedSelection = void 0;
+          void this.uploadAndInsertImage(file, uploadSelection);
         },
         openLinkDialog: () => this.openLinkDialog(),
         closeLinkDialog: (restoreSelection) => this.closeLinkDialog(restoreSelection),
@@ -15868,8 +15870,8 @@ var MoongladeEditor = class {
       return false;
     }
     event.preventDefault();
-    this.savedSelection = this.view.state.selection.getBookmark();
-    void this.uploadAndInsertImage(file);
+    const uploadSelection = this.view.state.selection.getBookmark();
+    void this.uploadAndInsertImage(file, uploadSelection);
     return true;
   }
   getEditorAttributes() {
@@ -15887,11 +15889,11 @@ var MoongladeEditor = class {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, coordinates.pos)));
     }
     event.preventDefault();
-    this.savedSelection = this.view.state.selection.getBookmark();
-    void this.uploadAndInsertImage(file);
+    const uploadSelection = this.view.state.selection.getBookmark();
+    void this.uploadAndInsertImage(file, uploadSelection);
     return true;
   }
-  async uploadAndInsertImage(file) {
+  async uploadAndInsertImage(file, uploadSelection) {
     if (!this.uploadImage) {
       this.setUploadStatus("Image upload is not configured.", true);
       return false;
@@ -15899,15 +15901,16 @@ var MoongladeEditor = class {
     this.setUploadStatus("Uploading image...");
     try {
       const result = await this.uploadImage(file);
-      const inserted = this.executeWithSavedSelection(this.commands.insertImage(result.src, result.alt, result.title));
+      const inserted = this.executeWithSelection(
+        this.commands.insertImage(result.src, result.alt, result.title),
+        uploadSelection
+      );
       if (!inserted) {
         throw new Error("The uploaded image response did not include a safe image URL.");
       }
-      this.savedSelection = void 0;
       this.setUploadStatus("");
       return true;
     } catch (error) {
-      this.savedSelection = void 0;
       const message = error instanceof Error ? error.message : "Image upload failed.";
       this.setUploadStatus(message, true);
       return false;
@@ -15983,17 +15986,23 @@ var MoongladeEditor = class {
     this.updateToolbarState();
   }
   executeWithSavedSelection(command) {
-    this.restoreSavedSelection();
+    return this.executeWithSelection(command, this.savedSelection);
+  }
+  executeWithSelection(command, selectionBookmark) {
+    this.restoreSelection(selectionBookmark);
     const result = command(this.view.state, this.view.dispatch, this.view);
     this.view.focus();
     this.updateToolbarState();
     return result;
   }
   restoreSavedSelection() {
-    if (!this.savedSelection) {
+    this.restoreSelection(this.savedSelection);
+  }
+  restoreSelection(selectionBookmark) {
+    if (!selectionBookmark) {
       return;
     }
-    const selection = this.savedSelection.resolve(this.view.state.doc);
+    const selection = selectionBookmark.resolve(this.view.state.doc);
     this.view.dispatch(this.view.state.tr.setSelection(selection));
   }
   updateToolbarState() {

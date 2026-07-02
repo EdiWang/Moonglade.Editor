@@ -567,6 +567,57 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('inserts a delayed uploaded image at the original upload selection', async () => {
+    const file = new File(['fake-image'], 'delayed.jpg', { type: 'image/jpeg' });
+    let resolveUpload: (result: { src: string; alt?: string }) => void = () => {};
+    const uploadImage = vi.fn((uploadedFile: File) => {
+      expect(uploadedFile).toBe(file);
+      return new Promise<{ src: string; alt?: string }>((resolve) => {
+        resolveUpload = resolve;
+      });
+    });
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello world</p>',
+      uploadImage
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    (host.querySelector('[data-command="image"]') as HTMLButtonElement).click();
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForExpectation(() => {
+      expect(uploadImage).toHaveBeenCalledWith(file);
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 7, 12)));
+      return true;
+    });
+    (host.querySelector('[data-command="link"]') as HTMLButtonElement).click();
+
+    resolveUpload({ src: '/media/delayed.jpg', alt: 'Delayed' });
+
+    await waitForExpectation(() => {
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/delayed.jpg" alt="Delayed" loading="lazy"> world</p>');
+
+    editor.destroy();
+  });
+
   it('shows an upload error when the image response is unsafe', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ location: 'javascript:alert(1)' }), {
       status: 200,

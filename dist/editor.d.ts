@@ -51,7 +51,9 @@ export declare class MoongladeEditor {
     private closeSourceDialog;
     private closeLinkDialog;
     private executeWithSavedSelection;
+    private executeWithSelection;
     private restoreSavedSelection;
+    private restoreSelection;
     private updateToolbarState;
 }
 export declare function createMoongladeEditor(options: MoongladeEditorOptions): MoongladeEditor;
