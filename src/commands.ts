@@ -62,6 +62,13 @@ function toggleBlockquote(schema: Schema): Command {
 
 function toggleList(schema: Schema, listType: NodeType): Command {
   return (state, dispatch, view) => {
+    const selectedLists = getSelectedLists(state, schema);
+    const hasDifferentSelectedListType = selectedLists.some((list) => list.node.type !== listType);
+
+    if (hasDifferentSelectedListType) {
+      return convertSelectedLists(state, selectedLists, listType, dispatch);
+    }
+
     const activeList = getActiveList(state, schema);
 
     if (activeList?.node.type === listType) {
@@ -70,7 +77,7 @@ function toggleList(schema: Schema, listType: NodeType): Command {
 
     if (activeList) {
       if (dispatch) {
-        dispatch(state.tr.setNodeMarkup(activeList.pos, listType, getListAttrs(listType)).scrollIntoView());
+        dispatch(state.tr.setNodeMarkup(activeList.pos, listType, getListAttrs(listType, activeList.node.attrs)).scrollIntoView());
       }
 
       return true;
@@ -78,6 +85,33 @@ function toggleList(schema: Schema, listType: NodeType): Command {
 
     return wrapInList(listType)(state, dispatch, view);
   };
+}
+
+type ListRange = { node: ProseMirrorNode; pos: number };
+
+function convertSelectedLists(state: EditorState, selectedLists: ListRange[], listType: NodeType, dispatch: Parameters<Command>[1]): boolean {
+  if (!selectedLists.length) {
+    return false;
+  }
+
+  if (dispatch) {
+    const transaction = state.tr;
+    const joinPositions = getSelectedListJoinPositions(selectedLists);
+
+    for (const list of selectedLists) {
+      transaction.setNodeMarkup(list.pos, listType, getListAttrs(listType, list.node.attrs));
+    }
+
+    for (const pos of joinPositions.sort((a, b) => b - a)) {
+      if (canJoinListAt(transaction.doc, pos, listType)) {
+        transaction.join(pos);
+      }
+    }
+
+    dispatch(transaction.scrollIntoView());
+  }
+
+  return true;
 }
 
 function getActiveList(state: EditorState, schema: Schema): { node: ProseMirrorNode; pos: number } | null {
@@ -94,8 +128,67 @@ function getActiveList(state: EditorState, schema: Schema): { node: ProseMirrorN
   return null;
 }
 
-function getListAttrs(listType: NodeType): Record<string, number> | null {
-  return listType.name === 'ordered_list' ? { order: 1 } : null;
+function getSelectedLists(state: EditorState, schema: Schema): ListRange[] {
+  const listTypes = new Set([schema.nodes.bullet_list, schema.nodes.ordered_list]);
+  const lists = new Map<number, ListRange>();
+  const activeList = getActiveList(state, schema);
+
+  if (activeList) {
+    lists.set(activeList.pos, activeList);
+  }
+
+  if (!state.selection.empty) {
+    state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
+      if (listTypes.has(node.type)) {
+        lists.set(pos, { node, pos });
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  return Array.from(lists.values()).sort((a, b) => a.pos - b.pos);
+}
+
+function getSelectedListJoinPositions(selectedLists: ListRange[]): number[] {
+  const positions: number[] = [];
+
+  for (let index = 0; index < selectedLists.length - 1; index += 1) {
+    const current = selectedLists[index];
+    const next = selectedLists[index + 1];
+    const boundary = current.pos + current.node.nodeSize;
+
+    if (boundary === next.pos) {
+      positions.push(boundary);
+    }
+  }
+
+  return positions;
+}
+
+function canJoinListAt(doc: ProseMirrorNode, pos: number, listType: NodeType): boolean {
+  if (pos <= 0 || pos >= doc.content.size) {
+    return false;
+  }
+
+  const resolved = doc.resolve(pos);
+  const before = resolved.nodeBefore;
+  const after = resolved.nodeAfter;
+
+  return Boolean(before && after && before.type === listType && after.type === listType && before.canAppend(after));
+}
+
+function getListAttrs(listType: NodeType, currentAttrs?: Record<string, unknown>): Record<string, unknown> {
+  const attrs: Record<string, unknown> = {
+    class: currentAttrs?.class || null
+  };
+
+  if (listType.name === 'ordered_list') {
+    attrs.order = typeof currentAttrs?.order === 'number' ? currentAttrs.order : 1;
+  }
+
+  return attrs;
 }
 
 function hasAncestor(state: EditorState, nodeType: NodeType): boolean {

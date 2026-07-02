@@ -164,6 +164,56 @@ describe('editor commands', () => {
 </ul>`);
   });
 
+  it('converts adjacent selected mixed lists to one ordered list', () => {
+    const state = createState(
+      '<ul><li><p>One</p></li><li><p>Two</p></li></ul><ol><li><p>Three</p></li><li><p>Four</p></li></ol>'
+    );
+    const selectionStart = findTextPosition(state, 'One');
+    const selectionEnd = findTextPosition(state, 'Four') + 'Four'.length;
+    const { result, state: nextState } = runCommand(setSelection(state, selectionStart, selectionEnd), commands.orderedList);
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe(`<ol>
+  <li>
+    <p>One</p>
+  </li>
+  <li>
+    <p>Two</p>
+  </li>
+  <li>
+    <p>Three</p>
+  </li>
+  <li>
+    <p>Four</p>
+  </li>
+</ol>`);
+  });
+
+  it('converts adjacent selected mixed lists to one bullet list', () => {
+    const state = createState(
+      '<ul><li><p>One</p></li><li><p>Two</p></li></ul><ol><li><p>Three</p></li><li><p>Four</p></li></ol>'
+    );
+    const selectionStart = findTextPosition(state, 'One');
+    const selectionEnd = findTextPosition(state, 'Four') + 'Four'.length;
+    const { result, state: nextState } = runCommand(setSelection(state, selectionStart, selectionEnd), commands.bulletList);
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe(`<ul>
+  <li>
+    <p>One</p>
+  </li>
+  <li>
+    <p>Two</p>
+  </li>
+  <li>
+    <p>Three</p>
+  </li>
+  <li>
+    <p>Four</p>
+  </li>
+</ul>`);
+  });
+
   it('clamps inserted table dimensions', () => {
     const state = setSelection(createState('<p>Hello</p>'), 1, 6);
     const { result, state: nextState } = runCommand(state, commands.insertTable(99, 99));
