@@ -14894,6 +14894,8 @@ function escapeAttributeValue(value) {
 }
 
 // src/image-upload.ts
+var invalidJsonMessage = "Image upload failed because the server returned invalid JSON.";
+var missingUrlMessage = "Image upload response did not include an image URL.";
 function createImageUploader({ uploadUrl, uploadImage }) {
   if (uploadImage) {
     return uploadImage;
@@ -14917,12 +14919,23 @@ async function uploadImageToUrl(uploadUrl, file) {
   if (!response.ok) {
     throw new Error(`Image upload failed with status ${response.status}.`);
   }
-  const result = await response.json();
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error(invalidJsonMessage);
+  }
+  if (!isObjectRecord(result) || typeof result.location !== "string" || !result.location.trim()) {
+    throw new Error(missingUrlMessage);
+  }
   return {
-    src: typeof result.location === "string" ? result.location : "",
+    src: result.location,
     alt: typeof result.filename === "string" ? result.filename : file.name,
     title: typeof result.title === "string" ? result.title : void 0
   };
+}
+function isObjectRecord(value) {
+  return typeof value === "object" && value !== null;
 }
 
 // node_modules/prosemirror-schema-basic/dist/index.js

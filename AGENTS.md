@@ -26,14 +26,14 @@ Do not add broad word-processor features unless explicitly requested. In particu
 ## Repository Contract
 
 - Source code lives under `src/`.
-- Browser-ready output lives under `dist/`.
+- Browser-ready output is generated under `dist/` by the build.
 - Tests live under `test/`.
 - Demo files live under `demo/`.
 - Long-lived project documentation lives under `docs/`.
 - Complex task records should live under `docs/tasks/`.
-- The main Moonglade repository should be able to use `dist/` artifacts directly.
+- The main Moonglade repository should use prebuilt release artifacts generated from `dist/`; do not add a frontend build step to Moonglade.
 - Keep the public API small and stable; prefer `createMoongladeEditor(...)` plus a narrow editor instance API.
-- Keep generated output deterministic and suitable for committing or publishing.
+- Keep generated output deterministic and suitable for publishing. `dist/` is ignored in normal development and should not be committed unless the project explicitly changes that release strategy.
 
 This repository is a single TypeScript package, not a monorepo or multi-service workspace.
 
@@ -66,7 +66,7 @@ Important directories:
 - `src/` - TypeScript source for the editor package.
 - `test/` - Vitest/jsdom unit tests for parsing, sanitization, commands, toolbar wiring, upload handling, and source mode.
 - `scripts/` - Build and bundle size scripts.
-- `dist/` - Generated browser-ready JavaScript, CSS, source maps, and declaration files.
+- `dist/` - Ignored generated browser-ready JavaScript, CSS, source maps, and declaration files.
 - `demo/` - Static demo page for manual browser checks.
 - `docs/` - Long-lived handoff, task, and project documentation.
 
@@ -133,7 +133,7 @@ Do not require Moonglade to understand ProseMirror JSON as the storage format un
 - Keep image upload integration configurable through options; Moonglade will pass `/image`.
 - Keep dependency licenses permissive and documented. Verify license changes before adding new dependencies.
 - Commit `package-lock.json` whenever dependencies change.
-- Do not edit generated `dist/` files by hand; update source or build scripts and rebuild.
+- Do not edit generated `dist/` files by hand; update source or build scripts and rebuild for verification or release packaging.
 - Avoid unrelated formatting churn.
 - Keep code comments and developer-facing strings in English unless an existing localized resource explicitly requires another language.
 - Use structured DOM/schema APIs where possible instead of ad hoc string manipulation.
@@ -193,10 +193,10 @@ The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before 
 
 Preferred integration models remain:
 
-- Copy `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` into Moonglade `wwwroot` during release packaging.
+- Build this project for release, attach generated `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
 - Publish a NuGet package with static web assets once the editor API is stable.
-- Use a submodule/subtree only if checked-in `dist` files remain the integration boundary.
+- Use a submodule/subtree only if the project later decides to track generated assets again.
 
 Moonglade integration is not completed in this repository.
 

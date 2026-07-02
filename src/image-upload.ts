@@ -6,6 +6,9 @@ export interface MoongladeImageUploadResult {
 
 export type MoongladeImageUploader = (file: File) => Promise<MoongladeImageUploadResult>;
 
+const invalidJsonMessage = 'Image upload failed because the server returned invalid JSON.';
+const missingUrlMessage = 'Image upload response did not include an image URL.';
+
 interface CreateImageUploaderOptions {
   uploadUrl?: string;
   uploadImage?: MoongladeImageUploader;
@@ -40,10 +43,24 @@ export async function uploadImageToUrl(uploadUrl: string, file: File): Promise<M
     throw new Error(`Image upload failed with status ${response.status}.`);
   }
 
-  const result = await response.json() as { location?: unknown; filename?: unknown; title?: unknown };
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error(invalidJsonMessage);
+  }
+
+  if (!isObjectRecord(result) || typeof result.location !== 'string' || !result.location.trim()) {
+    throw new Error(missingUrlMessage);
+  }
+
   return {
-    src: typeof result.location === 'string' ? result.location : '',
+    src: result.location,
     alt: typeof result.filename === 'string' ? result.filename : file.name,
     title: typeof result.title === 'string' ? result.title : undefined
   };
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

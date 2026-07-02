@@ -26,7 +26,7 @@ The codebase is small and generally coherent. The current architecture matches t
 
 Highest-value priorities:
 
-- Stop ignoring `dist/` and make generated assets part of the direct Moonglade consumption contract.
+- Keep `dist/` ignored during normal development and publish generated assets through GitHub Releases.
 - Preserve host dirty/autosave support for real edits while avoiding initialization-time false positives.
 - Make async image upload selection handling and upload error messages more deterministic.
 - Add tests around list/table edge cases before changing command behavior.
@@ -42,10 +42,10 @@ Not recommended now:
 
 | ID | Priority | Type | Location | Issue | Impact | Evidence | Recommended Direction |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| I-01 | P1 | Integration / release | `.gitignore`, `package.json`, `README.md`, `AGENTS.md`, `dist/` | The repository contract says Moonglade can consume `dist/` assets directly; `dist/` must therefore remain tracked and generated deterministically. | Missing or stale editor assets would break direct Moonglade consumption. | User confirmed on 2026-07-02 that `dist` should not be ignored. Execution on 2026-07-02 verified `.gitignore` does not ignore `dist/`, `git check-ignore` reports `dist is not ignored`, and generated `dist` files are tracked. | Resolved for tracking. Continue rebuilding and committing generated `dist/` artifacts with source changes. |
+| I-01 | P1 | Integration / release | `.gitignore`, `package.json`, `README.md`, `AGENTS.md`, `dist/` | The generated `dist/` assets should not be reviewed on every source change. They should be produced for release and attached to GitHub Releases, then manually copied into Moonglade when needed. | Normal code reviews stay focused on source changes while release artifacts remain available for Moonglade integration. | User initially confirmed `dist` should not be ignored, then corrected the decision on 2026-07-02: keep `/dist` ignored because tracked generated files make reviews too large; publish `dist` files only in GitHub Releases and manually copy them into Moonglade. | Keep `dist/` in `.gitignore`, remove tracked `dist` files from Git, and document release-copy expectations. |
 | I-02 | P2 | Stability / host integration | `src/editor.ts` constructor, `syncToTextarea()` | Editor initialization called `syncToTextarea()`, which dispatched a bubbling `input` event and invoked `onChange` before a user edit. | Host pages could mark a post as dirty, trigger autosave, or run change handlers during initialization. This is especially relevant when integrating into the main Moonglade edit page. | Initial code called `this.syncToTextarea()` from the constructor; `syncToTextarea()` set textarea value, dispatched `new Event('input', { bubbles: true })`, and called `this.onChange?.(html)`. User confirmed on 2026-07-02 that host dirty/autosave capability must be preserved. Execution on 2026-07-02 added tests for silent initialization and edit/setHTML/explicit sync notifications. | Resolved by silently writing initial textarea value while preserving host notifications for real edits, `setHTML`, and explicit `syncToTextarea()`. |
 | I-03 | P2 | Stability / async state | `src/editor.ts` `savedSelection`, `uploadAndInsertImage()` | Async image upload used a shared `savedSelection` field that is also used by link, color, code, paste, and drop flows. A later interaction could overwrite or clear the selection before the upload resolved. | Uploaded images could be inserted at the wrong selection or fail to restore the intended cursor in multi-upload or user-interaction races. | Initial code assigned `savedSelection` before image button/paste/drop upload and upload completion restored that shared field. Link/code/color flows also read/write the same field. Execution on 2026-07-02 added per-upload selection bookmarks and a delayed uploader test that opens the link dialog before upload completion. | Resolved by capturing an upload-specific bookmark at upload start and passing it through the async upload path. |
-| I-04 | P2 | Error handling / UX | `src/image-upload.ts`, `src/editor.ts` upload status | Upload response parsing assumes valid JSON and exposes low-level parse or custom error messages directly to the toolbar status. | Non-JSON responses, empty responses, or unexpected response shapes can show confusing technical text to users and make support harder. | `uploadImageToUrl()` calls `await response.json()` after `response.ok`; `uploadAndInsertImage()` displays `error.message` when any `Error` is thrown. Existing tests cover unsafe URL response but not invalid JSON, empty body, or unexpected content type. | Add focused tests for invalid JSON and missing `location`, then normalize user-facing upload errors while preserving useful developer details if needed. |
+| I-04 | P2 | Error handling / UX | `src/image-upload.ts`, `src/editor.ts` upload status | Upload response parsing assumed valid JSON and did not validate response shape before returning the upload result. | Non-JSON responses, empty responses, or missing `location` values could show confusing technical text or flow into later image insertion validation. | Initial `uploadImageToUrl()` called `await response.json()` after `response.ok` and returned an empty `src` when `location` was missing. Execution on 2026-07-02 added normalized errors for HTTP failure, invalid JSON, and missing image URL while preserving unsafe URL rejection. | Resolved by validating URL upload responses in `src/image-upload.ts` and adding upload error edge-case tests. |
 | I-05 | P2 | Command behavior / test gap | `src/commands.ts` `toggleList()` | List toggling is simple and may not handle switching between bullet and ordered lists as users expect. | Users may get nested lists or no intuitive conversion when switching list type. | `toggleList(schema, listType)` only lifts when the current selection already has the same list type as an ancestor; otherwise it calls `wrapInList(listType)`. Tests do not cover switching between bullet and ordered lists or nested list behavior. User confirmed on 2026-07-02 that switching should convert the current list type. | Add characterization tests for bullet-to-ordered and ordered-to-bullet behavior, then implement the smallest conversion fix. |
 | I-06 | P2 | Command behavior / edge case | `src/commands.ts` `insertTable()` | After table insertion, fallback selection recovery scans the document and picks the first table if `findTable(...)` cannot locate the inserted one. | In documents with existing tables, inserting another table could move the cursor into the wrong table. | `insertTable()` calls `findTable(transaction.selection.$from)?.pos`; if unavailable it runs `transaction.doc.descendants(...)` and assigns the first `schema.nodes.table` position. Existing tests only insert one table. | Add a test for inserting a second table after an existing table. Track the inserted position directly instead of global first-table fallback if the test confirms the issue. |
 | I-07 | P2 | Public API / architecture | `src/editor.ts`, `src/index.ts`, `src/commands.ts` | `MoongladeEditorOptions` exposes `schema?: Schema`, but the rest of the package assumes the full Moonglade schema shape. | Passing a custom schema can crash or create missing toolbar commands, widening the public API beyond the documented stable surface. | `MoongladeEditorOptions` includes `schema?: Schema`; constructor passes it to `createCommands`; commands immediately reference nodes/marks such as `paragraph`, `heading`, `bullet_list`, `ordered_list`, `table`, `image`, `text_color`; README public API does not document custom schema usage. User confirmed on 2026-07-02 that custom schema should not be a supported public API. | Remove or hide the custom schema option from the public API before wider release, keeping the built-in `moongladeSchema` as the supported schema. |
@@ -56,10 +56,10 @@ Not recommended now:
 
 | No. | Task | Dependencies | Verification | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Stop ignoring and commit generated `dist` artifacts | User confirmed `dist` should not be ignored | `.gitignore` review; `npm run build`; git status includes generated assets | Completed |
+| 1 | Ignore `dist` and publish generated assets only for release | User corrected decision: `dist` should stay ignored | `.gitignore` review; `git rm --cached -r dist`; `npm run build`; git status keeps generated files out of normal source diff | Completed |
 | 2 | Preserve dirty/autosave for edits while avoiding initialization false positives | User confirmed dirty/autosave capability must remain | Unit tests for constructor, textarea input event, `onChange`, `setHTML`, and document edits | Completed |
 | 3 | Harden async image upload selection handling | None after Task 2 decision | Unit tests with delayed uploader and intervening selection/dialog change; `npm test`; `npm run build` | Completed |
-| 4 | Normalize image upload response errors | None | Unit tests for invalid JSON, missing location, unsafe URL, HTTP failure; `npm test`; `npm run build` | Not started |
+| 4 | Normalize image upload response errors | None | Unit tests for invalid JSON, missing location, unsafe URL, HTTP failure; `npm test`; `npm run build` | Completed |
 | 5 | Characterize and fix list type switching as conversion | Characterization tests first | Unit tests for bullet-to-ordered, ordered-to-bullet, nested list behavior; `npm test`; `npm run build` | Not started |
 | 6 | Fix table insertion cursor recovery for multiple tables | Characterization test first | Unit test for inserting after an existing table; `npm test`; `npm run build` | Not started |
 | 7 | Remove unsupported custom schema API surface | User confirmed custom schema should not be supported publicly | Type/API review; `npm run types`; `npm run build` | Not started |
@@ -68,20 +68,20 @@ Not recommended now:
 
 ## Detailed Improvement Plan
 
-### Task 1: Stop ignoring and commit generated `dist` artifacts
+### Task 1: Ignore `dist` and publish generated assets only for release
 
 - **Priority**: P1
 - **Related issues**: I-01
-- **Goal**: Make browser-ready editor assets available directly from the repository for Moonglade consumption.
-- **Change scope**: `.gitignore`, generated `dist/` assets produced by the normal build, and documentation if needed.
+- **Goal**: Keep normal source reviews small while still producing browser-ready editor assets for releases.
+- **Change scope**: `.gitignore`, Git tracking state for `dist/`, release documentation if needed.
 - **Out of scope**: Business behavior, editor UI, dependency upgrades.
-- **Expected result**: `dist/` is no longer ignored, and generated JS/CSS/declaration artifacts can be committed after a clean build.
-- **Verification**: Run `npm run build`; verify `git status` shows expected generated `dist/` files and no unrelated changes.
-- **Release risk**: Medium because generated assets become part of source control.
-- **Rollback plan**: Revert `.gitignore` and generated `dist/` additions.
-- **Needs user confirmation**: No; user confirmed on 2026-07-02 that `dist` should not be ignored.
+- **Expected result**: `dist/` is ignored during development, not tracked by Git, and generated files are attached to GitHub Releases when publishing.
+- **Verification**: Run `npm run build`; verify generated local `dist/` files are ignored and normal source diffs do not include bundle churn.
+- **Release risk**: Low for code review; Medium for release process until release artifact steps are documented/automated.
+- **Rollback plan**: Re-track `dist/` files and remove the ignore rule if the project later decides to commit generated assets.
+- **Needs user confirmation**: No; user corrected the decision on 2026-07-02.
 - **Questions to confirm**: None.
-- **Execution result**: Completed on 2026-07-02. `.gitignore` already did not ignore `dist/` in HEAD; `git check-ignore` confirmed `dist` is not ignored. `npm run build` regenerated tracked `dist` artifacts affected by Step 2.
+- **Execution result**: Completed on 2026-07-02. Restored `dist/` in `.gitignore` and ran `git rm --cached -r dist` so local build output remains present but is no longer tracked.
 
 ### Task 2: Preserve dirty/autosave for edits while avoiding initialization false positives
 
@@ -126,6 +126,7 @@ Not recommended now:
 - **Rollback plan**: Revert error normalization changes.
 - **Needs user confirmation**: No.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. `src/image-upload.ts` now catches invalid JSON, validates that URL upload responses include a non-empty `location`, and keeps HTTP failure messages stable. `test/editor.test.ts` covers HTTP failure, invalid JSON, missing image URL, and unsafe image URL.
 
 ### Task 5: Characterize and fix list type switching as conversion
 
@@ -199,18 +200,18 @@ Not recommended now:
 
 ## Recommended Execution Order
 
-1. Task 4: Normalize image upload response errors.
-2. Task 6: Fix table insertion cursor recovery after adding a characterization test.
-3. Task 5: Characterize and adjust list type switching to convert the current list type.
-4. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
-5. Task 8: Improve dialog keyboard/focus behavior.
-6. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
+1. Task 6: Fix table insertion cursor recovery after adding a characterization test.
+2. Task 5: Characterize and adjust list type switching to convert the current list type.
+3. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
+4. Task 8: Improve dialog keyboard/focus behavior.
+5. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
 
 Completed:
 
-1. Task 1: Stop ignoring and commit generated `dist` artifacts.
+1. Task 1: Ignore `dist` and publish generated assets only for release.
 2. Task 2: Preserve dirty/autosave for edits while avoiding initialization false positives.
 3. Task 3: Harden async image upload selection handling.
+4. Task 4: Normalize image upload response errors.
 
 ## Deferred / Not Recommended Now
 
@@ -218,7 +219,7 @@ Completed:
 - Word/Office paste cleanup, emoji insertion, special symbols, line-height, paragraph spacing, collaboration, or media library: explicitly outside the current editor scope unless newly requested.
 - Large refactor of `editor.ts` and `toolbar.ts` before behavior hardening: current files are readable enough; extraction first would add churn without reducing the most important risks.
 - Dependency upgrades: no clear evidence from this read-only pass that an upgrade is required. Any security/license upgrade should be handled as a separate confirmed task.
-- Deleting `dist/` or relying only on local generated files: user confirmed `dist` should not be ignored.
+- Committing `dist/` in normal feature branches: user corrected the decision; publish generated assets through GitHub Releases instead.
 
 ## Open Questions
 
@@ -226,7 +227,7 @@ No open questions remain from this review plan.
 
 ## Confirmed Decisions
 
-- 2026-07-02: `dist/` should not be ignored.
+- 2026-07-02: Corrected decision: `dist/` should be ignored during normal development, generated for release, attached to GitHub Releases, and manually copied into Moonglade when needed.
 - 2026-07-02: Host dirty/autosave capability must be preserved. Implementation should avoid false initialization dirty signals while keeping real edit notifications.
 - 2026-07-02: Switching between bullet and ordered lists should convert the current list type.
 - 2026-07-02: Custom ProseMirror schema injection should not be supported as part of the public API; use the built-in Moonglade schema.
@@ -235,16 +236,18 @@ No open questions remain from this review plan.
 
 | Date | Task | Command or Check | Result | Notes |
 | --- | --- | --- | --- | --- |
-| 2026-07-02 | Task 1 | `git check-ignore -v dist\moonglade-editor.css` | Passed | `dist` is not ignored. |
+| 2026-07-02 | Task 1 | `git rm --cached -r dist` | Passed | `dist` files remain local but are removed from Git tracking. |
 | 2026-07-02 | Task 1, Task 2 | `npm test` | Passed | 4 test files, 54 tests. |
 | 2026-07-02 | Task 1, Task 2 | `npm run build` | Passed | Regenerated tracked `dist` artifacts; JS/CSS size checks passed. |
 | 2026-07-02 | Task 3 | `npm test` | Passed | 4 test files, 55 tests. |
-| 2026-07-02 | Task 3 | `npm run build` | Passed | Regenerated tracked `dist` artifacts; JS/CSS size checks passed. |
+| 2026-07-02 | Task 3 | `npm run build` | Passed | Regenerated `dist` artifacts; JS/CSS size checks passed. |
+| 2026-07-02 | Task 4 | `npm test` | Passed | 4 test files, 58 tests. |
+| 2026-07-02 | Task 4 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
 
 ## Notes for Future Execution
 
 - Read `AGENTS.md` before making changes.
-- Do not edit `dist/` by hand; update source/build scripts and rebuild only when approved.
+- Do not edit `dist/` by hand; update source/build scripts and rebuild only for verification or release packaging.
 - For behavior changes, add or update tests first or in the same task, then run `npm test` and `npm run build` after user approval.
 - Keep changes focused and independently committable.
 - Preserve sanitizer and schema constraints; do not weaken safe URL, style, alignment, image, or source-mode handling.

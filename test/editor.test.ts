@@ -618,6 +618,60 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it.each([
+    {
+      name: 'HTTP failure',
+      response: () => new Response(JSON.stringify({ error: 'nope' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }),
+      message: 'Image upload failed with status 500.'
+    },
+    {
+      name: 'invalid JSON',
+      response: () => new Response('not-json', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }),
+      message: 'Image upload failed because the server returned invalid JSON.'
+    },
+    {
+      name: 'missing image URL',
+      response: () => new Response(JSON.stringify({ filename: 'missing.jpg' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }),
+      message: 'Image upload response did not include an image URL.'
+    }
+  ])('shows a normalized upload error for $name', async ({ response, message }) => {
+    vi.stubGlobal('fetch', vi.fn(async () => response()));
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadUrl: '/image'
+    });
+    const file = new File(['fake-image'], 'failed.jpg', { type: 'image/jpeg' });
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const uploadStatus = host.querySelector('.mg-editor-upload-status') as HTMLDivElement;
+    await waitForExpectation(() => {
+      expect(uploadStatus.hidden).toBe(false);
+      expect(uploadStatus.textContent).toBe(message);
+    });
+
+    expect(editor.getHTML()).toBe('<p>Hello</p>');
+
+    editor.destroy();
+  });
+
   it('shows an upload error when the image response is unsafe', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ location: 'javascript:alert(1)' }), {
       status: 200,

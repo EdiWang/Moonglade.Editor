@@ -2,7 +2,7 @@
 
 Standalone ProseMirror-based rich text editor for Moonglade.
 
-This repository keeps editor source code, dependencies, tests, and build tooling outside the main Moonglade ASP.NET Core application. Moonglade can consume the compiled `dist/` assets without introducing a frontend build step into that repository.
+This repository keeps editor source code, dependencies, tests, and build tooling outside the main Moonglade ASP.NET Core application. Moonglade can consume compiled release assets without introducing a frontend build step into that repository.
 
 ## Project Overview
 
@@ -67,6 +67,8 @@ The build emits:
 
 `npm run build` also checks bundle size budgets for the generated JavaScript and CSS files.
 
+`dist/` is generated locally and ignored by Git so routine source changes do not include bundle churn in code review. For releases, build the package and attach the generated `dist` assets to the GitHub Release. When Moonglade needs an update, copy the release artifacts into the Moonglade application manually.
+
 For Codex continuation, read:
 
 - `AGENTS.md`
@@ -117,7 +119,7 @@ The editor height defaults to `500px`. Hosts can pass any CSS height value throu
 
 ## Consuming From Moonglade
 
-Moonglade should consume prebuilt files from this repository and should not add a frontend build step.
+Moonglade should consume prebuilt release files from this repository and should not add a frontend build step.
 
 The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `bi-*` icon classes. The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets. Custom editor styles inherit Bootstrap CSS variables, so the editor follows the nearest host `data-bs-theme` scope; omit the attribute or set `data-bs-theme="light"` for the default light theme, and set `data-bs-theme="dark"` for dark mode.
 
@@ -141,10 +143,10 @@ Static asset option:
 
 Package options that preserve the same contract:
 
-- Copy `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` into Moonglade `wwwroot` during release packaging.
+- Build this project for release, attach the generated `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` files to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
 - Publish a NuGet package with static web assets once the editor API is stable.
-- Use a submodule/subtree only if checked-in `dist` files remain the integration boundary.
+- Use a submodule/subtree only if the project later decides to track generated assets again.
 
 ## Repository Status
 
