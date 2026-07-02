@@ -62,12 +62,40 @@ function toggleBlockquote(schema: Schema): Command {
 
 function toggleList(schema: Schema, listType: NodeType): Command {
   return (state, dispatch, view) => {
-    if (hasAncestor(state, listType)) {
+    const activeList = getActiveList(state, schema);
+
+    if (activeList?.node.type === listType) {
       return liftListItem(schema.nodes.list_item)(state, dispatch, view);
+    }
+
+    if (activeList) {
+      if (dispatch) {
+        dispatch(state.tr.setNodeMarkup(activeList.pos, listType, getListAttrs(listType)).scrollIntoView());
+      }
+
+      return true;
     }
 
     return wrapInList(listType)(state, dispatch, view);
   };
+}
+
+function getActiveList(state: EditorState, schema: Schema): { node: ProseMirrorNode; pos: number } | null {
+  const listTypes = new Set([schema.nodes.bullet_list, schema.nodes.ordered_list]);
+  const { $from } = state.selection;
+
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    const node = $from.node(depth);
+    if (listTypes.has(node.type)) {
+      return { node, pos: $from.before(depth) };
+    }
+  }
+
+  return null;
+}
+
+function getListAttrs(listType: NodeType): Record<string, number> | null {
+  return listType.name === 'ordered_list' ? { order: 1 } : null;
 }
 
 function hasAncestor(state: EditorState, nodeType: NodeType): boolean {

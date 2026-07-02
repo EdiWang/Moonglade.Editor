@@ -46,7 +46,7 @@ Not recommended now:
 | I-02 | P2 | Stability / host integration | `src/editor.ts` constructor, `syncToTextarea()` | Editor initialization called `syncToTextarea()`, which dispatched a bubbling `input` event and invoked `onChange` before a user edit. | Host pages could mark a post as dirty, trigger autosave, or run change handlers during initialization. This is especially relevant when integrating into the main Moonglade edit page. | Initial code called `this.syncToTextarea()` from the constructor; `syncToTextarea()` set textarea value, dispatched `new Event('input', { bubbles: true })`, and called `this.onChange?.(html)`. User confirmed on 2026-07-02 that host dirty/autosave capability must be preserved. Execution on 2026-07-02 added tests for silent initialization and edit/setHTML/explicit sync notifications. | Resolved by silently writing initial textarea value while preserving host notifications for real edits, `setHTML`, and explicit `syncToTextarea()`. |
 | I-03 | P2 | Stability / async state | `src/editor.ts` `savedSelection`, `uploadAndInsertImage()` | Async image upload used a shared `savedSelection` field that is also used by link, color, code, paste, and drop flows. A later interaction could overwrite or clear the selection before the upload resolved. | Uploaded images could be inserted at the wrong selection or fail to restore the intended cursor in multi-upload or user-interaction races. | Initial code assigned `savedSelection` before image button/paste/drop upload and upload completion restored that shared field. Link/code/color flows also read/write the same field. Execution on 2026-07-02 added per-upload selection bookmarks and a delayed uploader test that opens the link dialog before upload completion. | Resolved by capturing an upload-specific bookmark at upload start and passing it through the async upload path. |
 | I-04 | P2 | Error handling / UX | `src/image-upload.ts`, `src/editor.ts` upload status | Upload response parsing assumed valid JSON and did not validate response shape before returning the upload result. | Non-JSON responses, empty responses, or missing `location` values could show confusing technical text or flow into later image insertion validation. | Initial `uploadImageToUrl()` called `await response.json()` after `response.ok` and returned an empty `src` when `location` was missing. Execution on 2026-07-02 added normalized errors for HTTP failure, invalid JSON, and missing image URL while preserving unsafe URL rejection. | Resolved by validating URL upload responses in `src/image-upload.ts` and adding upload error edge-case tests. |
-| I-05 | P2 | Command behavior / test gap | `src/commands.ts` `toggleList()` | List toggling is simple and may not handle switching between bullet and ordered lists as users expect. | Users may get nested lists or no intuitive conversion when switching list type. | `toggleList(schema, listType)` only lifts when the current selection already has the same list type as an ancestor; otherwise it calls `wrapInList(listType)`. Tests do not cover switching between bullet and ordered lists or nested list behavior. User confirmed on 2026-07-02 that switching should convert the current list type. | Add characterization tests for bullet-to-ordered and ordered-to-bullet behavior, then implement the smallest conversion fix. |
+| I-05 | P2 | Command behavior / test gap | `src/commands.ts` `toggleList()` | List toggling did not convert between bullet and ordered lists as users expect. | Users could get nested lists or no intuitive conversion when switching list type. | Initial `toggleList(schema, listType)` only lifted when the current selection already had the same list type as an ancestor; otherwise it called `wrapInList(listType)`. User confirmed on 2026-07-02 that switching should convert the current list type. Execution on 2026-07-02 added bullet-to-ordered and ordered-to-bullet conversion tests. | Resolved by converting the active list node type when switching between bullet and ordered lists, while preserving same-type toggle behavior. |
 | I-06 | P2 | Command behavior / edge case | `src/commands.ts` `insertTable()` | After table insertion, fallback selection recovery scanned the document and picked the first table if `findTable(...)` could not locate the inserted one. | In documents with existing tables, fallback behavior could move the cursor into the wrong table. | Initial `insertTable()` fallback ran `transaction.doc.descendants(...)` and assigned the first `schema.nodes.table` position. Execution on 2026-07-02 added a regression test with an existing table and changed fallback selection targeting to prefer a table at or after the original insertion point. | Resolved by targeting the inserted table near the mapped insertion point instead of globally falling back to the first table. |
 | I-07 | P2 | Public API / architecture | `src/editor.ts`, `src/index.ts`, `src/commands.ts` | `MoongladeEditorOptions` exposes `schema?: Schema`, but the rest of the package assumes the full Moonglade schema shape. | Passing a custom schema can crash or create missing toolbar commands, widening the public API beyond the documented stable surface. | `MoongladeEditorOptions` includes `schema?: Schema`; constructor passes it to `createCommands`; commands immediately reference nodes/marks such as `paragraph`, `heading`, `bullet_list`, `ordered_list`, `table`, `image`, `text_color`; README public API does not document custom schema usage. User confirmed on 2026-07-02 that custom schema should not be a supported public API. | Remove or hide the custom schema option from the public API before wider release, keeping the built-in `moongladeSchema` as the supported schema. |
 | I-08 | P3 | Accessibility / dialog UX | `src/dialogs.ts`, `src/editor.ts` | Dialogs declare modal semantics but do not implement keyboard dismissal, focus trapping, or focus return consistency for all paths. | Keyboard and screen reader users may have a rougher dialog experience, especially in source mode. This is not a core data-safety issue but matters before wider release. | Link/code/source roots set `role="dialog"` and `aria-modal="true"`; close behavior is wired only through explicit buttons/forms; keyword search found no Escape handler or focus trap tests. | Add a small dialog interaction task: Escape close, predictable focus return, and tests. Avoid a full modal framework unless Bootstrap integration later requires it. |
@@ -60,7 +60,7 @@ Not recommended now:
 | 2 | Preserve dirty/autosave for edits while avoiding initialization false positives | User confirmed dirty/autosave capability must remain | Unit tests for constructor, textarea input event, `onChange`, `setHTML`, and document edits | Completed |
 | 3 | Harden async image upload selection handling | None after Task 2 decision | Unit tests with delayed uploader and intervening selection/dialog change; `npm test`; `npm run build` | Completed |
 | 4 | Normalize image upload response errors | None | Unit tests for invalid JSON, missing location, unsafe URL, HTTP failure; `npm test`; `npm run build` | Completed |
-| 5 | Characterize and fix list type switching as conversion | Characterization tests first | Unit tests for bullet-to-ordered, ordered-to-bullet, nested list behavior; `npm test`; `npm run build` | Not started |
+| 5 | Characterize and fix list type switching as conversion | Characterization tests first | Unit tests for bullet-to-ordered, ordered-to-bullet, nested list behavior; `npm test`; `npm run build` | Completed |
 | 6 | Fix table insertion cursor recovery for multiple tables | Characterization test first | Unit test for inserting after an existing table; `npm test`; `npm run build` | Completed |
 | 7 | Remove unsupported custom schema API surface | User confirmed custom schema should not be supported publicly | Type/API review; `npm run types`; `npm run build` | Not started |
 | 8 | Improve dialog keyboard/focus behavior | None | jsdom tests for Escape/cancel/save focus behavior; browser demo smoke check | Not started |
@@ -141,6 +141,7 @@ Not recommended now:
 - **Rollback plan**: Revert command change while keeping characterization notes if useful.
 - **Needs user confirmation**: No; user confirmed conversion behavior on 2026-07-02.
 - **Questions to confirm**: None.
+- **Execution result**: Completed on 2026-07-02. `src/commands.ts` now detects the active bullet/ordered list ancestor and converts its node type when switching list commands. `test/commands.test.ts` covers bullet-to-ordered and ordered-to-bullet conversion.
 
 ### Task 6: Fix table insertion cursor recovery for multiple tables
 
@@ -201,10 +202,9 @@ Not recommended now:
 
 ## Recommended Execution Order
 
-1. Task 5: Characterize and adjust list type switching to convert the current list type.
-2. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
-3. Task 8: Improve dialog keyboard/focus behavior.
-4. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
+1. Task 7: Remove unsupported custom schema API surface before 1.0 or broader consumption.
+2. Task 8: Improve dialog keyboard/focus behavior.
+3. Task 9: Do small maintainability extractions only after the above behavioral tests exist.
 
 Completed:
 
@@ -213,6 +213,7 @@ Completed:
 3. Task 3: Harden async image upload selection handling.
 4. Task 4: Normalize image upload response errors.
 5. Task 6: Fix table insertion cursor recovery for multiple tables.
+6. Task 5: Characterize and fix list type switching as conversion.
 
 ## Deferred / Not Recommended Now
 
@@ -246,6 +247,8 @@ No open questions remain from this review plan.
 | 2026-07-02 | Task 4 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
 | 2026-07-02 | Task 6 | `npm test` | Passed | 4 test files, 59 tests. |
 | 2026-07-02 | Task 6 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
+| 2026-07-02 | Task 5 | `npm test` | Passed | 4 test files, 61 tests. |
+| 2026-07-02 | Task 5 | `npm run build` | Passed | Regenerated ignored local `dist` artifacts; JS/CSS size checks passed. |
 
 ## Notes for Future Execution
 

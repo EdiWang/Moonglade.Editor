@@ -126,6 +126,36 @@ describe('editor commands', () => {
 <hr>`);
   });
 
+  it('converts a bullet list to an ordered list', () => {
+    const state = setSelection(createState('<ul><li><p>One</p></li><li><p>Two</p></li></ul>'), 3);
+    const { result, state: nextState } = runCommand(state, commands.orderedList);
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe(`<ol>
+  <li>
+    <p>One</p>
+  </li>
+  <li>
+    <p>Two</p>
+  </li>
+</ol>`);
+  });
+
+  it('converts an ordered list to a bullet list', () => {
+    const state = setSelection(createState('<ol><li><p>One</p></li><li><p>Two</p></li></ol>'), 3);
+    const { result, state: nextState } = runCommand(state, commands.bulletList);
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe(`<ul>
+  <li>
+    <p>One</p>
+  </li>
+  <li>
+    <p>Two</p>
+  </li>
+</ul>`);
+  });
+
   it('clamps inserted table dimensions', () => {
     const state = setSelection(createState('<p>Hello</p>'), 1, 6);
     const { result, state: nextState } = runCommand(state, commands.insertTable(99, 99));
