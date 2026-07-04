@@ -32,7 +32,7 @@ Current scaffold:
 - Editor custom styles inherit Bootstrap CSS variables and follow the nearest host `data-bs-theme` scope.
 - esbuild emits ESM and browser-global bundles to dist/.
 - Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link/image stripping, toolbar shell/format wiring, blockquote toggle state, link dialog/command safety, color controls, alignment controls, mocked image upload responses, code snippets, horizontal rule insertion, table controls, and source mode.
-- Demo page exists at demo/index.html and can be served from the repository root after npm run build.
+- Demo page exists at demo/index.html and can be served from the repository root after npm run build. Use `npm run demo:upload` when testing the `/image` upload flow.
 
 Before implementing, inspect nearby source and update the task file as progress changes.
 For behavior changes, run npm test and npm run build.
@@ -55,7 +55,7 @@ cd E:\GitHub\ediwang\Moonglade.Editor
 npm install
 npm test
 npm run build
-npx http-server . -p 5173
+npm run demo:upload
 ```
 
 Open:

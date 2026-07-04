@@ -46,6 +46,7 @@ npm install
 npm test
 npm run build
 npm run dev
+npm run demo:upload
 npm run size
 ```
 
@@ -58,6 +59,15 @@ npx http-server . -p 5173
 ```
 
 Then open `http://localhost:5173/demo/`.
+
+To test the demo image upload flow, run the built-in Node.js test server instead:
+
+```powershell
+npm run build
+npm run demo:upload
+```
+
+Then open `http://localhost:5173/demo/`. The server accepts `POST /image` uploads from the demo editor's `uploadUrl`, stores files under `output/upload-test/`, and returns the `location` field expected by the editor. This server is for local testing only, not production image handling.
 
 The build emits:
 

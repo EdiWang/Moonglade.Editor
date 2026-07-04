@@ -149,7 +149,9 @@ Do not require Moonglade to understand ProseMirror JSON as the storage format un
 
 ## Configuration and Environment
 
-No project-specific environment variables are currently defined.
+Project-specific environment variables:
+
+- `PORT` - Optional port for the local Node.js upload test server used by `npm run demo:upload`. Example: `5173`.
 
 Configuration files:
 
@@ -160,6 +162,7 @@ Configuration files:
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
 - `scripts/build.mjs` - esbuild ESM/global bundles and CSS copy.
 - `scripts/check-size.mjs` - size budgets for generated JavaScript and CSS artifacts.
+- `scripts/upload-test-server.mjs` - local Node.js static demo server and `POST /image` upload test endpoint.
 
 If environment variables are added later, document each name, purpose, whether it is required, and an example format. Do not document real secrets.
 
@@ -170,6 +173,7 @@ npm install
 npm run build
 npm test
 npm run dev
+npm run demo:upload
 npm run size
 ```
 
@@ -182,6 +186,7 @@ Command meanings:
 - `npm run size` checks configured bundle size budgets.
 - `npm run build` cleans `dist/`, emits declarations, bundles assets, and checks size budgets.
 - `npm run dev` watches source files and rebuilds bundles/styles.
+- `npm run demo:upload` serves the built demo and a local `POST /image` endpoint for testing image uploads.
 
 ## Verification
 
