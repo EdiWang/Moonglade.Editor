@@ -29,6 +29,26 @@ async function waitForExpectation(assertion: () => void): Promise<void> {
   throw lastError;
 }
 
+function createClipboardImagePasteEvent(file: File): ClipboardEvent {
+  const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+
+  Object.defineProperty(event, 'clipboardData', {
+    configurable: true,
+    value: {
+      files: [],
+      items: [
+        {
+          kind: 'file',
+          type: file.type,
+          getAsFile: () => file
+        }
+      ]
+    }
+  });
+
+  return event;
+}
+
 describe('editor toolbar', () => {
   it('uses a 500px editor height by default', () => {
     const host = document.createElement('div');
@@ -732,6 +752,104 @@ describe('editor toolbar', () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(editor.getHTML()).toBe('<p>Hello<img src="/media/custom.jpg" alt="Custom alt" title="Custom title" loading="lazy"></p>');
+
+    editor.destroy();
+  });
+
+  it('uploads pasted clipboard image items with a temporary editor preview', async () => {
+    const file = new File(['fake-image'], '', { type: 'image/png' });
+    let resolveUpload: (result: { src: string; alt?: string }) => void = () => {};
+    const uploadImage = vi.fn((uploadedFile: File) => {
+      expect(uploadedFile).toBe(file);
+      return new Promise<{ src: string; alt?: string }>((resolve) => {
+        resolveUpload = resolve;
+      });
+    });
+    const createObjectURL = vi.fn(() => 'blob:preview');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL,
+      revokeObjectURL
+    });
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    const event = createClipboardImagePasteEvent(file);
+    editor.dom.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(uploadImage).toHaveBeenCalledWith(file);
+    expect(createObjectURL).toHaveBeenCalledWith(file);
+    expect((host.querySelector('.mg-editor-upload-preview img') as HTMLImageElement).getAttribute('src')).toBe('blob:preview');
+    expect(editor.getHTML()).toBe('<p>Hello</p>');
+
+    resolveUpload({ src: '/media/pasted.png', alt: 'Pasted' });
+
+    await waitForExpectation(() => {
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/pasted.png" alt="Pasted" loading="lazy"></p>');
+    expect(host.querySelector('.mg-editor-upload-preview')).toBeNull();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:preview');
+
+    editor.destroy();
+  });
+
+  it('uploads pasted images from the toolbar image dialog', async () => {
+    const file = new File(['fake-image'], 'dialog.png', { type: 'image/png' });
+    const uploadImage = vi.fn(async (uploadedFile: File) => {
+      expect(uploadedFile).toBe(file);
+      return {
+        src: '/media/dialog.png',
+        alt: 'Dialog paste'
+      };
+    });
+
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    (host.querySelector('[data-command="image"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-image-dialog') as HTMLDivElement;
+    const pasteTarget = dialog.querySelector('.mg-editor-image-paste-target') as HTMLDivElement;
+
+    expect(dialog.hidden).toBe(false);
+    expect(document.activeElement).toBe(pasteTarget);
+
+    const event = createClipboardImagePasteEvent(file);
+    pasteTarget.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(dialog.hidden).toBe(true);
+
+    await waitForExpectation(() => {
+      expect(uploadImage).toHaveBeenCalledWith(file);
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/dialog.png" alt="Dialog paste" loading="lazy"></p>');
 
     editor.destroy();
   });

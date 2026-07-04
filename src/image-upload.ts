@@ -11,6 +11,12 @@ export const DEFAULT_ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.png', '.webp', '.svg'
 const invalidJsonMessage = 'Image upload failed because the server returned invalid JSON.';
 const missingUrlMessage = 'Image upload response did not include an image URL.';
 const imageExtensionPattern = /^\.[a-z0-9]+$/;
+const imageMimeExtensions = new Map([
+  ['image/jpeg', ['.jpg', '.jpeg']],
+  ['image/png', ['.png']],
+  ['image/webp', ['.webp']],
+  ['image/svg+xml', ['.svg']]
+]);
 
 interface CreateImageUploaderOptions {
   uploadUrl?: string;
@@ -45,7 +51,12 @@ export function normalizeAllowedImageExtensions(extensions?: readonly string[]):
 
 export function hasAllowedImageUploadExtension(file: File, allowedExtensions: readonly string[]): boolean {
   const extension = getFileExtension(file.name);
-  return Boolean(extension && allowedExtensions.includes(extension));
+  if (extension) {
+    return allowedExtensions.includes(extension);
+  }
+
+  const mimeExtensions = imageMimeExtensions.get(file.type.toLowerCase());
+  return Boolean(mimeExtensions?.some((mimeExtension) => allowedExtensions.includes(mimeExtension)));
 }
 
 export function formatAllowedImageExtensions(allowedExtensions: readonly string[]): string {

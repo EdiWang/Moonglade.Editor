@@ -127,7 +127,7 @@ const editor = createMoongladeEditor({
 });
 ```
 
-Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Hosts can override that list with `allowedImageExtensions`; values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the file picker, paste, and drag/drop upload flows, but upload endpoints should still validate file content server-side.
+Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Hosts can override that list with `allowedImageExtensions`; values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the image toolbar dialog, direct editor paste, and drag/drop upload flows, but upload endpoints should still validate file content server-side. Pasted clipboard images show a temporary local preview while the upload is pending; saved HTML only receives the safe URL returned by the configured uploader.
 
 Code snippet languages use the default built-in dropdown unless hosts pass `codesample_languages`. Each entry uses `{ text, value }`, where `text` is the displayed label and `value` becomes the sanitized code language class suffix, such as `language-bicep`.
 
@@ -185,7 +185,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload UI, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
 
 Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

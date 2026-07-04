@@ -4,6 +4,7 @@ import type { MoongladeEditorCommands } from '../commands';
 import type {
   CodeDialogElements,
   EditorDialogActions,
+  ImageDialogElements,
   LinkDialogElements,
   SourceDialogElements
 } from '../dialogs';
@@ -46,6 +47,7 @@ export interface ToolbarElements {
   colorDropdowns: ColorDropdown[];
   tableDropdown: TableDropdown;
   imageInput: HTMLInputElement;
+  imageDialog: ImageDialogElements;
   uploadStatus: HTMLDivElement;
   linkDialog: LinkDialogElements;
   codeDialog: CodeDialogElements;
@@ -87,7 +89,7 @@ export interface CreateToolbarOptions {
 export interface ToolbarActions extends EditorDialogActions {
   execute(command: Command): void;
   saveSelection(): void;
-  uploadFile(file: File): void;
+  openImageDialog(): void;
   openLinkDialog(): void;
   openCodeDialog(): void;
   openSourceDialog(): void;

@@ -30,7 +30,7 @@ export type {
   ToolbarElements
 } from './toolbar/types';
 export { closeColorDropdowns } from './toolbar/color-tools';
-export { getFirstImageFile } from './toolbar/image-files';
+export { getFirstClipboardImageFile, getFirstImageFile } from './toolbar/image-files';
 export { closeTableDropdown } from './toolbar/table-tools';
 
 export function createToolbar(options: CreateToolbarOptions): ToolbarElements {
@@ -67,11 +67,11 @@ export function createToolbar(options: CreateToolbarOptions): ToolbarElements {
   };
 
   const { group: formatGroup, formatSelect } = createFormatTool(context);
-  const { group: insertionGroup, imageInput } = createInsertionTools(context);
+  const { group: insertionGroup } = createInsertionTools(context);
   tableDropdown = createTableTools(context);
   const uploadStatus = createUploadStatusTool();
   const sourceGroup = createSourceTool(context);
-  const { linkDialog, codeDialog, sourceDialog } = createToolbarDialogs(context);
+  const { imageDialog, linkDialog, codeDialog, sourceDialog } = createToolbarDialogs(context);
 
   root.append(
     createHistoryTools(context),
@@ -84,6 +84,7 @@ export function createToolbar(options: CreateToolbarOptions): ToolbarElements {
     tableDropdown.root,
     uploadStatus,
     sourceGroup,
+    imageDialog.root,
     linkDialog.root,
     codeDialog.root,
     sourceDialog.root
@@ -95,7 +96,8 @@ export function createToolbar(options: CreateToolbarOptions): ToolbarElements {
     buttons: buttons as ToolbarButtons,
     colorDropdowns,
     tableDropdown,
-    imageInput,
+    imageInput: imageDialog.fileInput,
+    imageDialog,
     uploadStatus,
     linkDialog,
     codeDialog,

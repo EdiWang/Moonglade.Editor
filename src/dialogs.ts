@@ -6,6 +6,7 @@ export interface EditorDialogActions {
   executeWithSavedSelection(command: Command): boolean;
   closeLinkDialog(restoreSelection: boolean): void;
   closeCodeDialog(restoreSelection: boolean): void;
+  closeImageDialog(restoreSelection: boolean): void;
   closeSourceDialog(focusEditor: boolean): void;
   applySourceHtml(html: string): void;
 }
@@ -31,6 +32,15 @@ export interface SourceDialogElements {
   root: HTMLDivElement;
   form: HTMLFormElement;
   sourceTextarea: HTMLTextAreaElement;
+  cancelButton: HTMLButtonElement;
+}
+
+export interface ImageDialogElements {
+  root: HTMLDivElement;
+  panel: HTMLDivElement;
+  pasteTarget: HTMLDivElement;
+  chooseButton: HTMLButtonElement;
+  fileInput: HTMLInputElement;
   cancelButton: HTMLButtonElement;
 }
 
@@ -162,6 +172,65 @@ export function createCodeDialog(
   closeOnEscape(root, () => actions.closeCodeDialog(true));
 
   return { root, form, languageSelect, cancelButton };
+}
+
+export function createImageDialog(
+  actions: Pick<EditorDialogActions, 'closeImageDialog'>,
+  allowedImageExtensions: readonly string[]
+): ImageDialogElements {
+  const root = document.createElement('div');
+  root.className = 'mg-editor-image-dialog p-3';
+  root.hidden = true;
+  root.setAttribute('role', 'dialog');
+  root.setAttribute('aria-modal', 'true');
+  root.setAttribute('aria-label', 'Image upload');
+
+  const panel = document.createElement('div');
+  panel.className = 'mg-editor-image-panel d-flex flex-column gap-3 p-3';
+
+  const title = document.createElement('h2');
+  title.className = 'h6 mb-0';
+  title.textContent = 'Image upload';
+
+  const pasteTarget = document.createElement('div');
+  pasteTarget.className = 'mg-editor-image-paste-target border rounded p-3 text-center';
+  pasteTarget.tabIndex = 0;
+  pasteTarget.setAttribute('role', 'button');
+  pasteTarget.setAttribute('aria-label', 'Paste image');
+  pasteTarget.textContent = 'Paste image here';
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = allowedImageExtensions.join(',');
+  fileInput.hidden = true;
+
+  const actionsElement = document.createElement('div');
+  actionsElement.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
+
+  const chooseButton = document.createElement('button');
+  chooseButton.type = 'button';
+  chooseButton.className = 'btn btn-primary btn-sm';
+  chooseButton.textContent = 'Choose image';
+  chooseButton.addEventListener('click', () => fileInput.click());
+
+  const cancelButton = document.createElement('button');
+  cancelButton.type = 'button';
+  cancelButton.className = 'btn btn-outline-secondary btn-sm';
+  cancelButton.textContent = 'Cancel';
+  cancelButton.addEventListener('click', () => actions.closeImageDialog(true));
+
+  actionsElement.append(chooseButton, cancelButton);
+  panel.append(title, pasteTarget, fileInput, actionsElement);
+  root.append(panel);
+
+  root.addEventListener('click', (event) => {
+    if (event.target === root) {
+      actions.closeImageDialog(true);
+    }
+  });
+  closeOnEscape(root, () => actions.closeImageDialog(true));
+
+  return { root, panel, pasteTarget, chooseButton, fileInput, cancelButton };
 }
 
 export function createSourceDialog(actions: EditorDialogActions): SourceDialogElements {

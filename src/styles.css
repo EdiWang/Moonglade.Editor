@@ -324,6 +324,42 @@
   z-index: 1055;
 }
 
+.mg-editor-image-dialog[hidden] {
+  display: none !important;
+}
+
+.mg-editor-image-dialog {
+  align-items: center;
+  background: rgba(var(--bs-body-color-rgb, 33, 37, 41), .35);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 1055;
+}
+
+.mg-editor-image-panel {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: .375rem;
+  box-shadow: var(--bs-box-shadow-lg, 0 1rem 3rem rgba(0, 0, 0, .175));
+  color: var(--bs-body-color, #212529);
+  width: min(28rem, calc(100vw - 2rem));
+}
+
+.mg-editor-image-paste-target {
+  background: var(--bs-tertiary-bg, #f8f9fa);
+  color: var(--bs-secondary-color, #6c757d);
+  cursor: text;
+  min-height: 7rem;
+}
+
+.mg-editor-image-paste-target:focus {
+  border-color: var(--bs-primary, #0d6efd) !important;
+  box-shadow: 0 0 0 .2rem rgba(var(--bs-primary-rgb, 13, 110, 253), .25);
+  outline: 0;
+}
+
 .mg-editor-source-panel {
   background: var(--bs-body-bg, #fff);
   border: 1px solid var(--bs-border-color, #dee2e6);
@@ -415,4 +451,33 @@
 .mg-editor .ProseMirror img {
   height: auto;
   max-width: 100%;
+}
+
+.mg-editor-upload-preview {
+  display: inline-block;
+  margin: .25rem;
+  max-width: min(16rem, 100%);
+  opacity: .72;
+  position: relative;
+  vertical-align: middle;
+}
+
+.mg-editor-upload-preview::after {
+  background: rgba(var(--bs-body-bg-rgb, 255, 255, 255), .7);
+  border: 1px solid rgba(var(--bs-primary-rgb, 13, 110, 253), .45);
+  border-radius: 999px;
+  color: var(--bs-primary, #0d6efd);
+  content: "";
+  height: .75rem;
+  position: absolute;
+  right: .4rem;
+  top: .4rem;
+  width: .75rem;
+}
+
+.mg-editor-upload-preview img {
+  border-radius: .25rem;
+  display: block;
+  max-height: 12rem;
+  object-fit: contain;
 }

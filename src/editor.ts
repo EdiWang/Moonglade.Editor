@@ -3,8 +3,8 @@ import { gapCursor } from 'prosemirror-gapcursor';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import type { Node as ProseMirrorNode, Schema } from 'prosemirror-model';
-import { EditorState, TextSelection, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
+import { EditorState, Plugin, PluginKey, Selection, TextSelection, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
+import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
 import { tableEditing } from 'prosemirror-tables';
 import { createCommands, type MoongladeEditorCommands } from './commands';
 import {
@@ -29,9 +29,28 @@ import {
   type MoongladeImageUploader
 } from './image-upload';
 import { moongladeSchema } from './schema';
-import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstImageFile, type ToolbarElements } from './toolbar';
+import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstClipboardImageFile, getFirstImageFile, type ToolbarElements } from './toolbar';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
+const uploadPreviewPluginKey = new PluginKey<DecorationSet>('moonglade-image-upload-preview');
+
+type UploadPreviewMeta =
+  | {
+    type: 'add';
+    id: number;
+    pos: number;
+    src: string;
+    alt: string;
+  }
+  | {
+    type: 'remove';
+    id: number;
+  };
+
+interface UploadPreviewHandle {
+  id: number;
+  objectUrl: string;
+}
 
 export interface MoongladeEditorOptions {
   element: HTMLElement;
@@ -68,6 +87,8 @@ export class MoongladeEditor {
     closeTableDropdown(this.toolbar);
   };
   private savedSelection?: SelectionBookmark;
+  private nextUploadPreviewId = 1;
+  private readonly uploadPreviewUrls = new Map<number, string>();
   private view: EditorView;
 
   constructor(options: MoongladeEditorOptions) {
@@ -102,11 +123,8 @@ export class MoongladeEditor {
         saveSelection: () => {
           this.savedSelection = this.view.state.selection.getBookmark();
         },
-        uploadFile: (file) => {
-          const uploadSelection = this.savedSelection ?? this.view.state.selection.getBookmark();
-          this.savedSelection = undefined;
-          void this.uploadAndInsertImage(file, uploadSelection);
-        },
+        openImageDialog: () => this.openImageDialog(),
+        closeImageDialog: (restoreSelection) => this.closeImageDialog(restoreSelection),
         openLinkDialog: () => this.openLinkDialog(),
         closeLinkDialog: (restoreSelection) => this.closeLinkDialog(restoreSelection),
         openCodeDialog: () => this.openCodeDialog(),
@@ -116,6 +134,8 @@ export class MoongladeEditor {
         applySourceHtml: (html) => this.setHTML(html)
       }
     });
+    this.toolbar.imageDialog.fileInput.addEventListener('change', () => this.handleImageDialogFileChange());
+    this.toolbar.imageDialog.pasteTarget.addEventListener('paste', (event) => this.handleImageDialogPaste(event));
     document.addEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     options.element.append(this.toolbar.root, editorHost);
 
@@ -126,6 +146,7 @@ export class MoongladeEditor {
         plugins: [
           history(),
           gapCursor(),
+          createUploadPreviewPlugin(),
           tableEditing(),
           keymap({
             'Mod-z': undo,
@@ -145,9 +166,11 @@ export class MoongladeEditor {
         mouseup: () => {
           this.updateToolbarState();
           return false;
+        },
+        paste: (_view, event) => {
+          return this.handleImagePaste(event as ClipboardEvent);
         }
       },
-      handlePaste: (_view, event) => this.handleImagePaste(event),
       handleDrop: (view, event) => this.handleImageDrop(view, event)
     });
 
@@ -201,6 +224,7 @@ export class MoongladeEditor {
 
   destroy(): void {
     document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
+    this.clearUploadPreviewUrls();
     this.view.destroy();
   }
 
@@ -223,13 +247,18 @@ export class MoongladeEditor {
   }
 
   private handleImagePaste(event: ClipboardEvent): boolean {
-    const file = getFirstImageFile(event.clipboardData?.files, this.allowedImageExtensions);
+    const file = getFirstClipboardImageFile(event.clipboardData, this.allowedImageExtensions);
 
-    if (!file || !this.uploadImage) {
+    if (!file) {
       return false;
     }
 
     event.preventDefault();
+    if (!this.uploadImage) {
+      this.setUploadStatus('Image upload is not configured.', true);
+      return true;
+    }
+
     const uploadSelection = this.view.state.selection.getBookmark();
     void this.uploadAndInsertImage(file, uploadSelection);
     return true;
@@ -270,13 +299,15 @@ export class MoongladeEditor {
       return false;
     }
 
+    const preview = this.addUploadPreview(file, uploadSelection);
     this.setUploadStatus('Uploading image...');
 
     try {
       const result = await this.uploadImage(file);
-      const inserted = this.executeWithSelection(
+      const inserted = this.executeImageCommand(
         this.commands.insertImage(result.src, result.alt, result.title),
-        uploadSelection
+        uploadSelection,
+        preview
       );
 
       if (!inserted) {
@@ -289,6 +320,8 @@ export class MoongladeEditor {
       const message = error instanceof Error ? error.message : 'Image upload failed.';
       this.setUploadStatus(message, true);
       return false;
+    } finally {
+      this.removeUploadPreview(preview);
     }
   }
 
@@ -326,6 +359,53 @@ export class MoongladeEditor {
     linkDialog.root.hidden = false;
     linkDialog.hrefInput.focus();
     linkDialog.hrefInput.select();
+  }
+
+  private openImageDialog(): void {
+    this.savedSelection = this.view.state.selection.getBookmark();
+    const { imageDialog } = this.toolbar;
+
+    imageDialog.root.hidden = false;
+    imageDialog.pasteTarget.focus();
+  }
+
+  private closeImageDialog(restoreSelection: boolean): void {
+    this.toolbar.imageDialog.root.hidden = true;
+    this.toolbar.imageDialog.fileInput.value = '';
+
+    if (restoreSelection) {
+      this.restoreSavedSelection();
+    }
+
+    this.savedSelection = undefined;
+    this.view.focus();
+    this.updateToolbarState();
+  }
+
+  private handleImageDialogFileChange(): void {
+    const { fileInput } = this.toolbar.imageDialog;
+    const file = getFirstImageFile(fileInput.files, this.allowedImageExtensions);
+    fileInput.value = '';
+
+    if (file) {
+      this.uploadImageFromSavedSelection(file);
+    }
+  }
+
+  private handleImageDialogPaste(event: ClipboardEvent): void {
+    const file = getFirstClipboardImageFile(event.clipboardData, this.allowedImageExtensions);
+    if (!file) {
+      return;
+    }
+
+    event.preventDefault();
+    this.uploadImageFromSavedSelection(file);
+  }
+
+  private uploadImageFromSavedSelection(file: File): void {
+    const uploadSelection = this.savedSelection ?? this.view.state.selection.getBookmark();
+    this.closeImageDialog(false);
+    void this.uploadAndInsertImage(file, uploadSelection);
   }
 
   private openCodeDialog(): void {
@@ -391,6 +471,92 @@ export class MoongladeEditor {
     this.view.focus();
     this.updateToolbarState();
     return result;
+  }
+
+  private executeImageCommand(command: Command, selectionBookmark: SelectionBookmark, preview?: UploadPreviewHandle): boolean {
+    const previewPosition = preview ? this.getUploadPreviewPosition(preview.id) : undefined;
+    if (typeof previewPosition === 'number') {
+      return this.executeWithPosition(command, previewPosition);
+    }
+
+    return this.executeWithSelection(command, selectionBookmark);
+  }
+
+  private executeWithPosition(command: Command, pos: number): boolean {
+    const doc = this.view.state.doc;
+    const safePos = Math.max(0, Math.min(pos, doc.content.size));
+    const resolvedPos = doc.resolve(safePos);
+    const selection = resolvedPos.parent.inlineContent
+      ? TextSelection.create(doc, safePos)
+      : Selection.near(resolvedPos);
+
+    this.view.dispatch(this.view.state.tr.setSelection(selection));
+    const result = command(this.view.state, this.view.dispatch, this.view);
+    this.view.focus();
+    this.updateToolbarState();
+    return result;
+  }
+
+  private addUploadPreview(file: File, uploadSelection: SelectionBookmark): UploadPreviewHandle | undefined {
+    if (!file.type.startsWith('image/')) {
+      return undefined;
+    }
+
+    const objectUrl = createObjectUrl(file);
+    if (!objectUrl) {
+      return undefined;
+    }
+
+    const id = this.nextUploadPreviewId;
+    this.nextUploadPreviewId += 1;
+    this.uploadPreviewUrls.set(id, objectUrl);
+
+    const selection = uploadSelection.resolve(this.view.state.doc);
+    this.view.dispatch(this.view.state.tr.setMeta(uploadPreviewPluginKey, {
+      type: 'add',
+      id,
+      pos: selection.from,
+      src: objectUrl,
+      alt: file.name || 'Uploading image'
+    } satisfies UploadPreviewMeta));
+
+    return { id, objectUrl };
+  }
+
+  private removeUploadPreview(preview: UploadPreviewHandle | undefined): void {
+    if (!preview) {
+      return;
+    }
+
+    this.view.dispatch(this.view.state.tr.setMeta(uploadPreviewPluginKey, {
+      type: 'remove',
+      id: preview.id
+    } satisfies UploadPreviewMeta));
+    this.revokeUploadPreviewUrl(preview.id);
+  }
+
+  private getUploadPreviewPosition(id: number): number | undefined {
+    const decorations = uploadPreviewPluginKey.getState(this.view.state);
+    const preview = decorations?.find(undefined, undefined, (spec) => spec.uploadPreviewId === id)[0];
+    return preview?.from;
+  }
+
+  private revokeUploadPreviewUrl(id: number): void {
+    const objectUrl = this.uploadPreviewUrls.get(id);
+    if (!objectUrl) {
+      return;
+    }
+
+    revokeObjectUrl(objectUrl);
+    this.uploadPreviewUrls.delete(id);
+  }
+
+  private clearUploadPreviewUrls(): void {
+    for (const objectUrl of this.uploadPreviewUrls.values()) {
+      revokeObjectUrl(objectUrl);
+    }
+
+    this.uploadPreviewUrls.clear();
   }
 
   private restoreSavedSelection(): void {
@@ -470,4 +636,64 @@ function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boo
   button.classList.toggle('active', active);
   button.setAttribute('aria-pressed', active ? 'true' : 'false');
   button.disabled = !enabled;
+}
+
+function createUploadPreviewPlugin(): Plugin<DecorationSet> {
+  return new Plugin<DecorationSet>({
+    key: uploadPreviewPluginKey,
+    state: {
+      init: () => DecorationSet.empty,
+      apply(transaction, decorations) {
+        let nextDecorations = decorations.map(transaction.mapping, transaction.doc);
+        const meta = transaction.getMeta(uploadPreviewPluginKey) as UploadPreviewMeta | undefined;
+
+        if (!meta) {
+          return nextDecorations;
+        }
+
+        if (meta.type === 'remove') {
+          return nextDecorations.remove(nextDecorations.find(undefined, undefined, (spec) => spec.uploadPreviewId === meta.id));
+        }
+
+        const preview = Decoration.widget(meta.pos, () => {
+          const root = document.createElement('span');
+          root.className = 'mg-editor-upload-preview';
+          root.contentEditable = 'false';
+
+          const image = document.createElement('img');
+          image.src = meta.src;
+          image.alt = meta.alt;
+          root.append(image);
+
+          return root;
+        }, {
+          key: `mg-editor-upload-preview-${meta.id}`,
+          side: -1,
+          uploadPreviewId: meta.id
+        });
+
+        nextDecorations = nextDecorations.add(transaction.doc, [preview]);
+        return nextDecorations;
+      }
+    },
+    props: {
+      decorations(state) {
+        return uploadPreviewPluginKey.getState(state) ?? null;
+      }
+    }
+  });
+}
+
+function createObjectUrl(file: File): string | undefined {
+  if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    return undefined;
+  }
+
+  return URL.createObjectURL(file);
+}
+
+function revokeObjectUrl(objectUrl: string): void {
+  if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
