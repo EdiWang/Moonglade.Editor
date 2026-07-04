@@ -1,6 +1,7 @@
 import type { MarkType } from 'prosemirror-model';
 import type { Command } from 'prosemirror-state';
 import { colorPalette } from '../editor-options';
+import { preserveDisabledButtonTitle } from './dom';
 import type { ColorDropdown, ToolbarContext, ToolbarElements } from './types';
 
 export function createColorTools(context: ToolbarContext): HTMLDivElement {
@@ -73,6 +74,7 @@ function createColorDropdown({
   button.setAttribute('aria-expanded', 'false');
   button.setAttribute('aria-pressed', 'false');
   button.title = label;
+  preserveDisabledButtonTitle(button);
 
   const symbolElement = document.createElement('span');
   symbolElement.className = 'mg-editor-color-symbol';
@@ -115,6 +117,7 @@ function createColorDropdown({
     colorButton.setAttribute('aria-label', `${label}: ${color.label}`);
     colorButton.setAttribute('aria-pressed', 'false');
     colorButton.title = color.label;
+    preserveDisabledButtonTitle(colorButton);
     colorButton.addEventListener('mousedown', (event) => event.preventDefault());
     colorButton.addEventListener('click', () => {
       context.actions.executeWithSavedSelection(command);
@@ -134,6 +137,7 @@ function createColorDropdown({
   clearButton.setAttribute('aria-label', `Clear ${label.toLowerCase()}`);
   clearButton.setAttribute('aria-pressed', 'false');
   clearButton.title = `Clear ${label.toLowerCase()}`;
+  preserveDisabledButtonTitle(clearButton);
   clearButton.addEventListener('mousedown', (event) => event.preventDefault());
   clearButton.addEventListener('click', () => {
     context.actions.executeWithSavedSelection(clearCommand);

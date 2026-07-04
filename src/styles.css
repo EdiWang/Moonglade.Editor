@@ -28,6 +28,15 @@
   min-width: 2.25rem;
 }
 
+.mg-editor button:disabled[title] {
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.mg-editor button:disabled[title] > * {
+  pointer-events: none;
+}
+
 .mg-editor-color-dropdown {
   display: inline-flex;
   position: relative;

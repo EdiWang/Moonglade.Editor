@@ -40,6 +40,7 @@ export function createToolbarButton(name: ToolbarButtonId, icon: string, ariaLab
   button.setAttribute('aria-label', ariaLabel);
   button.setAttribute('aria-pressed', 'false');
   button.title = ariaLabel;
+  preserveDisabledButtonTitle(button);
   button.addEventListener('mousedown', (event) => event.preventDefault());
 
   if (icon) {
@@ -50,4 +51,15 @@ export function createToolbarButton(name: ToolbarButtonId, icon: string, ariaLab
   }
 
   return button;
+}
+
+export function preserveDisabledButtonTitle(button: HTMLButtonElement): void {
+  button.addEventListener('click', (event) => {
+    if (!button.disabled) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, { capture: true });
 }

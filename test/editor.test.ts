@@ -242,6 +242,29 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('keeps titles available on disabled toolbar buttons', () => {
+    const css = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8');
+    const disabledTitleRule = css.match(/\.mg-editor button:disabled\[title\]\s*\{[^}]+\}/)?.[0] ?? '';
+    const disabledTitleChildRule = css.match(/\.mg-editor button:disabled\[title\] > \*\s*\{[^}]+\}/)?.[0] ?? '';
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+    const imageButton = host.querySelector('[data-command="image"]') as HTMLButtonElement;
+    const imageIcon = imageButton.querySelector('.bi') as HTMLElement;
+    const imageDialog = host.querySelector('.mg-editor-image-dialog') as HTMLDivElement;
+
+    expect(imageButton.disabled).toBe(true);
+    expect(imageButton.title).toBe('Upload image');
+    expect(disabledTitleRule).toContain('pointer-events: auto;');
+    expect(disabledTitleChildRule).toContain('pointer-events: none;');
+    expect(imageIcon.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))).toBe(false);
+    expect(imageDialog.hidden).toBe(true);
+
+    editor.destroy();
+  });
+
   it('wires the block format selector to editor commands', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({

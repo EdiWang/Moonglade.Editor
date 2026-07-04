@@ -1,5 +1,5 @@
 import type { Command } from 'prosemirror-state';
-import { createToolbarButton } from './dom';
+import { createToolbarButton, preserveDisabledButtonTitle } from './dom';
 import type { TableDropdown, TableMenuPanel, ToolbarButtonId, ToolbarContext, ToolbarElements } from './types';
 
 const TABLE_GRID_ROWS = 6;
@@ -236,6 +236,7 @@ function createTableMenuCommandButton(name: ToolbarButtonId, icon: string, label
   button.setAttribute('aria-label', label);
   button.setAttribute('aria-pressed', 'false');
   button.title = label;
+  preserveDisabledButtonTitle(button);
   button.addEventListener('mousedown', (event) => event.preventDefault());
 
   const iconElement = document.createElement('i');
