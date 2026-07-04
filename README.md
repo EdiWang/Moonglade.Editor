@@ -23,7 +23,7 @@ The editor flow is intentionally narrow:
 2. Initial HTML is read from `content` or an attached `textarea`.
 3. HTML is parsed through the ProseMirror schema after unsafe URL attributes are removed or normalized.
 4. Users edit content through the ProseMirror `EditorView` and the framework-free toolbar.
-5. Commands update the document for headings, marks, links, colors, alignment, lists, blockquotes, horizontal rules, code blocks, tables, source mode, and images.
+5. Commands update the document for headings, marks, links, colors, alignment, lists, blockquotes, horizontal rules, inline code, code blocks, tables, source mode, and images.
 6. On document changes, the editor serializes the ProseMirror document back to HTML and syncs it to the attached `textarea` and optional `onChange` callback.
 
 Key concepts:
@@ -35,7 +35,7 @@ Key concepts:
 - Image upload is configured with either `uploadUrl` or a custom `uploadImage` function, with upload file extensions constrained by `allowedImageExtensions`.
 - Code snippet languages are configured through `codesample_languages`, with values filtered by the same code language sanitizer used for stored HTML.
 
-Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit.
+Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit.
 
 ## Development
 
@@ -129,7 +129,7 @@ const editor = createMoongladeEditor({
 
 Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Hosts can override that list with `allowedImageExtensions`; values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the image toolbar dialog, direct editor paste, and drag/drop upload flows, but upload endpoints should still validate file content server-side. Pasted clipboard images show a temporary local preview while the upload is pending; saved HTML only receives the safe URL returned by the configured uploader.
 
-Code snippet languages use the default built-in dropdown unless hosts pass `codesample_languages`. Each entry uses `{ text, value }`, where `text` is the displayed label and `value` becomes the sanitized code language class suffix, such as `language-bicep`.
+Code snippet languages use the default built-in dropdown unless hosts pass `codesample_languages`. Each entry uses `{ text, value }`, where `text` is the displayed label and `value` becomes the sanitized code language class suffix, such as `language-bicep`. The Insert code toolbar button wraps selected text as inline `<code>`; with an empty selection it opens the code snippet dialog.
 
 HTML source mode and imported HTML are constrained before entering the editor schema:
 
@@ -185,7 +185,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
 
 Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

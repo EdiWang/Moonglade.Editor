@@ -447,6 +447,30 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('wraps selected text in inline code from the insert code toolbar button', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello world</p>'
+    });
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 1, 6)));
+      return true;
+    });
+
+    const codeButton = host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement;
+    codeButton.click();
+
+    const dialog = host.querySelector('.mg-editor-dialog[aria-label="Code snippet"]') as HTMLDivElement;
+
+    expect(dialog.hidden).toBe(true);
+    expect(editor.getHTML()).toBe('<p><code>Hello</code> world</p>');
+    expect(codeButton.getAttribute('aria-pressed')).toBe('true');
+
+    editor.destroy();
+  });
+
   it('uses configured code sample languages in the toolbar dialog', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({

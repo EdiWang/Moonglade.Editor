@@ -36,6 +36,7 @@ export function createCommands(schema: Schema) {
     clearBackgroundColor: removeMark(schema.marks.background_color),
     alignment: (align: TextAlignment): Command => setTextAlignment(schema, align),
     insertImage: (src: string, alt?: string, title?: string): Command => insertImage(schema, src, alt, title),
+    inlineCode: toggleMark(schema.marks.code),
     codeBlock: (language?: string): Command => setCodeBlock(schema, language),
     insertHorizontalRule: insertHorizontalRule(schema),
     insertTable: (rows = 3, columns = 3): Command => insertTable(schema, rows, columns),

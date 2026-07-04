@@ -91,6 +91,7 @@ export interface ToolbarActions extends EditorDialogActions {
   saveSelection(): void;
   openImageDialog(): void;
   openLinkDialog(): void;
+  insertCode(): void;
   openCodeDialog(): void;
   openSourceDialog(): void;
 }

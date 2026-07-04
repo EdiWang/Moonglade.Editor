@@ -125,6 +125,14 @@ describe('editor commands', () => {
     expect(getHtml(nextState)).toBe('<pre><code>alert(1)</code></pre>');
   });
 
+  it('wraps selected text with an inline code mark', () => {
+    const state = setSelection(createState('<p>Hello world</p>'), 1, 6);
+    const { result, state: nextState } = runCommand(state, commands.inlineCode);
+
+    expect(result).toBe(true);
+    expect(getHtml(nextState)).toBe('<p><code>Hello</code> world</p>');
+  });
+
   it('inserts horizontal rules', () => {
     const state = setSelection(createState('<p>Hello</p>'), 6);
     const { result, state: nextState } = runCommand(state, commands.insertHorizontalRule);

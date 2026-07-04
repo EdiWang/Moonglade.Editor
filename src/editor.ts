@@ -127,6 +127,7 @@ export class MoongladeEditor {
         closeImageDialog: (restoreSelection) => this.closeImageDialog(restoreSelection),
         openLinkDialog: () => this.openLinkDialog(),
         closeLinkDialog: (restoreSelection) => this.closeLinkDialog(restoreSelection),
+        insertCode: () => this.insertCode(),
         openCodeDialog: () => this.openCodeDialog(),
         closeCodeDialog: (restoreSelection) => this.closeCodeDialog(restoreSelection),
         openSourceDialog: () => this.openSourceDialog(),
@@ -408,6 +409,15 @@ export class MoongladeEditor {
     void this.uploadAndInsertImage(file, uploadSelection);
   }
 
+  private insertCode(): void {
+    if (this.view.state.selection.empty) {
+      this.openCodeDialog();
+      return;
+    }
+
+    this.execute(this.commands.inlineCode);
+  }
+
   private openCodeDialog(): void {
     this.savedSelection = this.view.state.selection.getBookmark();
     const { codeDialog } = this.toolbar;
@@ -590,7 +600,11 @@ export class MoongladeEditor {
     setButtonState(buttons.alignCenter, getCurrentAlignment(state) === 'center', canRun(state, this.view, this.commands.alignment('center')));
     setButtonState(buttons.alignRight, getCurrentAlignment(state) === 'right', canRun(state, this.view, this.commands.alignment('right')));
     setButtonState(buttons.alignJustify, getCurrentAlignment(state) === 'justify', canRun(state, this.view, this.commands.alignment('justify')));
-    setButtonState(buttons.codeBlock, state.selection.$from.parent.type === this.schema.nodes.code_block, canRun(state, this.view, this.commands.codeBlock(getCurrentCodeLanguage(state))));
+    setButtonState(
+      buttons.codeBlock,
+      state.selection.$from.parent.type === this.schema.nodes.code_block || isMarkActive(state, this.schema.marks.code),
+      canRun(state, this.view, state.selection.empty ? this.commands.codeBlock(getCurrentCodeLanguage(state)) : this.commands.inlineCode)
+    );
     setButtonState(buttons.horizontalRule, false, canRun(state, this.view, this.commands.insertHorizontalRule));
     setButtonState(buttons.insertTable, false, canRun(state, this.view, this.commands.insertTable()));
     setButtonState(buttons.addTableRow, false, canRun(state, this.view, this.commands.addTableRow));

@@ -17,8 +17,8 @@ export function createInsertionTools(context: ToolbarContext): InsertionToolElem
   linkButton.addEventListener('click', () => context.actions.openLinkDialog());
   context.buttons.link = linkButton;
 
-  const codeButton = createToolbarButton('codeBlock', 'code-slash', 'Code snippet');
-  codeButton.addEventListener('click', () => context.actions.openCodeDialog());
+  const codeButton = createToolbarButton('codeBlock', 'code-slash', 'Insert code');
+  codeButton.addEventListener('click', () => context.actions.insertCode());
   context.buttons.codeBlock = codeButton;
 
   const horizontalRuleButton = createToolbarButton('horizontalRule', 'hr', 'Insert horizontal rule');
