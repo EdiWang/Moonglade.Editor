@@ -169,11 +169,11 @@
   border-color: var(--bs-dropdown-border-color, var(--bs-border-color, #dee2e6));
   color: var(--bs-dropdown-color, var(--bs-body-color, #212529));
   display: flex;
-  left: auto;
+  left: 0;
   max-width: calc(100vw - 1rem);
   min-width: 0;
   padding: 0;
-  right: 0;
+  right: auto;
   top: calc(100% + .25rem);
   width: min(26rem, calc(100vw - 1rem));
   z-index: 1001;
@@ -279,6 +279,21 @@
   line-height: 1.25;
   margin-top: .65rem;
   text-align: center;
+}
+
+.mg-editor-table-menu.dropdown-menu.mg-editor-table-menu-compact {
+  flex-direction: column;
+  width: min(13.25rem, calc(100vw - 1rem));
+}
+
+.mg-editor-table-menu.dropdown-menu.mg-editor-table-menu-compact .mg-editor-table-menu-list {
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  border-right: 0;
+  min-width: 0;
+}
+
+.mg-editor-table-menu.dropdown-menu.mg-editor-table-menu-compact .mg-editor-table-panel-shell {
+  min-width: 0;
 }
 
 @media (max-width: 30rem) {

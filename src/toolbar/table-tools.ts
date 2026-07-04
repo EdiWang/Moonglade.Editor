@@ -4,6 +4,8 @@ import type { TableDropdown, TableMenuPanel, ToolbarButtonId, ToolbarContext, To
 
 const TABLE_GRID_ROWS = 6;
 const TABLE_GRID_COLUMNS = 8;
+const TABLE_MENU_VIEWPORT_MARGIN = 8;
+const TABLE_MENU_WIDE_WIDTH_REM = 26;
 const tableMenuPanels: TableMenuPanel[] = ['insert', 'row', 'column'];
 
 export function createTableTools(context: ToolbarContext): TableDropdown {
@@ -121,6 +123,7 @@ export function createTableTools(context: ToolbarContext): TableDropdown {
     if (shouldOpen) {
       setPanel('insert');
       updateTableGridPreview(dropdown, 3, 3);
+      positionTableDropdown(dropdown);
     }
   });
   button.addEventListener('keydown', (event) => {
@@ -145,6 +148,58 @@ export function createTableTools(context: ToolbarContext): TableDropdown {
 export function closeTableDropdown(toolbar: Pick<ToolbarElements, 'tableDropdown'>): void {
   toolbar.tableDropdown.menu.hidden = true;
   toolbar.tableDropdown.button.setAttribute('aria-expanded', 'false');
+}
+
+function positionTableDropdown(dropdown: Pick<TableDropdown, 'root' | 'menu'>): void {
+  const { root, menu } = dropdown;
+  menu.style.left = '0px';
+  menu.style.right = 'auto';
+  menu.classList.remove('mg-editor-table-menu-compact');
+
+  const viewportWidth = getViewportWidth();
+  const viewportLeft = TABLE_MENU_VIEWPORT_MARGIN;
+  const viewportRight = Math.max(viewportLeft, viewportWidth - TABLE_MENU_VIEWPORT_MARGIN);
+  const boundary = root.closest<HTMLElement>('.mg-editor') ?? root.parentElement;
+  const boundaryRect = boundary?.getBoundingClientRect();
+  const boundaryLeft = Math.max(boundaryRect?.left ?? viewportLeft, viewportLeft);
+  const boundaryRight = Math.min(boundaryRect?.right ?? viewportRight, viewportRight);
+  const availableWidth = boundaryRight - boundaryLeft;
+
+  if (availableWidth <= 0) {
+    menu.style.removeProperty('max-width');
+    return;
+  }
+
+  menu.style.maxWidth = `${Math.round(availableWidth)}px`;
+  menu.classList.toggle('mg-editor-table-menu-compact', availableWidth < getWideMenuWidth());
+
+  const rootRect = root.getBoundingClientRect();
+  const menuRect = menu.getBoundingClientRect();
+  const minLeft = boundaryLeft - rootRect.left;
+  const maxLeft = boundaryRight - rootRect.left - menuRect.width;
+
+  if (!Number.isFinite(minLeft) || !Number.isFinite(maxLeft)) {
+    return;
+  }
+
+  menu.style.left = `${Math.round(clamp(0, minLeft, maxLeft))}px`;
+}
+
+function getViewportWidth(): number {
+  return window.innerWidth || document.documentElement.clientWidth || 0;
+}
+
+function getWideMenuWidth(): number {
+  const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize);
+  return (Number.isFinite(rootFontSize) ? rootFontSize : 16) * TABLE_MENU_WIDE_WIDTH_REM;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  if (max < min) {
+    return min;
+  }
+
+  return Math.min(Math.max(value, min), max);
 }
 
 function createTablePanelButton(label: string, icon: string, panel: TableMenuPanel): HTMLButtonElement {

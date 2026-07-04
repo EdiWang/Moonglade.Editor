@@ -5,6 +5,7 @@ import { TextSelection } from 'prosemirror-state';
 import { createMoongladeEditor } from '../src/editor';
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
 });
@@ -47,6 +48,19 @@ function createClipboardImagePasteEvent(file: File): ClipboardEvent {
   });
 
   return event;
+}
+
+function mockElementRect(element: Element, rect: { left: number; top: number; width: number; height: number }): void {
+  const domRect = {
+    ...rect,
+    x: rect.left,
+    y: rect.top,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    toJSON: () => ({})
+  } as DOMRect;
+
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(domRect);
 }
 
 describe('editor toolbar', () => {
@@ -587,6 +601,33 @@ describe('editor toolbar', () => {
     tableButton.click();
     (host.querySelector('[data-command="toggleTableHeaderRow"]') as HTMLButtonElement).click();
     expect(editor.getHTML()).toContain('<th>');
+
+    editor.destroy();
+  });
+
+  it('keeps the table menu inside the editor when the toolbar wraps', () => {
+    vi.stubGlobal('innerWidth', 932);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+
+    const tableDropdown = host.querySelector('.mg-editor-table-dropdown') as HTMLDivElement;
+    const tableButton = host.querySelector('[data-command="insertTable"]') as HTMLButtonElement;
+    const tableMenu = host.querySelector('.mg-editor-table-menu') as HTMLDivElement;
+
+    mockElementRect(host, { left: 118, top: 72, width: 696, height: 672 });
+    mockElementRect(tableDropdown, { left: 424.8, top: 120.5, width: 55.2, height: 32 });
+    mockElementRect(tableMenu, { left: 424.8, top: 156.5, width: 416, height: 208.8 });
+
+    tableButton.click();
+
+    expect(tableMenu.hidden).toBe(false);
+    expect(tableMenu.style.left).toBe('-27px');
+    expect(tableMenu.style.right).toBe('auto');
+    expect(tableMenu.style.maxWidth).toBe('696px');
 
     editor.destroy();
   });
