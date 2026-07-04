@@ -148,6 +148,7 @@ export class MoongladeEditor {
           history(),
           gapCursor(),
           createUploadPreviewPlugin(),
+          createCodeBlockSpellcheckPlugin(),
           tableEditing(),
           keymap({
             'Mod-z': undo,
@@ -693,6 +694,30 @@ function createUploadPreviewPlugin(): Plugin<DecorationSet> {
     props: {
       decorations(state) {
         return uploadPreviewPluginKey.getState(state) ?? null;
+      }
+    }
+  });
+}
+
+function createCodeBlockSpellcheckPlugin(): Plugin {
+  return new Plugin({
+    props: {
+      decorations(state) {
+        const codeBlockType = state.schema.nodes.code_block;
+        const decorations: Decoration[] = [];
+
+        state.doc.descendants((node, pos) => {
+          if (node.type !== codeBlockType) {
+            return true;
+          }
+
+          decorations.push(Decoration.node(pos, pos + node.nodeSize, {
+            spellcheck: 'false'
+          }));
+          return false;
+        });
+
+        return DecorationSet.create(state.doc, decorations);
       }
     }
   });

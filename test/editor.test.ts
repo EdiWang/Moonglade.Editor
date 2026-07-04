@@ -129,6 +129,27 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('keeps code blocks spellcheck-disabled independently of the editor setting', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<pre><code>const answer = 42;</code></pre>',
+      spellcheck: true
+    });
+    const codeBlock = host.querySelector('.ProseMirror pre') as HTMLPreElement;
+
+    expect(editor.dom.getAttribute('spellcheck')).toBe('true');
+    expect(codeBlock.getAttribute('spellcheck')).toBe('false');
+
+    editor.setSpellcheck(false);
+
+    expect(editor.dom.getAttribute('spellcheck')).toBe('false');
+    expect(codeBlock.getAttribute('spellcheck')).toBe('false');
+    expect(editor.getHTML()).toBe('<pre><code>const answer = 42;</code></pre>');
+
+    editor.destroy();
+  });
+
   it('syncs initial textarea content without notifying the host during initialization', () => {
     const host = document.createElement('div');
     const textarea = document.createElement('textarea');
@@ -479,6 +500,7 @@ describe('editor toolbar', () => {
 
     expect(dialog.hidden).toBe(true);
     expect(editor.getHTML()).toBe('<pre><code class="language-javascript">const answer = 42;</code></pre>');
+    expect((host.querySelector('.ProseMirror pre') as HTMLPreElement).getAttribute('spellcheck')).toBe('false');
     expect((host.querySelector('[data-command="codeBlock"]') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
 
     editor.destroy();
