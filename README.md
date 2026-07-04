@@ -78,6 +78,8 @@ The build emits:
 
 `npm run build` also checks bundle size budgets for the generated JavaScript and CSS files.
 
+GitHub Actions runs the build workflow only for pushes to the `release` branch.
+
 `dist/` is generated locally and ignored by Git so routine source changes do not include bundle churn in code review. For releases, build the package and attach the generated `dist` assets to the GitHub Release. When Moonglade needs an update, copy the release artifacts into the Moonglade application manually.
 
 For Codex continuation, read:
