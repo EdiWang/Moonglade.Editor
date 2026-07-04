@@ -1,6 +1,6 @@
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { watch as watchFile } from 'node:fs';
-import { context, build } from 'esbuild';
+import { context, build, transform } from 'esbuild';
 
 const watch = process.argv.includes('--watch');
 const styleSource = 'src/styles.css';
@@ -9,6 +9,7 @@ const styleOutput = 'dist/moonglade-editor.css';
 const shared = {
   entryPoints: ['src/index.ts'],
   bundle: true,
+  minify: !watch,
   sourcemap: true,
   target: 'es2020',
   logLevel: 'info'
@@ -29,14 +30,14 @@ const builds = [
 ];
 
 await mkdir('dist', { recursive: true });
-await copyStyles();
+await copyStyles({ minify: !watch });
 
 if (watch) {
   const contexts = await Promise.all(builds.map((options) => context(options)));
   await Promise.all(contexts.map((ctx) => ctx.watch()));
   const styleWatcher = watchFile(styleSource, async () => {
     try {
-      await copyStyles();
+      await copyStyles({ minify: false });
       console.log(`Copied ${styleOutput}`);
     } catch (error) {
       console.error(error);
@@ -58,6 +59,18 @@ if (watch) {
   await Promise.all(builds.map((options) => build(options)));
 }
 
-async function copyStyles() {
-  await copyFile(styleSource, styleOutput);
+async function copyStyles({ minify }) {
+  if (!minify) {
+    await copyFile(styleSource, styleOutput);
+    return;
+  }
+
+  const css = await readFile(styleSource, 'utf8');
+  const result = await transform(css, {
+    loader: 'css',
+    minify: true,
+    target: 'es2020'
+  });
+
+  await writeFile(styleOutput, result.code);
 }

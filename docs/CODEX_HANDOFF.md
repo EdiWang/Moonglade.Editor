@@ -30,7 +30,7 @@ Current scaffold:
 - Serialized HTML is newline-formatted around block content and standalone image paragraphs for easier source editing.
 - Editor height is configurable through `createMoongladeEditor({ height })`, defaults to `500px`, and accepts CSS height strings.
 - Editor custom styles inherit Bootstrap CSS variables and follow the nearest host `data-bs-theme` scope.
-- esbuild emits ESM and browser-global bundles to dist/.
+- esbuild emits minified ESM and browser-global release bundles to dist/.
 - Vitest/jsdom tests cover basic HTML round-trip behavior, unsafe link/image stripping, toolbar shell/format wiring, blockquote toggle state, link dialog/command safety, color controls, alignment controls, mocked image upload responses, inline code, code snippets, horizontal rule insertion, table controls, and source mode.
 - Demo page exists at demo/index.html and can be served from the repository root after npm run build. Use `npm run demo:upload` when testing the `/image` upload flow.
 

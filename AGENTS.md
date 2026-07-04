@@ -160,7 +160,7 @@ Configuration files:
 - `tsconfig.json` - shared TypeScript compiler settings for source, tests, scripts, and Vitest config.
 - `tsconfig.build.json` - declaration-only TypeScript build output to `dist/`.
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
-- `scripts/build.mjs` - esbuild ESM/global bundles and CSS copy.
+- `scripts/build.mjs` - esbuild ESM/global bundles and CSS output; release builds are minified while `--watch` keeps readable output.
 - `scripts/check-size.mjs` - size budgets for generated JavaScript and CSS artifacts.
 - `scripts/upload-test-server.mjs` - local Node.js static demo server and `POST /image` upload test endpoint.
 
@@ -182,7 +182,7 @@ Command meanings:
 - `npm install` installs dependencies from `package-lock.json`.
 - `npm test` runs Vitest in jsdom.
 - `npm run types` emits declaration files only.
-- `npm run bundle` runs esbuild and copies CSS.
+- `npm run bundle` runs esbuild and writes minified JS/CSS release assets.
 - `npm run size` checks configured bundle size budgets.
 - `npm run build` cleans `dist/`, emits declarations, bundles assets, and checks size budgets.
 - `npm run dev` watches source files and rebuilds bundles/styles.

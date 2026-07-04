@@ -71,9 +71,9 @@ Then open `http://localhost:5173/demo/`. The server accepts `POST /image` upload
 
 The build emits:
 
-- `dist/moonglade-editor.js` - bundled ESM entry.
-- `dist/moonglade-editor.global.js` - bundled browser global entry.
-- `dist/moonglade-editor.css` - editor styles.
+- `dist/moonglade-editor.js` - bundled and minified ESM entry.
+- `dist/moonglade-editor.global.js` - bundled and minified browser global entry.
+- `dist/moonglade-editor.css` - minified editor styles.
 - `dist/*.d.ts` - TypeScript declarations.
 
 `npm run build` also checks bundle size budgets for the generated JavaScript and CSS files.
