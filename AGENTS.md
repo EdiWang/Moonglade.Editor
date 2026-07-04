@@ -57,7 +57,7 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 - Linting: To be confirmed. No lint script is currently configured.
 - Database/cache/message queue: None.
 - Deployment/runtime service infrastructure: None in this package. The intended integration boundary is prebuilt static assets or a package artifact consumed by Moonglade.
-- License: `UNLICENSED` in `package.json`; choose a publishing license before independent distribution.
+- License: MIT in `package.json`, with the full text in the repository `LICENSE` file.
 
 ## Code Architecture
 

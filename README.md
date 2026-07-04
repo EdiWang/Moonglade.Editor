@@ -195,4 +195,4 @@ This is a single-package repository, not a monorepo.
 
 ## License
 
-This package is private and currently marked `UNLICENSED`. Choose the intended license before publishing the package or distributing it independently.
+This project is licensed under the MIT License. See the `LICENSE` file for the full text.

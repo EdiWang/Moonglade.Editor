@@ -4,7 +4,7 @@
   "private": true,
   "description": "Standalone ProseMirror-based rich text editor for Moonglade.",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "module": "./dist/moonglade-editor.js",
   "types": "./dist/index.d.ts",
   "exports": {
