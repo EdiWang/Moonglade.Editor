@@ -154,6 +154,33 @@ describe('html parsing and serialization', () => {
       .toBe('<p></p>');
   });
 
+  it('escapes special characters in serialized text content', () => {
+    const html = '<p>1 &lt; 2 &amp;&amp; 3 &gt; 2</p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>1 &lt; 2 &amp;&amp; 3 &gt; 2</p>');
+  });
+
+  it('removes inline event handler attributes', () => {
+    const html = '<p onclick="evil()">Text <a href="/post" onmouseover="evil()">link</a></p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe('<p>Text <a href="/post">link</a></p>');
+  });
+
+  it('keeps safe images while removing their event handler attributes', () => {
+    const html = '<p><img src="/media/photo.jpg" alt="Photo" onerror="evil()"></p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<p>
+  <img src="/media/photo.jpg" alt="Photo" loading="lazy">
+</p>`);
+  });
+
+  it('drops disallowed elements such as scripts', () => {
+    const html = '<p>Before</p><script>evil()</script><p>After</p>';
+
+    expect(roundTripHtml(moongladeSchema, html)).toBe(`<p>Before</p>
+<p>After</p>`);
+  });
+
   it('keeps formatted output stable after another parse and serialize pass', () => {
     const html = '<h1>Hello</h1><p><strong>Moonglade</strong> editor</p><hr><p><img src="/media/photo.jpg" alt="Photo"></p>';
     const formatted = roundTripHtml(moongladeSchema, html);

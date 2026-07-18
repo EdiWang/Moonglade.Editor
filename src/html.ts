@@ -42,7 +42,7 @@ const VOID_TAGS = new Set(['AREA', 'BASE', 'BR', 'COL', 'EMBED', 'HR', 'IMG', 'I
 const PREFORMATTED_TAGS = new Set(['PRE', 'CODE']);
 const INDENT = '  ';
 
-function removeUnsafeAttributes(root: HTMLElement): void {
+function removeUnsafeAttributes(root: DocumentFragment | HTMLElement): void {
   for (const element of Array.from(root.querySelectorAll('*'))) {
     for (const attribute of Array.from(element.attributes)) {
       const name = attribute.name.toLowerCase();
@@ -78,11 +78,14 @@ function removeUnsafeAttributes(root: HTMLElement): void {
 }
 
 export function parseHtml(schema: Schema, html: string): ProseMirrorNode {
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = html || '';
-  removeUnsafeAttributes(wrapper);
+  // Parse into an inert <template> fragment so untrusted HTML cannot trigger
+  // resource loads (e.g. image requests) or inline event handlers before it is
+  // sanitized. Template contents live in an inert document with no browsing context.
+  const template = document.createElement('template');
+  template.innerHTML = html || '';
+  removeUnsafeAttributes(template.content);
 
-  return ProseMirrorDOMParser.fromSchema(schema).parse(wrapper);
+  return ProseMirrorDOMParser.fromSchema(schema).parse(template.content);
 }
 
 export function serializeHtml(schema: Schema, doc: ProseMirrorNode): string {
