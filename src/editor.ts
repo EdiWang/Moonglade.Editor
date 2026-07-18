@@ -72,12 +72,21 @@ export class MoongladeEditor {
   };
   private savedSelection?: SelectionBookmark;
   private readonly uploadPreviews = new UploadPreviewManager();
+  private readonly alignmentCommands: { left: Command; center: Command; right: Command; justify: Command };
+  private readonly insertTableCommand: Command;
   private view: EditorView;
   private textareaSyncHandle?: ReturnType<typeof setTimeout>;
 
   constructor(options: MoongladeEditorOptions) {
     this.schema = moongladeSchema;
     this.commands = createCommands(this.schema);
+    this.alignmentCommands = {
+      left: this.commands.alignment('left'),
+      center: this.commands.alignment('center'),
+      right: this.commands.alignment('right'),
+      justify: this.commands.alignment('justify')
+    };
+    this.insertTableCommand = this.commands.insertTable();
     this.textarea = options.textarea;
     this.uploadUrl = options.uploadUrl;
     this.uploadImage = createImageUploader(options);
@@ -291,8 +300,14 @@ export class MoongladeEditor {
   private handleImageDrop(view: EditorView, event: DragEvent): boolean {
     const file = getFirstImageFile(event.dataTransfer?.files, this.allowedImageExtensions);
 
-    if (!file || !this.uploadImage) {
+    if (!file) {
       return false;
+    }
+
+    event.preventDefault();
+    if (!this.uploadImage) {
+      this.setUploadStatus('Image upload is not configured.', true);
+      return true;
     }
 
     const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
@@ -300,7 +315,6 @@ export class MoongladeEditor {
       view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, coordinates.pos)));
     }
 
-    event.preventDefault();
     const uploadSelection = this.view.state.selection.getBookmark();
     void this.uploadAndInsertImage(file, uploadSelection);
     return true;
@@ -544,6 +558,8 @@ export class MoongladeEditor {
 
     formatSelect.value = getCurrentFormat(state);
 
+    const currentAlignment = getCurrentAlignment(state);
+
     setButtonState(buttons.bold, isMarkActive(state, this.schema.marks.strong), canRun(state, this.view, this.commands.bold));
     setButtonState(buttons.italic, isMarkActive(state, this.schema.marks.em), canRun(state, this.view, this.commands.italic));
     setButtonState(buttons.underline, isMarkActive(state, this.schema.marks.underline), canRun(state, this.view, this.commands.underline));
@@ -551,17 +567,17 @@ export class MoongladeEditor {
     setButtonState(buttons.blockquote, hasAncestor(state, this.schema.nodes.blockquote), canRun(state, this.view, this.commands.blockquote));
     setButtonState(buttons.bulletList, hasAncestor(state, this.schema.nodes.bullet_list), canRun(state, this.view, this.commands.bulletList));
     setButtonState(buttons.orderedList, hasAncestor(state, this.schema.nodes.ordered_list), canRun(state, this.view, this.commands.orderedList));
-    setButtonState(buttons.alignLeft, getCurrentAlignment(state) === 'left', canRun(state, this.view, this.commands.alignment('left')));
-    setButtonState(buttons.alignCenter, getCurrentAlignment(state) === 'center', canRun(state, this.view, this.commands.alignment('center')));
-    setButtonState(buttons.alignRight, getCurrentAlignment(state) === 'right', canRun(state, this.view, this.commands.alignment('right')));
-    setButtonState(buttons.alignJustify, getCurrentAlignment(state) === 'justify', canRun(state, this.view, this.commands.alignment('justify')));
+    setButtonState(buttons.alignLeft, currentAlignment === 'left', canRun(state, this.view, this.alignmentCommands.left));
+    setButtonState(buttons.alignCenter, currentAlignment === 'center', canRun(state, this.view, this.alignmentCommands.center));
+    setButtonState(buttons.alignRight, currentAlignment === 'right', canRun(state, this.view, this.alignmentCommands.right));
+    setButtonState(buttons.alignJustify, currentAlignment === 'justify', canRun(state, this.view, this.alignmentCommands.justify));
     setButtonState(
       buttons.codeBlock,
       state.selection.$from.parent.type === this.schema.nodes.code_block || isMarkActive(state, this.schema.marks.code),
       canRun(state, this.view, state.selection.empty ? this.commands.codeBlock(getCurrentCodeLanguage(state)) : this.commands.inlineCode)
     );
     setButtonState(buttons.horizontalRule, false, canRun(state, this.view, this.commands.insertHorizontalRule));
-    setButtonState(buttons.insertTable, false, canRun(state, this.view, this.commands.insertTable()));
+    setButtonState(buttons.insertTable, false, canRun(state, this.view, this.insertTableCommand));
     setButtonState(buttons.addTableRow, false, canRun(state, this.view, this.commands.addTableRow));
     setButtonState(buttons.deleteTableRow, false, canRun(state, this.view, this.commands.deleteTableRow));
     setButtonState(buttons.addTableColumn, false, canRun(state, this.view, this.commands.addTableColumn));

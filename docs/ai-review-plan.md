@@ -171,6 +171,7 @@ cleanups, then long-term polish. Each task is independently committable and test
 - **Release risk**: Low.
 - **Rollback**: Revert edits.
 - **Needs my confirmation**: No
+- **Status**: DONE (2026-07-18). I8: `handleImageDrop` now mirrors `handleImagePaste` — when an image is dropped without a configured uploader it `preventDefault`s and shows `Image upload is not configured.` instead of silently ignoring. I7: `updateToolbarState` computes `getCurrentAlignment` once and reuses cached command instances (`alignmentCommands` for the four alignments + `insertTableCommand`) created in the constructor instead of rebuilding them each toolbar update. Verified: `npm test` (93 passing), `npm run build` (within size budgets). Note: a jsdom unit test for the drop path was attempted but removed — ProseMirror's internal drop handler calls `posAtCoords`/`elementFromPoint` before the `handleDrop` prop, which jsdom cannot satisfy without heavy layout mocking; the analogous paste status path remains covered.
 
 ### Task 8 (docs-only): Clarify upload response contracts
 
@@ -184,6 +185,7 @@ cleanups, then long-term polish. Each task is independently committable and test
 - **Release risk**: Low.
 - **Rollback**: Revert docs.
 - **Needs my confirmation**: No
+- **Status**: DONE (2026-07-18). Added a "two upload options use different response shapes" section to `README.md` after the `uploadImage` example: `uploadImage(file)` resolves to `{ src, alt?, title? }`; `uploadUrl` posts multipart form-data (field `file`, `same-origin`, `Accept: application/json`) and expects `{ location, filename?, title? }`, mapped to `src`/`alt` (fallback to file name)/`title`, with missing `location` or non-JSON treated as an error. Docs-only, no code change.
 
 ## 6. Not Recommended Now
 
