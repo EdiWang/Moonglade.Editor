@@ -143,17 +143,36 @@ function sanitizeUrlWithProtocols(value: string, allowedProtocols: Set<string>):
   return allowedProtocols.has(`${protocol}:`) ? normalized : false;
 }
 
-function isSafeRgbColor(value: string): boolean {
+export interface RgbColor {
+  r: number;
+  g: number;
+  b: number;
+  a?: number;
+}
+
+export function parseRgbColor(value: string): RgbColor | null {
   const rgb = value.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i);
   if (!rgb) {
-    return false;
+    return null;
   }
 
-  const channels = rgb.slice(1, 4).map(Number);
-  if (channels.some((channel) => channel < 0 || channel > 255)) {
-    return false;
+  const [r, g, b] = rgb.slice(1, 4).map(Number);
+  if ([r, g, b].some((channel) => channel < 0 || channel > 255)) {
+    return null;
   }
 
-  const alpha = rgb[4];
-  return !alpha || Number(alpha) >= 0 && Number(alpha) <= 1;
+  if (rgb[4] === undefined) {
+    return { r, g, b };
+  }
+
+  const a = Number(rgb[4]);
+  if (a < 0 || a > 1) {
+    return null;
+  }
+
+  return { r, g, b, a };
+}
+
+function isSafeRgbColor(value: string): boolean {
+  return parseRgbColor(value) !== null;
 }

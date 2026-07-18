@@ -173,41 +173,118 @@ describe('editor toolbar', () => {
   });
 
   it('notifies the host for edits, setHTML, and explicit textarea sync', () => {
-    const host = document.createElement('div');
-    const textarea = document.createElement('textarea');
-    const inputListener = vi.fn();
-    const onChange = vi.fn();
-    textarea.addEventListener('input', inputListener);
+    vi.useFakeTimers();
+    try {
+      const host = document.createElement('div');
+      const textarea = document.createElement('textarea');
+      const inputListener = vi.fn();
+      const onChange = vi.fn();
+      textarea.addEventListener('input', inputListener);
 
-    const editor = createMoongladeEditor({
-      element: host,
-      textarea,
-      content: '<p>Hello</p>',
-      onChange
-    });
+      const editor = createMoongladeEditor({
+        element: host,
+        textarea,
+        content: '<p>Hello</p>',
+        onChange
+      });
 
-    editor.run((state, dispatch) => {
-      dispatch?.(state.tr.insertText('!', 6));
-      return true;
-    });
+      editor.run((state, dispatch) => {
+        dispatch?.(state.tr.insertText('!', 6));
+        return true;
+      });
 
-    expect(textarea.value).toBe('<p>Hello!</p>');
-    expect(inputListener).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenLastCalledWith('<p>Hello!</p>');
+      // getHTML stays immediate; the textarea/onChange write is debounced.
+      expect(editor.getHTML()).toBe('<p>Hello!</p>');
+      expect(inputListener).not.toHaveBeenCalled();
+      expect(onChange).not.toHaveBeenCalled();
 
-    editor.setHTML('<p>Updated</p>');
+      vi.advanceTimersByTime(300);
 
-    expect(textarea.value).toBe('<p>Updated</p>');
-    expect(inputListener).toHaveBeenCalledTimes(2);
-    expect(onChange).toHaveBeenLastCalledWith('<p>Updated</p>');
+      expect(textarea.value).toBe('<p>Hello!</p>');
+      expect(inputListener).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenLastCalledWith('<p>Hello!</p>');
 
-    editor.syncToTextarea();
+      editor.setHTML('<p>Updated</p>');
 
-    expect(inputListener).toHaveBeenCalledTimes(3);
-    expect(onChange).toHaveBeenCalledTimes(3);
-    expect(onChange).toHaveBeenLastCalledWith('<p>Updated</p>');
+      expect(textarea.value).toBe('<p>Updated</p>');
+      expect(inputListener).toHaveBeenCalledTimes(2);
+      expect(onChange).toHaveBeenLastCalledWith('<p>Updated</p>');
 
-    editor.destroy();
+      editor.syncToTextarea();
+
+      expect(inputListener).toHaveBeenCalledTimes(3);
+      expect(onChange).toHaveBeenCalledTimes(3);
+      expect(onChange).toHaveBeenLastCalledWith('<p>Updated</p>');
+
+      editor.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('coalesces rapid edits into a single debounced host notification', () => {
+    vi.useFakeTimers();
+    try {
+      const host = document.createElement('div');
+      const onChange = vi.fn();
+      const editor = createMoongladeEditor({
+        element: host,
+        content: '<p>Hi</p>',
+        onChange
+      });
+
+      editor.run((state, dispatch) => {
+        dispatch?.(state.tr.insertText('a', 3));
+        return true;
+      });
+      editor.run((state, dispatch) => {
+        dispatch?.(state.tr.insertText('b', 4));
+        return true;
+      });
+      editor.run((state, dispatch) => {
+        dispatch?.(state.tr.insertText('c', 5));
+        return true;
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+      expect(editor.getHTML()).toBe('<p>Hiabc</p>');
+
+      vi.advanceTimersByTime(300);
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenLastCalledWith('<p>Hiabc</p>');
+
+      editor.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('flushes a pending debounced notification on destroy', () => {
+    vi.useFakeTimers();
+    try {
+      const host = document.createElement('div');
+      const onChange = vi.fn();
+      const editor = createMoongladeEditor({
+        element: host,
+        content: '<p>Hi</p>',
+        onChange
+      });
+
+      editor.run((state, dispatch) => {
+        dispatch?.(state.tr.insertText('!', 3));
+        return true;
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+
+      editor.destroy();
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenLastCalledWith('<p>Hi!</p>');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('renders a Bootstrap-compatible toolbar shell', () => {

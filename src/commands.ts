@@ -13,6 +13,7 @@ import {
   toggleHeaderRow
 } from 'prosemirror-tables';
 import { TextSelection } from 'prosemirror-state';
+import { hasAncestor } from './editor-state';
 import { sanitizeCodeLanguage, sanitizeImageUrl, sanitizeLinkUrl, sanitizeStyleValue, sanitizeTextAlign, type TextAlignment } from './safety';
 
 export function createCommands(schema: Schema) {
@@ -190,18 +191,6 @@ function getListAttrs(listType: NodeType, currentAttrs?: Record<string, unknown>
   }
 
   return attrs;
-}
-
-function hasAncestor(state: EditorState, nodeType: NodeType): boolean {
-  const { $from } = state.selection;
-
-  for (let depth = $from.depth; depth > 0; depth -= 1) {
-    if ($from.node(depth).type === nodeType) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function setLink(markType: MarkType, href: string, title?: string): Command {

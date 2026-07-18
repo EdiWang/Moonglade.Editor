@@ -1,6 +1,7 @@
 import type { Mark, MarkType, NodeType } from 'prosemirror-model';
 import type { Command, EditorState } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
+import { parseRgbColor } from './safety';
 
 export function canRun(state: EditorState, view: EditorView, command: Command): boolean {
   return command(state, undefined, view);
@@ -22,13 +23,13 @@ export function getPaletteColor(value: unknown, commands: Map<string, Command>):
     }
   }
 
-  const rgb = normalized.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/);
+  const rgb = parseRgbColor(normalized);
   if (!rgb) {
     return '';
   }
 
-  const hex = `#${rgb.slice(1, 4)
-    .map((channel) => Number(channel).toString(16).padStart(2, '0'))
+  const hex = `#${[rgb.r, rgb.g, rgb.b]
+    .map((channel) => channel.toString(16).padStart(2, '0'))
     .join('')}`;
   for (const color of commands.keys()) {
     if (color.toLowerCase() === hex) {

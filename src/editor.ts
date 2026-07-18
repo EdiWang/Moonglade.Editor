@@ -32,6 +32,7 @@ import { moongladeSchema } from './schema';
 import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstClipboardImageFile, getFirstImageFile, type ToolbarElements } from './toolbar';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
+const TEXTAREA_SYNC_DEBOUNCE_MS = 200;
 const uploadPreviewPluginKey = new PluginKey<DecorationSet>('moonglade-image-upload-preview');
 
 type UploadPreviewMeta =
@@ -90,6 +91,7 @@ export class MoongladeEditor {
   private nextUploadPreviewId = 1;
   private readonly uploadPreviewUrls = new Map<number, string>();
   private view: EditorView;
+  private textareaSyncHandle?: ReturnType<typeof setTimeout>;
 
   constructor(options: MoongladeEditorOptions) {
     this.schema = moongladeSchema;
@@ -226,11 +228,43 @@ export class MoongladeEditor {
 
   destroy(): void {
     document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
+    this.flushScheduledTextareaSync();
     this.clearUploadPreviewUrls();
     this.view.destroy();
   }
 
   syncToTextarea(): void {
+    this.cancelScheduledTextareaSync();
+    this.writeEditorValue(true);
+  }
+
+  private scheduleTextareaSync(): void {
+    if (this.textareaSyncHandle !== undefined) {
+      clearTimeout(this.textareaSyncHandle);
+    }
+
+    this.textareaSyncHandle = setTimeout(() => {
+      this.textareaSyncHandle = undefined;
+      this.writeEditorValue(true);
+    }, TEXTAREA_SYNC_DEBOUNCE_MS);
+  }
+
+  private cancelScheduledTextareaSync(): void {
+    if (this.textareaSyncHandle === undefined) {
+      return;
+    }
+
+    clearTimeout(this.textareaSyncHandle);
+    this.textareaSyncHandle = undefined;
+  }
+
+  private flushScheduledTextareaSync(): void {
+    if (this.textareaSyncHandle === undefined) {
+      return;
+    }
+
+    clearTimeout(this.textareaSyncHandle);
+    this.textareaSyncHandle = undefined;
     this.writeEditorValue(true);
   }
 
@@ -337,7 +371,7 @@ export class MoongladeEditor {
   private dispatch(transaction: Transaction): void {
     this.view.updateState(this.view.state.apply(transaction));
     if (transaction.docChanged) {
-      this.syncToTextarea();
+      this.scheduleTextareaSync();
     }
 
     this.updateToolbarState();

@@ -113,6 +113,7 @@ cleanups, then long-term polish. Each task is independently committable and test
 - **Rollback**: Revert to synchronous `syncToTextarea()` on every `docChanged`.
 - **Needs my confirmation**: No (confirmed: short debounce acceptable, no host relies on synchronous updates)
 - **Notes**: Keep `syncToTextarea()` and `getHTML()` synchronous/immediate; only the automatic per-keystroke `onChange`/textarea write is debounced. Flush any pending debounce on `destroy()` and on explicit `syncToTextarea()`.
+- **Status**: DONE (2026-07-18). Implemented a 200ms debounce (`TEXTAREA_SYNC_DEBOUNCE_MS`) in `src/editor.ts`: `dispatch` now calls `scheduleTextareaSync()` on `docChanged`; `syncToTextarea()` cancels pending + writes immediately; `destroy()` flushes pending. `getHTML()` unchanged (immediate). Updated the edit-notification test to fake timers and added tests for rapid-edit coalescing and flush-on-destroy. Verified: `npm test` (92 passing), `npm run build` (within size budgets).
 
 ### Task 4: De-duplicate helpers (hasAncestor, rgb parsing)
 
@@ -127,6 +128,7 @@ cleanups, then long-term polish. Each task is independently committable and test
 - **Rollback**: Re-inline the helpers.
 - **Needs my confirmation**: No
 - **Depends on**: Task 2 recommended first.
+- **Status**: DONE (2026-07-18). `hasAncestor` now sourced only from `src/editor-state.ts` (removed the duplicate in `src/commands.ts`, which now imports it). Added shared `parseRgbColor` (+ `RgbColor` type) in `src/safety.ts`; `isSafeRgbColor` and `getPaletteColor` (`src/editor-state.ts`) both reuse it, removing the duplicated `rgba?()` regex. No behavior change. Verified: `npm test` (92 passing), `npm run build` (within size budgets). No import cycle (commands → editor-state → safety).
 
 ### Task 5: Convert code-block spellcheck plugin to mapped decorations
 
