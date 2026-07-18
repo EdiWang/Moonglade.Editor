@@ -142,6 +142,7 @@ cleanups, then long-term polish. Each task is independently committable and test
 - **Release risk**: Low–Medium.
 - **Rollback**: Revert to the per-render `descendants` implementation.
 - **Needs my confirmation**: No
+- **Status**: DONE (2026-07-18). `createCodeBlockSpellcheckPlugin` now uses plugin state keyed by `codeBlockSpellcheckPluginKey`: decorations are built once in `init` and recomputed in `apply` only when `transaction.docChanged` (selection-only updates reuse the cached `DecorationSet`). Full-doc `descendants` walk moved into a shared `buildCodeBlockSpellcheckDecorations(doc, schema)` helper. Added a test that code blocks inserted after init (`setHTML`) still get `spellcheck="false"`. Verified: `npm test` (93 passing), `npm run build` (within size budgets).
 
 ### Task 6: Extract upload-preview / object-URL lifecycle from MoongladeEditor
 

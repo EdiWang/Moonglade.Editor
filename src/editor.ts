@@ -34,6 +34,7 @@ import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstClipboa
 const DEFAULT_EDITOR_HEIGHT = '500px';
 const TEXTAREA_SYNC_DEBOUNCE_MS = 200;
 const uploadPreviewPluginKey = new PluginKey<DecorationSet>('moonglade-image-upload-preview');
+const codeBlockSpellcheckPluginKey = new PluginKey<DecorationSet>('moonglade-code-block-spellcheck');
 
 type UploadPreviewMeta =
   | {
@@ -733,25 +734,40 @@ function createUploadPreviewPlugin(): Plugin<DecorationSet> {
   });
 }
 
-function createCodeBlockSpellcheckPlugin(): Plugin {
-  return new Plugin({
+function buildCodeBlockSpellcheckDecorations(doc: ProseMirrorNode, schema: Schema): DecorationSet {
+  const codeBlockType = schema.nodes.code_block;
+  const decorations: Decoration[] = [];
+
+  doc.descendants((node, pos) => {
+    if (node.type !== codeBlockType) {
+      return true;
+    }
+
+    decorations.push(Decoration.node(pos, pos + node.nodeSize, {
+      spellcheck: 'false'
+    }));
+    return false;
+  });
+
+  return DecorationSet.create(doc, decorations);
+}
+
+function createCodeBlockSpellcheckPlugin(): Plugin<DecorationSet> {
+  return new Plugin<DecorationSet>({
+    key: codeBlockSpellcheckPluginKey,
+    state: {
+      init: (_config, state) => buildCodeBlockSpellcheckDecorations(state.doc, state.schema),
+      apply(transaction, decorations, _oldState, newState) {
+        if (!transaction.docChanged) {
+          return decorations;
+        }
+
+        return buildCodeBlockSpellcheckDecorations(transaction.doc, newState.schema);
+      }
+    },
     props: {
       decorations(state) {
-        const codeBlockType = state.schema.nodes.code_block;
-        const decorations: Decoration[] = [];
-
-        state.doc.descendants((node, pos) => {
-          if (node.type !== codeBlockType) {
-            return true;
-          }
-
-          decorations.push(Decoration.node(pos, pos + node.nodeSize, {
-            spellcheck: 'false'
-          }));
-          return false;
-        });
-
-        return DecorationSet.create(state.doc, decorations);
+        return codeBlockSpellcheckPluginKey.getState(state) ?? null;
       }
     }
   });

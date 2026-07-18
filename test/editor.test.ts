@@ -150,6 +150,25 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
+  it('disables spellcheck on code blocks added after initialization', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      spellcheck: true
+    });
+
+    expect(host.querySelector('.ProseMirror pre')).toBeNull();
+
+    editor.setHTML('<pre><code>const answer = 42;</code></pre>');
+
+    const codeBlock = host.querySelector('.ProseMirror pre') as HTMLPreElement;
+    expect(codeBlock).not.toBeNull();
+    expect(codeBlock.getAttribute('spellcheck')).toBe('false');
+
+    editor.destroy();
+  });
+
   it('syncs initial textarea content without notifying the host during initialization', () => {
     const host = document.createElement('div');
     const textarea = document.createElement('textarea');
