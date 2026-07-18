@@ -30,29 +30,11 @@ import {
 } from './image-upload';
 import { moongladeSchema } from './schema';
 import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstClipboardImageFile, getFirstImageFile, type ToolbarElements } from './toolbar';
+import { createUploadPreviewPlugin, UploadPreviewManager, type UploadPreviewHandle } from './upload-preview';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
 const TEXTAREA_SYNC_DEBOUNCE_MS = 200;
-const uploadPreviewPluginKey = new PluginKey<DecorationSet>('moonglade-image-upload-preview');
 const codeBlockSpellcheckPluginKey = new PluginKey<DecorationSet>('moonglade-code-block-spellcheck');
-
-type UploadPreviewMeta =
-  | {
-    type: 'add';
-    id: number;
-    pos: number;
-    src: string;
-    alt: string;
-  }
-  | {
-    type: 'remove';
-    id: number;
-  };
-
-interface UploadPreviewHandle {
-  id: number;
-  objectUrl: string;
-}
 
 export interface MoongladeEditorOptions {
   element: HTMLElement;
@@ -89,8 +71,7 @@ export class MoongladeEditor {
     closeTableDropdown(this.toolbar);
   };
   private savedSelection?: SelectionBookmark;
-  private nextUploadPreviewId = 1;
-  private readonly uploadPreviewUrls = new Map<number, string>();
+  private readonly uploadPreviews = new UploadPreviewManager();
   private view: EditorView;
   private textareaSyncHandle?: ReturnType<typeof setTimeout>;
 
@@ -230,7 +211,7 @@ export class MoongladeEditor {
   destroy(): void {
     document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     this.flushScheduledTextareaSync();
-    this.clearUploadPreviewUrls();
+    this.uploadPreviews.clear();
     this.view.destroy();
   }
 
@@ -336,7 +317,7 @@ export class MoongladeEditor {
       return false;
     }
 
-    const preview = this.addUploadPreview(file, uploadSelection);
+    const preview = this.uploadPreviews.add(this.view, file, uploadSelection);
     this.setUploadStatus('Uploading image...');
 
     try {
@@ -358,7 +339,7 @@ export class MoongladeEditor {
       this.setUploadStatus(message, true);
       return false;
     } finally {
-      this.removeUploadPreview(preview);
+      this.uploadPreviews.remove(this.view, preview);
     }
   }
 
@@ -520,7 +501,7 @@ export class MoongladeEditor {
   }
 
   private executeImageCommand(command: Command, selectionBookmark: SelectionBookmark, preview?: UploadPreviewHandle): boolean {
-    const previewPosition = preview ? this.getUploadPreviewPosition(preview.id) : undefined;
+    const previewPosition = preview ? this.uploadPreviews.getPosition(this.view, preview.id) : undefined;
     if (typeof previewPosition === 'number') {
       return this.executeWithPosition(command, previewPosition);
     }
@@ -541,68 +522,6 @@ export class MoongladeEditor {
     this.view.focus();
     this.updateToolbarState();
     return result;
-  }
-
-  private addUploadPreview(file: File, uploadSelection: SelectionBookmark): UploadPreviewHandle | undefined {
-    if (!file.type.startsWith('image/')) {
-      return undefined;
-    }
-
-    const objectUrl = createObjectUrl(file);
-    if (!objectUrl) {
-      return undefined;
-    }
-
-    const id = this.nextUploadPreviewId;
-    this.nextUploadPreviewId += 1;
-    this.uploadPreviewUrls.set(id, objectUrl);
-
-    const selection = uploadSelection.resolve(this.view.state.doc);
-    this.view.dispatch(this.view.state.tr.setMeta(uploadPreviewPluginKey, {
-      type: 'add',
-      id,
-      pos: selection.from,
-      src: objectUrl,
-      alt: file.name || 'Uploading image'
-    } satisfies UploadPreviewMeta));
-
-    return { id, objectUrl };
-  }
-
-  private removeUploadPreview(preview: UploadPreviewHandle | undefined): void {
-    if (!preview) {
-      return;
-    }
-
-    this.view.dispatch(this.view.state.tr.setMeta(uploadPreviewPluginKey, {
-      type: 'remove',
-      id: preview.id
-    } satisfies UploadPreviewMeta));
-    this.revokeUploadPreviewUrl(preview.id);
-  }
-
-  private getUploadPreviewPosition(id: number): number | undefined {
-    const decorations = uploadPreviewPluginKey.getState(this.view.state);
-    const preview = decorations?.find(undefined, undefined, (spec) => spec.uploadPreviewId === id)[0];
-    return preview?.from;
-  }
-
-  private revokeUploadPreviewUrl(id: number): void {
-    const objectUrl = this.uploadPreviewUrls.get(id);
-    if (!objectUrl) {
-      return;
-    }
-
-    revokeObjectUrl(objectUrl);
-    this.uploadPreviewUrls.delete(id);
-  }
-
-  private clearUploadPreviewUrls(): void {
-    for (const objectUrl of this.uploadPreviewUrls.values()) {
-      revokeObjectUrl(objectUrl);
-    }
-
-    this.uploadPreviewUrls.clear();
   }
 
   private restoreSavedSelection(): void {
@@ -688,52 +607,6 @@ function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boo
   button.disabled = !enabled;
 }
 
-function createUploadPreviewPlugin(): Plugin<DecorationSet> {
-  return new Plugin<DecorationSet>({
-    key: uploadPreviewPluginKey,
-    state: {
-      init: () => DecorationSet.empty,
-      apply(transaction, decorations) {
-        let nextDecorations = decorations.map(transaction.mapping, transaction.doc);
-        const meta = transaction.getMeta(uploadPreviewPluginKey) as UploadPreviewMeta | undefined;
-
-        if (!meta) {
-          return nextDecorations;
-        }
-
-        if (meta.type === 'remove') {
-          return nextDecorations.remove(nextDecorations.find(undefined, undefined, (spec) => spec.uploadPreviewId === meta.id));
-        }
-
-        const preview = Decoration.widget(meta.pos, () => {
-          const root = document.createElement('span');
-          root.className = 'mg-editor-upload-preview';
-          root.contentEditable = 'false';
-
-          const image = document.createElement('img');
-          image.src = meta.src;
-          image.alt = meta.alt;
-          root.append(image);
-
-          return root;
-        }, {
-          key: `mg-editor-upload-preview-${meta.id}`,
-          side: -1,
-          uploadPreviewId: meta.id
-        });
-
-        nextDecorations = nextDecorations.add(transaction.doc, [preview]);
-        return nextDecorations;
-      }
-    },
-    props: {
-      decorations(state) {
-        return uploadPreviewPluginKey.getState(state) ?? null;
-      }
-    }
-  });
-}
-
 function buildCodeBlockSpellcheckDecorations(doc: ProseMirrorNode, schema: Schema): DecorationSet {
   const codeBlockType = schema.nodes.code_block;
   const decorations: Decoration[] = [];
@@ -771,18 +644,4 @@ function createCodeBlockSpellcheckPlugin(): Plugin<DecorationSet> {
       }
     }
   });
-}
-
-function createObjectUrl(file: File): string | undefined {
-  if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
-    return undefined;
-  }
-
-  return URL.createObjectURL(file);
-}
-
-function revokeObjectUrl(objectUrl: string): void {
-  if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
-    URL.revokeObjectURL(objectUrl);
-  }
 }

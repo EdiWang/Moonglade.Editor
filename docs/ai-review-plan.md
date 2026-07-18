@@ -157,6 +157,7 @@ cleanups, then long-term polish. Each task is independently committable and test
 - **Rollback**: Re-inline into the class.
 - **Needs my confirmation**: No
 - **Depends on**: Task 2 recommended first.
+- **Status**: DONE (2026-07-18). Created `src/upload-preview.ts` owning `createUploadPreviewPlugin`, the preview plugin key/meta types, `UploadPreviewHandle`, object-URL create/revoke helpers, and a new `UploadPreviewManager` class (`add`/`remove`/`getPosition`/`clear`, view passed per call). `MoongladeEditor` now holds a single `private readonly uploadPreviews = new UploadPreviewManager()` instead of `nextUploadPreviewId` + `uploadPreviewUrls`, and delegates preview add/remove/position lookup plus `destroy()` cleanup to it. Behavior unchanged. Verified: `npm test` (93 passing), `npm run build` (within size budgets).
 
 ### Task 7: Minor consistency & readability polish
 
