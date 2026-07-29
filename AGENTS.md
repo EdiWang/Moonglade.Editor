@@ -46,6 +46,7 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 - Node.js version: To be confirmed. No `engines` field is currently defined.
 - Package manager: npm, with `package-lock.json` committed.
 - Editor framework: ProseMirror core packages (`prosemirror-model`, `prosemirror-state`, `prosemirror-view`, commands, history, keymap, schema-list, tables, gapcursor).
+- Source editor framework: CodeMirror 6 packages for HTML source mode only (`@codemirror/lang-html`, language folding/highlighting, search, state, view, and commands).
 - UI framework: No SPA framework. Toolbar/dialogs are built with DOM APIs and Bootstrap-compatible classes.
 - Host UI dependencies: Bootstrap 5 CSS and Bootstrap Icons CSS are expected to be loaded by the consuming host page.
 - Theme behavior: Custom editor styles use Bootstrap CSS variables and should inherit the nearest host `data-bs-theme` scope. Keep theme switching host-owned; do not add editor-specific theme APIs unless explicitly requested.
@@ -81,7 +82,8 @@ Key source modules:
 - `src/editor-state.ts` contains helpers for command availability and toolbar active-state detection.
 - `src/toolbar.ts` assembles the framework-free toolbar and preserves the narrow toolbar export surface used by `src/editor.ts`.
 - `src/toolbar/` contains toolbar contracts, shared DOM helpers, and focused tool modules for history, block format selection, inline marks, colors, blocks/lists, alignment, insertion, tables, source mode, dialogs, and upload status. Add new toolbar tools by creating or extending a focused tool module and registering it from `src/toolbar.ts`.
-- `src/dialogs.ts` creates link, code snippet, and HTML source dialogs.
+- `src/dialogs.ts` creates link, code snippet, image upload, and HTML source dialog shells.
+- `src/source-code-editor.ts` contains the internal CodeMirror-backed HTML source editor used by the source dialog, including syntax highlighting, line numbers, folding, and find/replace. Keep it internal; do not add a public code editor API here.
 - `src/editor-options.ts` contains supported block formats, color palette values, and code language options.
 - `src/image-upload.ts` contains upload URL and custom uploader integration.
 - `src/styles.css` contains editor styles copied to `dist/moonglade-editor.css` by the build.
@@ -93,7 +95,7 @@ Core flow:
 3. `parseHtml(schema, html)` sanitizes incoming HTML attributes and parses content into the ProseMirror schema.
 4. `EditorView` applies commands and transactions.
 5. `dispatchTransaction` serializes changed docs with `serializeHtml(...)`, syncs the textarea, and calls `onChange`.
-6. `setHTML(...)` and HTML source mode also re-enter through `parseHtml(...)`, preserving schema and sanitizer constraints.
+6. HTML source mode edits are made in the internal CodeMirror source editor, then re-enter through `setHTML(...)` and `parseHtml(...)`, preserving schema and sanitizer constraints.
 
 ## Public API Contract
 
@@ -135,6 +137,7 @@ Do not require Moonglade to understand ProseMirror JSON as the storage format un
 
 - Preserve the goal that Moonglade itself does not need npm, Vite, webpack, Rollup, or esbuild to run.
 - Prefer explicit schema definitions and commands over large editor frameworks.
+- Keep CodeMirror usage scoped to HTML source mode unless a future task explicitly expands that boundary.
 - Keep ProseMirror schema output compatible with Moonglade's existing public post renderer.
 - Treat HTML source mode and pasted/imported HTML as untrusted input that must pass through the schema and sanitizer.
 - Preserve safe URL handling for links and images. Reject script-like protocols.

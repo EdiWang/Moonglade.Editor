@@ -34,8 +34,9 @@ Key concepts:
 - `safety.ts` contains URL, style, alignment, code language, and HTML class attribute constraints.
 - Image upload is configured with either `uploadUrl` or a custom `uploadImage` function, with upload file extensions constrained by `allowedImageExtensions`.
 - Code snippet languages are configured through `codesample_languages`, with values filtered by the same code language sanitizer used for stored HTML.
+- HTML source mode uses an internal CodeMirror 6 HTML editor for syntax highlighting, folding, and find/replace while keeping saved content routed through the same sanitizer-backed HTML boundary.
 
-Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit.
+Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit with code highlighting, folding, and find/replace.
 
 ## Development
 
@@ -50,7 +51,7 @@ npm run demo:upload
 npm run size
 ```
 
-These commands are defined in `package.json`. They were not re-run during this documentation-only update.
+These commands are defined in `package.json`.
 
 To run the demo after building:
 
@@ -76,7 +77,7 @@ The build emits:
 - `dist/moonglade-editor.css` - minified editor styles.
 - `dist/*.d.ts` - TypeScript declarations.
 
-`npm run build` also checks bundle size budgets for the generated JavaScript and CSS files.
+`npm run build` also checks bundle size budgets for the generated JavaScript and CSS files. The current budgets include the internal CodeMirror runtime used by HTML source mode.
 
 GitHub Actions runs the build workflow only for pushes to the `release` branch.
 
@@ -146,6 +147,8 @@ HTML source mode and imported HTML are constrained before entering the editor sc
 - Text alignment imports legacy `style`/`align` values and Bootstrap alignment classes, then serializes as Bootstrap classes such as `text-center`.
 - Schema-supported elements preserve safe custom `class` tokens, such as `ul class="abc"` and `table class="custom-table"`, while unsupported tags and unsafe class tokens are still dropped.
 
+The source dialog provides HTML syntax highlighting, line numbers, code folding, and find/replace. Applying source edits still re-enters through `setHTML(...)`, so unsupported tags, unsafe URLs, event attributes, and unsafe styles are not preserved just because they were typed in source mode.
+
 Serialized editor output is newline-formatted around block content such as headings, paragraphs, horizontal rules, blockquotes, tables, and standalone image paragraphs so the synced HTML remains practical to hand-edit.
 
 The editor height defaults to `500px`. Hosts can pass any CSS height value through `height`, such as `640px`, `60vh`, or `calc(100vh - 12rem)`. Users can also drag the editor's bottom corner resize handle to adjust the height while editing.
@@ -192,7 +195,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, source mode, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed HTML source mode, consumption docs, tests, and build pipeline are present.
 
 Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

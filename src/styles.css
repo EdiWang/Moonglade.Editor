@@ -1,4 +1,37 @@
 .mg-editor {
+  --mg-source-editor-bg: var(--bs-body-bg, #fff);
+  --mg-source-editor-fg: var(--bs-body-color, #212529);
+  --mg-source-border: var(--bs-border-color, #dee2e6);
+  --mg-source-gutter-bg: var(--bs-tertiary-bg, #f8f9fa);
+  --mg-source-gutter-fg: var(--bs-secondary-color, #6c757d);
+  --mg-source-muted: var(--bs-secondary-color, #6c757d);
+  --mg-source-caret: var(--bs-primary, #0d6efd);
+  --mg-source-selection-bg: rgba(var(--bs-primary-rgb, 13, 110, 253), .22);
+  --mg-source-active-line-bg: color-mix(in srgb, var(--bs-primary, #0d6efd) 8%, transparent);
+  --mg-source-panel-bg: var(--bs-body-bg, #fff);
+  --mg-source-search-match-bg: rgba(255, 193, 7, .34);
+  --mg-source-search-match-border: rgba(153, 116, 4, .5);
+  --mg-source-search-match-selected-bg: rgba(255, 193, 7, .55);
+  --mg-source-bracket-bg: rgba(var(--bs-success-rgb, 25, 135, 84), .16);
+  --mg-source-bracket-border: rgba(var(--bs-success-rgb, 25, 135, 84), .42);
+  --mg-source-syntax-keyword: #7c3aed;
+  --mg-source-syntax-atom: #0f766e;
+  --mg-source-syntax-number: #b45309;
+  --mg-source-syntax-string: #15803d;
+  --mg-source-syntax-regexp: #be123c;
+  --mg-source-syntax-comment: #6c757d;
+  --mg-source-syntax-definition: #0d6efd;
+  --mg-source-syntax-variable: #334155;
+  --mg-source-syntax-function: #0369a1;
+  --mg-source-syntax-type: #9333ea;
+  --mg-source-syntax-property: #0f766e;
+  --mg-source-syntax-operator: #64748b;
+  --mg-source-syntax-tag: #b91c1c;
+  --mg-source-syntax-attribute: #c2410c;
+  --mg-source-syntax-heading: #0d6efd;
+  --mg-source-syntax-link: #0a58ca;
+  --mg-source-syntax-meta: #64748b;
+  --mg-source-syntax-invalid: #dc3545;
   background-color: var(--bs-body-bg, #fff);
   border-color: var(--bs-border-color, #dee2e6);
   color: var(--bs-body-color, #212529);
@@ -393,16 +426,160 @@
   border-radius: .375rem;
   box-shadow: var(--bs-box-shadow-lg, 0 1rem 3rem rgba(0, 0, 0, .175));
   color: var(--bs-body-color, #212529);
+  min-height: 0;
   max-height: calc(100vh - 2rem);
   overflow: auto;
   width: min(72rem, calc(100vw - 2rem));
 }
 
-.mg-editor-source-textarea {
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+.mg-editor-source-header {
+  flex: 0 0 auto;
+}
+
+.mg-editor-source-code-editor {
+  background-color: var(--mg-source-editor-bg);
+  border: 1px solid var(--mg-source-border);
+  border-radius: var(--bs-border-radius, .375rem);
+  color: var(--mg-source-editor-fg);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   height: clamp(16rem, 55vh, 34rem);
   min-height: 0;
-  resize: vertical;
+  overflow: hidden;
+}
+
+.mg-editor-source-code-host {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.mg-editor-source-textarea[hidden] {
+  display: none !important;
+}
+
+.mg-editor-source-code-editor .cm-editor {
+  background-color: var(--mg-source-editor-bg);
+  color: var(--mg-source-editor-fg);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: .92rem;
+  min-height: 0;
+  width: 100%;
+}
+
+.mg-editor-source-code-editor .cm-scroller {
+  flex: 1 1 auto;
+  line-height: 1.5;
+  min-height: 0;
+  overflow: auto;
+}
+
+.mg-editor-source-code-editor .cm-gutters {
+  background-color: var(--mg-source-gutter-bg);
+  border-color: var(--mg-source-border);
+  color: var(--mg-source-gutter-fg);
+}
+
+.mg-editor-source-code-editor .cm-activeLine,
+.mg-editor-source-code-editor .cm-activeLineGutter {
+  background-color: var(--mg-source-active-line-bg);
+}
+
+.mg-editor-source-code-editor .cm-focused {
+  outline: none;
+}
+
+.mg-editor-source-code-editor .cm-panels {
+  border-color: var(--mg-source-border);
+}
+
+.mg-editor-source-code-editor .cm-panels input,
+.mg-editor-source-code-editor .cm-panels button,
+.mg-editor-source-code-editor .cm-textfield,
+.mg-editor-source-code-editor .cm-button {
+  appearance: none;
+  background-color: var(--mg-source-panel-bg);
+  background-image: none;
+  border: 1px solid var(--mg-source-border);
+  border-radius: .25rem;
+  box-shadow: none;
+  color: var(--mg-source-editor-fg);
+  font: inherit;
+}
+
+.mg-editor-source-code-editor .cm-panels button,
+.mg-editor-source-code-editor .cm-button {
+  background-color: var(--mg-source-gutter-bg);
+}
+
+.mg-editor-source-code-editor .cm-panels button:hover:not(:disabled),
+.mg-editor-source-code-editor .cm-panels button:focus-visible,
+.mg-editor-source-code-editor .cm-button:hover:not(:disabled),
+.mg-editor-source-code-editor .cm-button:focus-visible {
+  background-color: var(--mg-source-active-line-bg);
+  border-color: var(--bs-primary, #0d6efd);
+  color: var(--mg-source-editor-fg);
+}
+
+.mg-editor-source-code-editor .cm-panels button:focus-visible,
+.mg-editor-source-code-editor .cm-button:focus-visible,
+.mg-editor-source-code-editor .cm-panels input:focus,
+.mg-editor-source-code-editor .cm-textfield:focus,
+.mg-editor-source-code-editor:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 .16rem rgba(var(--bs-primary-rgb, 13, 110, 253), .2);
+}
+
+.mg-editor-source-code-editor .cm-panels input[type="checkbox"] {
+  appearance: auto;
+  accent-color: var(--bs-primary, #0d6efd);
+}
+
+.mg-editor-source-code-editor .cm-placeholder,
+.mg-editor-source-code-editor .cm-foldPlaceholder {
+  color: var(--mg-source-muted);
+}
+
+[data-bs-theme="dark"] .mg-editor,
+.mg-editor[data-bs-theme="dark"] {
+  --mg-source-editor-bg: var(--bs-body-bg, #212529);
+  --mg-source-editor-fg: var(--bs-body-color, #f8f9fa);
+  --mg-source-border: var(--bs-border-color, #495057);
+  --mg-source-gutter-bg: var(--bs-tertiary-bg, #2b3035);
+  --mg-source-gutter-fg: var(--bs-secondary-color, #adb5bd);
+  --mg-source-muted: var(--bs-secondary-color, #adb5bd);
+  --mg-source-caret: #7ab7ff;
+  --mg-source-selection-bg: rgba(122, 183, 255, .28);
+  --mg-source-active-line-bg: rgba(122, 183, 255, .08);
+  --mg-source-panel-bg: var(--bs-tertiary-bg, #2b3035);
+  --mg-source-search-match-bg: rgba(255, 214, 102, .26);
+  --mg-source-search-match-border: rgba(255, 214, 102, .55);
+  --mg-source-search-match-selected-bg: rgba(255, 214, 102, .42);
+  --mg-source-bracket-bg: rgba(117, 213, 152, .14);
+  --mg-source-bracket-border: rgba(117, 213, 152, .5);
+  --mg-source-syntax-keyword: #d19aff;
+  --mg-source-syntax-atom: #75d5c3;
+  --mg-source-syntax-number: #f2bf73;
+  --mg-source-syntax-string: #8edc8f;
+  --mg-source-syntax-regexp: #ff9a9a;
+  --mg-source-syntax-comment: #9aa8b5;
+  --mg-source-syntax-definition: #8ecbff;
+  --mg-source-syntax-variable: #d7dee7;
+  --mg-source-syntax-function: #8ecbff;
+  --mg-source-syntax-type: #f0a6ff;
+  --mg-source-syntax-property: #7bdff2;
+  --mg-source-syntax-operator: #b8c4d0;
+  --mg-source-syntax-tag: #ff9a9a;
+  --mg-source-syntax-attribute: #ffd080;
+  --mg-source-syntax-heading: #8ecbff;
+  --mg-source-syntax-link: #9bd3ff;
+  --mg-source-syntax-meta: #b8c4d0;
+  --mg-source-syntax-invalid: #ff8a95;
 }
 
 .mg-editor-body {

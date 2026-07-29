@@ -4,6 +4,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TextSelection } from 'prosemirror-state';
 import { createMoongladeEditor } from '../src/editor';
 
+const emptyClientRects = {
+  length: 0,
+  item: () => null,
+  [Symbol.iterator]: function* iterator() {
+    return;
+  }
+} as DOMRectList;
+
+Range.prototype.getClientRects = () => emptyClientRects;
+Range.prototype.getBoundingClientRect = () => new DOMRect();
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -790,10 +801,10 @@ describe('editor toolbar', () => {
     expect(dialog.hidden).toBe(false);
     expect(dialog.classList.contains('dropdown-menu')).toBe(false);
     expect(dialog.querySelector('.mg-editor-source-panel')).not.toBeNull();
-    expect(document.activeElement).toBe(sourceTextarea);
-    expect(sourceTextarea.selectionStart).toBe(0);
-    expect(sourceTextarea.selectionEnd).toBe(0);
-    expect(sourceTextarea.scrollTop).toBe(0);
+    expect(dialog.querySelector('.mg-editor-source-code-editor .cm-editor')).not.toBeNull();
+    expect(dialog.querySelector('.mg-editor-source-code-editor .cm-content')).toBe(document.activeElement);
+    expect(sourceTextarea.hidden).toBe(true);
+    expect(sourceTextarea.value).toBe('<p>Hello</p>');
 
     sourceTextarea.value = '<p onclick="alert(1)">Clean <a href="javascript:alert(1)">link</a></p>';
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
@@ -801,6 +812,40 @@ describe('editor toolbar', () => {
     expect(dialog.hidden).toBe(true);
     expect(editor.getHTML()).toBe('<p>Clean link</p>');
     expect(document.activeElement).toBe(editor.dom);
+
+    editor.destroy();
+  });
+
+  it('opens find and replace controls in the highlighted source editor', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<blockquote><p>Hello</p></blockquote><p>World</p>'
+    });
+
+    (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
+
+    const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
+    const codeEditor = dialog.querySelector('.mg-editor-source-code-editor') as HTMLDivElement;
+    const findButton = dialog.querySelector('[data-command="sourceFind"]') as HTMLButtonElement;
+    const replaceButton = dialog.querySelector('[data-command="sourceReplace"]') as HTMLButtonElement;
+
+    expect(codeEditor.querySelector('.cm-lineNumbers')).not.toBeNull();
+    expect(codeEditor.querySelector('.cm-foldGutter')).not.toBeNull();
+    expect(codeEditor.querySelector('.cm-content')?.textContent).toContain('<blockquote>');
+
+    findButton.click();
+
+    let searchPanel = codeEditor.querySelector('.cm-search') as HTMLElement;
+    expect(searchPanel).not.toBeNull();
+    expect(searchPanel.querySelector('input[name="search"]')).not.toBeNull();
+    expect(searchPanel.querySelector('input[name="replace"]')).not.toBeNull();
+
+    replaceButton.click();
+
+    searchPanel = codeEditor.querySelector('.cm-search') as HTMLElement;
+    expect(searchPanel.querySelector('input[name="replace"]')).not.toBeNull();
 
     editor.destroy();
   });
@@ -846,9 +891,9 @@ describe('editor toolbar', () => {
     const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
 
     expect(dialog.hidden).toBe(false);
-    expect(document.activeElement).toBe(sourceTextarea);
+    expect(dialog.querySelector('.mg-editor-source-code-editor .cm-content')).toBe(document.activeElement);
 
-    sourceTextarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
 
     expect(dialog.hidden).toBe(true);
     expect(document.activeElement).toBe(editor.dom);

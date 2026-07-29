@@ -1,6 +1,7 @@
 import type { Command } from 'prosemirror-state';
 import type { MoongladeEditorCommands } from './commands';
 import type { CodeSampleLanguageOption } from './editor-options';
+import { HtmlSourceCodeEditor } from './source-code-editor';
 
 export interface EditorDialogActions {
   executeWithSavedSelection(command: Command): boolean;
@@ -31,7 +32,10 @@ export interface CodeDialogElements {
 export interface SourceDialogElements {
   root: HTMLDivElement;
   form: HTMLFormElement;
+  sourceEditor: HtmlSourceCodeEditor;
   sourceTextarea: HTMLTextAreaElement;
+  findButton: HTMLButtonElement;
+  replaceButton: HTMLButtonElement;
   cancelButton: HTMLButtonElement;
 }
 
@@ -244,15 +248,25 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   const form = document.createElement('form');
   form.className = 'mg-editor-source-panel d-flex flex-column gap-3 p-3';
 
+  const header = document.createElement('div');
+  header.className = 'mg-editor-source-header d-flex align-items-center justify-content-between gap-2';
+
   const title = document.createElement('h2');
   title.className = 'h6 mb-0';
   title.textContent = 'HTML source';
 
-  const sourceTextarea = document.createElement('textarea');
-  sourceTextarea.className = 'mg-editor-source-textarea form-control form-control-sm';
-  sourceTextarea.name = 'source';
-  sourceTextarea.spellcheck = false;
-  sourceTextarea.setAttribute('aria-label', 'HTML source');
+  const sourceToolbar = document.createElement('div');
+  sourceToolbar.className = 'btn-group btn-group-sm';
+  sourceToolbar.setAttribute('role', 'group');
+  sourceToolbar.setAttribute('aria-label', 'Source search');
+
+  const findButton = createSourceActionButton('sourceFind', 'search', 'Find');
+  const replaceButton = createSourceActionButton('sourceReplace', 'arrow-left-right', 'Replace');
+  sourceToolbar.append(findButton, replaceButton);
+  header.append(title, sourceToolbar);
+
+  const sourceEditor = new HtmlSourceCodeEditor();
+  const { textarea: sourceTextarea } = sourceEditor;
 
   const actionsElement = document.createElement('div');
   actionsElement.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
@@ -269,8 +283,11 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   cancelButton.addEventListener('click', () => actions.closeSourceDialog(true));
 
   actionsElement.append(saveButton, cancelButton);
-  form.append(title, sourceTextarea, actionsElement);
+  form.append(header, sourceEditor.root, actionsElement);
   root.append(form);
+
+  findButton.addEventListener('click', () => sourceEditor.openSearchPanel('search'));
+  replaceButton.addEventListener('click', () => sourceEditor.openSearchPanel('replace'));
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -279,12 +296,32 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   });
   closeOnEscape(root, () => actions.closeSourceDialog(true));
 
-  return { root, form, sourceTextarea, cancelButton };
+  return { root, form, sourceEditor, sourceTextarea, findButton, replaceButton, cancelButton };
+}
+
+function createSourceActionButton(command: string, icon: string, label: string): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-outline-secondary mg-editor-toolbar-button mg-editor-icon-button';
+  button.dataset.command = command;
+  button.title = label;
+  button.setAttribute('aria-label', label);
+
+  const iconElement = document.createElement('i');
+  iconElement.className = `bi bi-${icon}`;
+  iconElement.setAttribute('aria-hidden', 'true');
+  button.append(iconElement);
+
+  button.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+  });
+
+  return button;
 }
 
 function closeOnEscape(root: HTMLElement, close: () => void): void {
   root.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || root.hidden) {
+    if (event.key !== 'Escape' || root.hidden || event.defaultPrevented) {
       return;
     }
 
