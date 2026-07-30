@@ -10,6 +10,8 @@
 - Task 1 验证命令：`npm test -- test/editor.test.ts`、`npm test`、`npm run build`。
 - Task 3 / Task 4 执行日期：2026-07-30
 - Task 3 / Task 4 验证方式：Markdown / workflow diff review；未重新运行测试或构建，因为本次只修改文档和 CI 配置。
+- Task 2 执行日期：2026-07-30
+- Task 2 验证命令：`npm test -- test/code-editor.test.ts`、`npm test`、`npm run build`。
 
 ## 2. 分析范围
 
@@ -29,7 +31,7 @@
 
 - 整体风险等级：中。
 - 没有发现 P0/P1 级别的确定性问题。HTML rich mode 的主要 XSS 边界集中在 `parseHtml(...)`、schema 和 `safety.ts`，并已有较多 sanitizer 回归测试。
-- 最值得优先处理的问题是：CodeMirror 公共模式自动同步缺少 debounce，以及后续低风险维护性整理。
+- 最值得优先处理的问题是：后续低风险维护性整理。
 - 不建议现在做大规模架构重写、替换 ProseMirror / CodeMirror / Prettier、盲目升级依赖或为本地 demo 增加复杂安全策略。
 
 ## 4. 问题列表
@@ -37,7 +39,7 @@
 | ID | 优先级 | 类型 | 位置 | 问题描述 | 影响 | 证据 | 建议方向 |
 |---|---|---|---|---|---|---|---|
 | R1 | Done | 稳定性 / 上传边界 | `src/toolbar/image-files.ts` `getFirstImageFile(...)`、`getFirstImageFileFromItems(...)`；`test/editor.test.ts` | 已完成。富文本图片选择阶段现在复用 `hasAllowedImageUploadExtension(...)`，不再先接受任意 `image/*`。新增多文件顺序测试，覆盖不允许 GIF 在前、允许 PNG 在后时仍上传 PNG。 | 默认不允许的图片不会阻断同一批文件里的允许图片；上传前最终校验仍保留。 | 2026-07-30 执行 Task 1：更新 `src/toolbar/image-files.ts`，调整默认不支持 GIF 测试，并新增 “uploads the first allowed image when earlier files are unsupported”。验证 `npm test -- test/editor.test.ts`、`npm test`、`npm run build` 均通过。 | 无后续待办。 |
-| R2 | P2 | 性能 / 集成行为 | `src/code-editor.ts` CodeMirror `onDocChanged` | CodeMirror 公共模式每次 `docChanged` 都立即 `update.state.doc.toString()`、写入 textarea 并触发 `onChange`。富文本模式已有 200ms 自动同步 debounce，两套模式同步时序不一致。 | 长 Markdown/HTML/CSS 文档连续输入时可能频繁读取完整 buffer 并通知宿主。引入 debounce 会改变自动 `onChange` 时机，需要测试锁定显式 API 仍立即。 | `src/code-editor.ts:242-244` 每次变化立即 `writeEditorValue(update.state.doc.toString(), true)`；富文本模式有 `TEXTAREA_SYNC_DEBOUNCE_MS = 200`、`scheduleTextareaSync()` 和 destroy flush，见 `src/editor.ts:36`、`src/editor.ts:250-258`、`src/editor.ts:270-278`、`src/editor.ts:395-399`。 | 为 CodeMirror 公共模式增加短 debounce；保留 `getValue()`、显式 `syncToTextarea()` 和 `destroy()` flush 的立即/最终一致语义。 |
+| R2 | Done | 性能 / 集成行为 | `src/code-editor.ts` CodeMirror `onDocChanged`；`test/code-editor.test.ts`；`README.md` | 已完成。CodeMirror 公共模式自动文档变更现在使用短 debounce 合并 `textarea` / `onChange` 同步；`setValue()` 作为显式 setter 仍立即同步并通知；显式 `syncToTextarea()` 和 `destroy()` 会 flush pending 自动同步。 | 长 Markdown/HTML/CSS 文档连续输入时减少完整 buffer 同步和宿主通知频率；显式 API 语义保持可预测。 | 2026-07-30 执行 Task 2：`src/code-editor.ts` 增加 `TEXTAREA_SYNC_DEBOUNCE_MS`、schedule/cancel/flush；`test/code-editor.test.ts` 增加 fake timer 覆盖连续自动编辑合并、显式 sync flush、destroy flush，并调整 Markdown 图片上传 onChange 等待；`README.md` 同步最终同步语义。验证 `npm test -- test/code-editor.test.ts`、`npm test`、`npm run build` 均通过。 | 无后续待办。 |
 | R3 | Done | 测试 / 上线保障 | `.github/workflows/build.yml` | 已完成。GitHub Actions 现在覆盖 `main` / `release` push 和 pull request，并在 `npm run build` 前运行 `npm test`。 | release 和 PR 自动化能覆盖 Vitest 回归。 | 2026-07-30 执行 Task 4：workflow 增加 `main` push、`pull_request` 触发，以及 `Test` step。 | 无后续待办。 |
 | R4 | P3 | 安全 / 集成边界（已确认） | `src/index.ts`、`src/code-editor.ts`、README / AGENTS raw HTML 说明 | `mode: 'html'` 是 raw HTML 代码模式，按设计保留文本 buffer，不经过 rich HTML schema 和 sanitizer。维护者已确认不需要在本仓对 raw HTML mode 增加“仅受信任管理员”限制。 | 本仓后续不应把 raw HTML mode 改成 sanitizer-backed rich HTML，也不应新增权限限制。raw HTML 渲染安全由主应用业务边界承担。 | `src/index.ts:38-44` 将 `mode: 'html'` 路由到 `createMoongladeCodeEditor(...)`；`src/code-editor.ts:88-109` 直接 `getValue()` / `setValue()` 文本 buffer；AGENTS 明确 “Code-like raw HTML mode ... must preserve the text buffer instead of routing content through the rich HTML schema”。维护者于 2026-07-30 确认“不用做这个限制”。 | 保持 raw HTML code mode 文本保留设计；文档只需说明它与 rich HTML mode 的 sanitizer 边界不同，不要提出权限限制作为待办。 |
 | R5 | P3 | 安全 / 集成边界（已确认） | `src/image-upload.ts`、README image upload 说明 | 默认允许 `.svg` 上传扩展名。维护者已确认允许上传 SVG。客户端仍只做扩展名/MIME 初筛，服务端仍需负责文件内容和响应策略。 | 不应移除 `.svg` 默认支持；后续只可强化服务端责任说明或测试，不应把禁用 SVG 作为默认改进方向。 | `src/image-upload.ts:9` 默认值包含 `.svg`；`src/image-upload.ts:14-18` 将 `image/svg+xml` 映射到 `.svg`；`README.md:167` 说明服务端仍需验证文件内容。维护者于 2026-07-30 确认“允许上传SVG”。 | 保留 `.svg` 默认支持；如更新文档，应强调服务端校验和安全响应仍是 host responsibility。 |
@@ -61,15 +63,15 @@
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 
-### Task 2：为 CodeMirror 公共模式增加自动同步 debounce
+### Task 2：为 CodeMirror 公共模式增加自动同步 debounce（已完成）
 
 - **优先级**：P2
 - **关联问题**：R2
 - **目标**：减少长文档连续输入时的完整 buffer 读取和宿主通知频率，同时保持显式读取与提交路径可靠。
 - **改动范围**：`src/code-editor.ts`、`test/code-editor.test.ts`，必要时复用或抽出同步 helper。
 - **不包含的内容**：不改变 public API 名称；不改变 `getValue()` 的立即读取；不改变 formatter、搜索、Markdown 图片上传逻辑。
-- **预期结果**：自动 textarea / `onChange` 通知被短 debounce 合并；`syncToTextarea()` 立即写入 textarea；`destroy()` flush 未完成同步。
-- **验证方式**：使用 fake timers 覆盖连续编辑合并、显式 sync 立即、destroy flush、formatter/setValue 后最终同步。执行 `npm test` 和 `npm run build`。
+- **预期结果**：已完成。自动 textarea / `onChange` 通知被短 debounce 合并；`syncToTextarea()` 立即写入 textarea 并 flush pending sync；`destroy()` flush 未完成同步；`setValue()` 仍立即同步并通知。
+- **验证方式**：已执行 `npm test -- test/code-editor.test.ts`、`npm test`、`npm run build`，均通过。
 - **上线风险**：中。自动 `onChange` 触发时机改变，但既有 AI 记忆记录维护者已确认允许短 debounce。
 - **回滚方案**：恢复 `onDocChanged` 中每次变化立即 `writeEditorValue(update.state.doc.toString(), true)`。
 - **是否需要我确认**：否。
@@ -88,7 +90,7 @@
 - **回滚方案**：回退 README 文档变更。
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。维护者已确认删除 README 中缺失的 `docs/CODEX_HANDOFF.md` / `docs/tasks/task-moonglade-editor-implementation.md` 引用。
-- **依赖关系**：Task 2 尚未完成；README 当前按现有代码行为记录。Task 2 完成后如 code-like modes 自动同步改为 debounce，需要再次同步 README。
+- **依赖关系**：Task 2 已完成；README 已同步为最终行为。
 
 ### Task 4：让 CI 覆盖单元测试（已完成）
 
@@ -163,7 +165,7 @@
 ## 6. 建议执行顺序
 
 1. Task 1：先修正富文本图片选择 allowlist 边界，改动小、行为清晰、可快速测试。
-2. Task 2：再处理 CodeMirror 公共模式 debounce，用测试固定时序。
+2. Task 2：已完成，CodeMirror 公共模式自动同步 debounce 已实现并测试。
 3. Task 3：已完成，README 同步语义和续接文档引用已更新。
 4. Task 4：已完成，CI 已覆盖 tests + build 以及 main/release PR。
 5. Task 5：记录 raw HTML code mode 不做权限限制的决策。
@@ -190,14 +192,15 @@
 - Moonglade 主仓应消费预构建静态资源，不应新增前端构建流水线。
 - Markdown 图片上传 URL 策略应与富文本图片 URL 策略保持一致。
 - Markdown 图片默认允许扩展名应与富文本默认值保持一致。
-- CodeMirror 公共模式允许引入短 debounce。
+- CodeMirror 公共模式已引入短 debounce。
 - `demo/index.html` 不会公开部署。
 - README 中缺失的旧续接文档引用应删除，而不是重新创建。
 - CI 测试覆盖应包含 PR / main 分支，不仅限 `release` 分支。
 - Raw HTML code mode 不需要新增“仅受信任管理员”限制。
 - `.svg` 默认允许上传应保留。
 - Task 1 已完成：富文本图片选择阶段应继续复用 `hasAllowedImageUploadExtension(...)`，不要恢复为任意 `image/*` 先选中再上传前拒绝。
-- Task 3 已完成：README 当前记录的是现有同步行为；Task 2 改变 code-like modes 同步时序后需要再次更新 README。
+- Task 2 已完成：CodeMirror 公共模式自动同步已 debounce；`setValue()`、`getValue()`、显式 `syncToTextarea()` 的立即语义应保留。
+- Task 3 已完成：README 已记录 rich HTML 和 code-like modes 自动同步均 debounced。
 - Task 4 已完成：workflow 应继续在 build 前运行 `npm test`，并覆盖 `main` / `release` push 和 pull request。
 
 ## 9. 执行记录
@@ -207,6 +210,7 @@
 | 2026-07-30 | Task 1：修正富文本图片选择的 allowlist 边界 | `src/toolbar/image-files.ts` 改为选择阶段只接受 `hasAllowedImageUploadExtension(...)` 通过的文件；`test/editor.test.ts` 更新默认 GIF 行为测试并新增多文件顺序测试。 | `npm test -- test/editor.test.ts`；`npm test`；`npm run build`。 | 通过。完整测试 6 个测试文件、115 个用例通过；构建和 size budget 通过。 |
 | 2026-07-30 | Task 3：同步 README 的同步语义和续接文档引用 | `README.md` 删除不存在的续接文档引用，改为 `AGENTS.md` 和 `docs/ai-review-plan.md`；补充 rich HTML / code-like modes 当前同步语义。 | Markdown diff review。 | 完成。 |
 | 2026-07-30 | Task 4：让 CI 覆盖单元测试 | `.github/workflows/build.yml` 增加 `main` push、`pull_request` 触发，并在 build 前运行 `npm test`。 | Workflow diff review；等待合并后 GitHub Actions 验证。 | 完成。 |
+| 2026-07-30 | Task 2：为 CodeMirror 公共模式增加自动同步 debounce | `src/code-editor.ts` 增加自动同步 debounce 和 flush；`test/code-editor.test.ts` 增加 fake timer 同步测试并调整 Markdown 图片上传 onChange 等待；`README.md` 更新同步语义。 | `npm test -- test/code-editor.test.ts`；`npm test`；`npm run build`。 | 通过。完整测试 6 个测试文件、117 个用例通过；构建和 size budget 通过。 |
 
 ## 10. 后续执行注意事项
 

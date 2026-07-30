@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { EditorView } from '@codemirror/view';
 import { createMoongladeCodeEditor } from '../src/code-editor';
 import { setFormatterRuntimeLoaderForTests } from '../src/code-formatter';
 
@@ -22,6 +23,10 @@ afterEach(() => {
 
 function waitForAsyncWork(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function waitForDebouncedSync(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 async function waitForExpectation(assertion: () => void): Promise<void> {
@@ -57,6 +62,10 @@ function createClipboardImagePasteEvent(file: File): ClipboardEvent {
 function dispatchPasteToEditorContent(host: HTMLElement, event: ClipboardEvent): void {
   const content = host.querySelector('.cm-content') as HTMLElement;
   content.dispatchEvent(event);
+}
+
+function getCodeMirrorView(editor: ReturnType<typeof createMoongladeCodeEditor>): EditorView {
+  return (editor as unknown as { view: EditorView }).view;
 }
 
 describe('code editor public modes', () => {
@@ -104,6 +113,84 @@ describe('code editor public modes', () => {
     expect(onChange).toHaveBeenLastCalledWith('<section>Updated</section>');
 
     editor.destroy();
+  });
+
+  it('coalesces automatic document changes into a single debounced host notification', () => {
+    vi.useFakeTimers();
+    try {
+      const host = document.createElement('div');
+      const textarea = document.createElement('textarea');
+      const onChange = vi.fn();
+      const editor = createMoongladeCodeEditor({
+        element: host,
+        textarea,
+        language: 'markdown',
+        content: '# Title',
+        onChange
+      });
+      const view = getCodeMirrorView(editor);
+
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\n' } });
+      view.dispatch({ changes: { from: view.state.doc.length, insert: 'Body' } });
+
+      expect(editor.getValue()).toBe('# Title\nBody');
+      expect(textarea.value).toBe('# Title');
+      expect(onChange).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(199);
+
+      expect(textarea.value).toBe('# Title');
+      expect(onChange).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+
+      expect(textarea.value).toBe('# Title\nBody');
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenLastCalledWith('# Title\nBody');
+
+      editor.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('flushes pending automatic sync when explicitly syncing or destroying', () => {
+    vi.useFakeTimers();
+    try {
+      const host = document.createElement('div');
+      const textarea = document.createElement('textarea');
+      const onChange = vi.fn();
+      const editor = createMoongladeCodeEditor({
+        element: host,
+        textarea,
+        language: 'markdown',
+        content: '# Title',
+        onChange
+      });
+      const view = getCodeMirrorView(editor);
+
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nBody' } });
+
+      expect(onChange).not.toHaveBeenCalled();
+
+      editor.syncToTextarea();
+
+      expect(textarea.value).toBe('# Title\nBody');
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenLastCalledWith('# Title\nBody');
+
+      view.dispatch({ changes: { from: view.state.doc.length, insert: '\nTail' } });
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+
+      editor.destroy();
+
+      expect(textarea.value).toBe('# Title\nBody\nTail');
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(onChange).toHaveBeenLastCalledWith('# Title\nBody\nTail');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('switches language compartments without replacing the text buffer', () => {
@@ -230,6 +317,8 @@ describe('code editor public modes', () => {
       expect(upload).toHaveBeenCalledWith(file);
       expect(editor.getValue()).toBe('![Alt \\] text](</media/hello(world).png> "Title \\"quoted\\"")');
     });
+
+    await waitForDebouncedSync();
 
     expect(onChange).toHaveBeenLastCalledWith('![Alt \\] text](</media/hello(world).png> "Title \\"quoted\\"")');
     expect(host.querySelector('.mg-code-editor-status')?.textContent).toBe('Inserted 1 image.');

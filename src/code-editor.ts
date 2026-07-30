@@ -20,6 +20,7 @@ import { createMoongladeCodeEditorTheme } from './code-theme';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
 const DEFAULT_TAB_SIZE = 2;
+const TEXTAREA_SYNC_DEBOUNCE_MS = 200;
 type StatusTone = 'info' | 'success' | 'error';
 
 interface ToolbarElements {
@@ -43,6 +44,7 @@ export class MoongladeCodeEditor {
   private readOnly: boolean;
   private view: EditorView;
   private statusHideTimer: number | undefined;
+  private textareaSyncHandle?: ReturnType<typeof setTimeout>;
   private destroyed = false;
 
   constructor(options: MoongladeCodeEditorOptions) {
@@ -104,8 +106,12 @@ export class MoongladeCodeEditor {
     });
 
     if (value === previousValue) {
+      this.cancelScheduledTextareaSync();
       this.writeEditorValue(value, false);
+      return;
     }
+
+    this.flushScheduledTextareaSync();
   }
 
   getLanguage(): MoongladeCodeLanguage {
@@ -173,7 +179,42 @@ export class MoongladeCodeEditor {
 
   syncToTextarea(): void {
     this.ensureActive();
+    if (this.flushScheduledTextareaSync()) {
+      return;
+    }
+
     this.writeEditorValue(this.getValue(), false);
+  }
+
+  private scheduleTextareaSync(): void {
+    if (this.textareaSyncHandle !== undefined) {
+      clearTimeout(this.textareaSyncHandle);
+    }
+
+    this.textareaSyncHandle = setTimeout(() => {
+      this.textareaSyncHandle = undefined;
+      this.writeEditorValue(this.getValue(), true);
+    }, TEXTAREA_SYNC_DEBOUNCE_MS);
+  }
+
+  private cancelScheduledTextareaSync(): void {
+    if (this.textareaSyncHandle === undefined) {
+      return;
+    }
+
+    clearTimeout(this.textareaSyncHandle);
+    this.textareaSyncHandle = undefined;
+  }
+
+  private flushScheduledTextareaSync(): boolean {
+    if (this.textareaSyncHandle === undefined) {
+      return false;
+    }
+
+    clearTimeout(this.textareaSyncHandle);
+    this.textareaSyncHandle = undefined;
+    this.writeEditorValue(this.getValue(), true);
+    return true;
   }
 
   private writeEditorValue(value: string, notifyHost: boolean): void {
@@ -196,6 +237,7 @@ export class MoongladeCodeEditor {
       return;
     }
 
+    this.flushScheduledTextareaSync();
     this.view.destroy();
     this.clearStatusTimer();
     this.destroyed = true;
@@ -239,9 +281,7 @@ export class MoongladeCodeEditor {
           }
         })
       ],
-      onDocChanged: (update) => {
-        this.writeEditorValue(update.state.doc.toString(), true);
-      },
+      onDocChanged: () => this.scheduleTextareaSync(),
       keymapBindings: [
         ...closeBracketsKeymap,
         ...defaultKeymapBeforeTab,

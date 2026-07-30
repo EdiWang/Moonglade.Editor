@@ -143,7 +143,7 @@ editor.syncToTextarea();
 
 `createMoongladeCodeEditor(...)` remains exported as a compatibility factory during migration, but new host code should prefer `createMoongladeEditor({ mode })`.
 
-Content access is immediate through `getHTML()` in rich HTML mode and `getValue()` in code-like modes. Explicit `syncToTextarea()` writes immediately. Rich HTML automatic `textarea` and `onChange` sync is debounced after document edits, while code-like modes currently sync automatically on each CodeMirror document change.
+Content access is immediate through `getHTML()` in rich HTML mode and `getValue()` in code-like modes. Explicit `syncToTextarea()` writes immediately. Automatic `textarea` and `onChange` sync is debounced after document edits.
 
 For custom image upload flows, pass `uploadImage` instead of `uploadUrl`:
 
