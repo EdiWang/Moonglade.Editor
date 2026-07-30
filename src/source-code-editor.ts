@@ -1,29 +1,17 @@
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { html } from '@codemirror/lang-html';
 import {
-  bracketMatching,
-  foldGutter,
-  foldKeymap,
   HighlightStyle,
-  indentOnInput,
   syntaxHighlighting
 } from '@codemirror/language';
-import { highlightSelectionMatches, openSearchPanel, searchKeymap } from '@codemirror/search';
+import { openSearchPanel } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
-import {
-  drawSelection,
-  dropCursor,
-  EditorView,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  highlightSpecialChars,
-  keymap,
-  lineNumbers,
-  rectangularSelection
-} from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-
-type SearchPanelFocusTarget = 'search' | 'replace';
+import {
+  createCodeMirrorBaseExtensions,
+  focusCodeMirrorSearchPanelField,
+  type SearchPanelFocusTarget
+} from './code-editor-shared';
 
 const sourceHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: 'var(--mg-source-syntax-keyword)' },
@@ -112,53 +100,18 @@ export class HtmlSourceCodeEditor {
   }
 
   private createExtensions(): Extension[] {
-    return [
-      lineNumbers(),
-      highlightActiveLineGutter(),
-      highlightSpecialChars(),
-      history(),
-      foldGutter(),
-      drawSelection(),
-      dropCursor(),
-      rectangularSelection(),
-      highlightActiveLine(),
-      indentOnInput(),
-      bracketMatching(),
-      createSourceCodeEditorTheme(),
-      highlightSelectionMatches(),
-      html(),
-      EditorView.lineWrapping,
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          this.syncTextarea();
-        }
-      }),
-      keymap.of([
-        ...defaultKeymap,
-        ...historyKeymap,
-        ...foldKeymap,
-        ...searchKeymap,
-        indentWithTab
-      ])
-    ];
+    return createCodeMirrorBaseExtensions({
+      theme: createSourceCodeEditorTheme(),
+      language: html(),
+      lineWrapping: true,
+      onDocChanged: () => {
+        this.syncTextarea();
+      }
+    });
   }
 
   private focusSearchPanelField(focusTarget: SearchPanelFocusTarget): void {
-    const focus = () => {
-      const field =
-        this.root.querySelector<HTMLInputElement>(`.cm-search input[name="${focusTarget}"]`) ??
-        this.root.querySelector<HTMLInputElement>('.cm-search input');
-
-      field?.focus();
-      field?.select();
-    };
-
-    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(focus);
-      return;
-    }
-
-    focus();
+    focusCodeMirrorSearchPanelField(this.root, focusTarget);
   }
 
   private syncTextarea(): void {

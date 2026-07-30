@@ -1,32 +1,17 @@
 import { closeBrackets, closeBracketsKeymap, completionKeymap } from '@codemirror/autocomplete';
-import {
-  defaultKeymap,
-  history,
-  historyKeymap,
-  indentWithTab
-} from '@codemirror/commands';
-import {
-  bracketMatching,
-  foldGutter,
-  foldKeymap,
-  indentOnInput
-} from '@codemirror/language';
-import { openSearchPanel, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+import { indentWithTab } from '@codemirror/commands';
+import { openSearchPanel } from '@codemirror/search';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import {
-  drawSelection,
-  dropCursor,
-  EditorView,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  highlightSpecialChars,
-  keymap,
-  lineNumbers,
-  rectangularSelection
-} from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import type { MoongladeCodeEditorOptions, MoongladeCodeLanguage } from './code-editor-options';
 import { formatCode } from './code-formatter';
 import { assertMoongladeCodeLanguage, createLanguageExtension } from './code-languages';
+import {
+  createCodeMirrorBaseExtensions,
+  createDefaultCodeMirrorKeymap,
+  focusCodeMirrorSearchPanelField,
+  type SearchPanelFocusTarget
+} from './code-editor-shared';
 import {
   assertOptionalMarkdownImageUploadOptions,
   createMarkdownImageUploadExtension
@@ -36,7 +21,6 @@ import { createMoongladeCodeEditorTheme } from './code-theme';
 const DEFAULT_EDITOR_HEIGHT = '500px';
 const DEFAULT_TAB_SIZE = 2;
 type StatusTone = 'info' | 'success' | 'error';
-type SearchPanelFocusTarget = 'search' | 'replace';
 
 interface ToolbarElements {
   root: HTMLDivElement;
@@ -218,67 +202,53 @@ export class MoongladeCodeEditor {
   }
 
   private createExtensions(options: MoongladeCodeEditorOptions): Extension[] {
-    return [
-      lineNumbers(),
-      highlightActiveLineGutter(),
-      highlightSpecialChars(),
-      history(),
-      foldGutter(),
-      drawSelection(),
-      dropCursor(),
-      rectangularSelection(),
-      highlightActiveLine(),
-      indentOnInput(),
-      bracketMatching(),
-      closeBrackets(),
-      createMoongladeCodeEditorTheme(),
-      highlightSelectionMatches(),
-      this.languageCompartment.of(createLanguageExtension(this.language)),
-      this.tabSizeCompartment.of(EditorState.tabSize.of(this.tabSize)),
-      this.wrappingCompartment.of(options.lineWrapping ? EditorView.lineWrapping : []),
-      this.readOnlyCompartment.of(EditorState.readOnly.of(this.readOnly)),
-      this.editableCompartment.of(EditorView.editable.of(!this.readOnly)),
-      createMarkdownImageUploadExtension(options.markdownImageUpload, () => this.language, {
-        onUploadStart: (files) => {
-          this.showStatus(`Uploading ${formatImageCount(files.length)}...`, 'info', 0);
-        },
-        onUploadError: (error) => {
-          this.showStatus(`Image upload failed: ${getErrorMessage(error)}`, 'error', 6000);
-        },
-        onUploadComplete: ({ uploadedFiles, failedFiles }) => {
-          if (failedFiles.length > 0) {
-            if (uploadedFiles.length > 0) {
-              this.showStatus(
-                `Uploaded ${formatImageCount(uploadedFiles.length)}. ${formatImageCount(failedFiles.length)} failed.`,
-                'error',
-                6000
-              );
+    const defaultKeymap = createDefaultCodeMirrorKeymap();
+    const defaultKeymapBeforeTab = defaultKeymap.slice(0, -1);
+
+    return createCodeMirrorBaseExtensions({
+      theme: createMoongladeCodeEditorTheme(),
+      language: this.languageCompartment.of(createLanguageExtension(this.language)),
+      extraExtensions: [
+        closeBrackets(),
+        this.tabSizeCompartment.of(EditorState.tabSize.of(this.tabSize)),
+        this.wrappingCompartment.of(options.lineWrapping ? EditorView.lineWrapping : []),
+        this.readOnlyCompartment.of(EditorState.readOnly.of(this.readOnly)),
+        this.editableCompartment.of(EditorView.editable.of(!this.readOnly)),
+        createMarkdownImageUploadExtension(options.markdownImageUpload, () => this.language, {
+          onUploadStart: (files) => {
+            this.showStatus(`Uploading ${formatImageCount(files.length)}...`, 'info', 0);
+          },
+          onUploadError: (error) => {
+            this.showStatus(`Image upload failed: ${getErrorMessage(error)}`, 'error', 6000);
+          },
+          onUploadComplete: ({ uploadedFiles, failedFiles }) => {
+            if (failedFiles.length > 0) {
+              if (uploadedFiles.length > 0) {
+                this.showStatus(
+                  `Uploaded ${formatImageCount(uploadedFiles.length)}. ${formatImageCount(failedFiles.length)} failed.`,
+                  'error',
+                  6000
+                );
+              }
+              return;
             }
-            return;
-          }
 
-          if (uploadedFiles.length > 0) {
-            this.showStatus(`Inserted ${formatImageCount(uploadedFiles.length)}.`, 'success', 1800);
+            if (uploadedFiles.length > 0) {
+              this.showStatus(`Inserted ${formatImageCount(uploadedFiles.length)}.`, 'success', 1800);
+            }
           }
-        }
-      }),
-      EditorView.updateListener.of((update) => {
-        if (!update.docChanged) {
-          return;
-        }
-
+        })
+      ],
+      onDocChanged: (update) => {
         this.writeEditorValue(update.state.doc.toString(), true);
-      }),
-      keymap.of([
+      },
+      keymapBindings: [
         ...closeBracketsKeymap,
-        ...defaultKeymap,
-        ...historyKeymap,
-        ...foldKeymap,
-        ...searchKeymap,
+        ...defaultKeymapBeforeTab,
         ...completionKeymap,
         indentWithTab
-      ])
-    ];
+      ]
+    });
   }
 
   private ensureActive(): void {
@@ -333,21 +303,7 @@ export class MoongladeCodeEditor {
   }
 
   private focusSearchPanelField(focusTarget: SearchPanelFocusTarget): void {
-    const focus = () => {
-      const field =
-        this.view.dom.querySelector<HTMLInputElement>(`.cm-search input[name="${focusTarget}"]`) ??
-        this.view.dom.querySelector<HTMLInputElement>('.cm-search input');
-
-      field?.focus();
-      field?.select();
-    };
-
-    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(focus);
-      return;
-    }
-
-    focus();
+    focusCodeMirrorSearchPanelField(this.view.dom, focusTarget);
   }
 
   private showStatus(message: string, tone: StatusTone, autoHideMs: number): void {
