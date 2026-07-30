@@ -350,6 +350,7 @@ All questions were answered on 2026-07-18:
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 - **依赖关系**：无。
+- **状态**：DONE (2026-07-30). `src/editor.ts` now tracks a `destroyed` state, makes `destroy()` idempotent, guards public instance methods/getters with a clear destroyed-instance error, and avoids inserting/updating status when a pending image upload completes after destroy. Added `test/editor.test.ts` coverage for repeated destroy, destroyed public method calls, and pending upload completion after destroy. Verified: `npm test` (6 files, 110 tests passing), `npm run build` (types, bundle, and size budgets passing), and real Chromium browser smoke test via Playwright CLI against `http://localhost:5173/demo/` confirming rich HTML destroy is idempotent and public methods reject after destroy.
 
 ### Task 6：补齐富文本 options 运行时校验
 

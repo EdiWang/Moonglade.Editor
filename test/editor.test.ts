@@ -317,6 +317,28 @@ describe('editor toolbar', () => {
     }
   });
 
+  it('makes destroy idempotent and rejects public instance methods after destroy', () => {
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>'
+    });
+    const expectedMessage = 'Moonglade.Editor rich HTML editor instance has been destroyed.';
+
+    expect(() => editor.destroy()).not.toThrow();
+    expect(() => editor.destroy()).not.toThrow();
+
+    expect(() => editor.dom).toThrow(expectedMessage);
+    expect(() => editor.doc).toThrow(expectedMessage);
+    expect(() => editor.getHTML()).toThrow(expectedMessage);
+    expect(() => editor.setHTML('<p>Updated</p>')).toThrow(expectedMessage);
+    expect(() => editor.run(editor.commands.bold)).toThrow(expectedMessage);
+    expect(() => editor.focus()).toThrow(expectedMessage);
+    expect(() => editor.getSpellcheck()).toThrow(expectedMessage);
+    expect(() => editor.setSpellcheck(false)).toThrow(expectedMessage);
+    expect(() => editor.syncToTextarea()).toThrow(expectedMessage);
+  });
+
   it('renders a Bootstrap-compatible toolbar shell', () => {
     const host = document.createElement('div');
     const editor = createMoongladeEditor({
@@ -1005,6 +1027,44 @@ describe('editor toolbar', () => {
     expect(editor.getHTML()).toBe('<p>Hello<img src="/media/custom.jpg" alt="Custom alt" title="Custom title" loading="lazy"></p>');
 
     editor.destroy();
+  });
+
+  it('does not insert a pending uploaded image after destroy', async () => {
+    const file = new File(['fake-image'], 'delayed.jpg', { type: 'image/jpeg' });
+    let resolveUpload: (result: { src: string; alt?: string }) => void = () => {};
+    const uploadImage = vi.fn((uploadedFile: File) => {
+      expect(uploadedFile).toBe(file);
+      return new Promise<{ src: string; alt?: string }>((resolve) => {
+        resolveUpload = resolve;
+      });
+    });
+    const onChange = vi.fn();
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage,
+      onChange
+    });
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForExpectation(() => {
+      expect(uploadImage).toHaveBeenCalledWith(file);
+    });
+
+    editor.destroy();
+    resolveUpload({ src: '/media/delayed.jpg', alt: 'Delayed' });
+    await waitForAsyncWork();
+
+    expect(host.querySelector('img[src="/media/delayed.jpg"]')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('uploads pasted clipboard image items with a temporary editor preview', async () => {

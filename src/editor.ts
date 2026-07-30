@@ -76,6 +76,7 @@ export class MoongladeEditor {
   private readonly insertTableCommand: Command;
   private view: EditorView;
   private textareaSyncHandle?: ReturnType<typeof setTimeout>;
+  private destroyed = false;
 
   constructor(options: MoongladeEditorOptions) {
     this.schema = moongladeSchema;
@@ -174,18 +175,22 @@ export class MoongladeEditor {
   }
 
   get dom(): HTMLElement {
+    this.ensureActive();
     return this.view.dom;
   }
 
   get doc(): ProseMirrorNode {
+    this.ensureActive();
     return this.view.state.doc;
   }
 
   getHTML(): string {
+    this.ensureActive();
     return serializeHtml(this.schema, this.view.state.doc);
   }
 
   setHTML(html: string): void {
+    this.ensureActive();
     const doc = parseHtml(this.schema, html);
     const state = EditorState.create({
       doc,
@@ -199,18 +204,22 @@ export class MoongladeEditor {
   }
 
   run(command: Command): boolean {
+    this.ensureActive();
     return command(this.view.state, this.view.dispatch, this.view);
   }
 
   focus(): void {
+    this.ensureActive();
     this.view.focus();
   }
 
   getSpellcheck(): boolean {
+    this.ensureActive();
     return this.spellcheck;
   }
 
   setSpellcheck(enabled: boolean): void {
+    this.ensureActive();
     this.spellcheck = enabled;
     this.view.setProps({
       attributes: this.getEditorAttributes()
@@ -218,14 +227,20 @@ export class MoongladeEditor {
   }
 
   destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
     document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     this.flushScheduledTextareaSync();
     this.uploadPreviews.clear();
     this.toolbar.sourceDialog.sourceEditor.destroy();
     this.view.destroy();
+    this.destroyed = true;
   }
 
   syncToTextarea(): void {
+    this.ensureActive();
     this.cancelScheduledTextareaSync();
     this.writeEditorValue(true);
   }
@@ -337,6 +352,10 @@ export class MoongladeEditor {
 
     try {
       const result = await this.uploadImage(file);
+      if (this.destroyed) {
+        return false;
+      }
+
       const inserted = this.executeImageCommand(
         this.commands.insertImage(result.src, result.alt, result.title),
         uploadSelection,
@@ -350,11 +369,17 @@ export class MoongladeEditor {
       this.setUploadStatus('');
       return true;
     } catch (error) {
+      if (this.destroyed) {
+        return false;
+      }
+
       const message = error instanceof Error ? error.message : 'Image upload failed.';
       this.setUploadStatus(message, true);
       return false;
     } finally {
-      this.uploadPreviews.remove(this.view, preview);
+      if (!this.destroyed) {
+        this.uploadPreviews.remove(this.view, preview);
+      }
     }
   }
 
@@ -609,6 +634,12 @@ export class MoongladeEditor {
     return allowedExtensions
       ? `Image uploads only support ${allowedExtensions}.`
       : 'Image uploads are disabled because no image formats are allowed.';
+  }
+
+  private ensureActive(): void {
+    if (this.destroyed) {
+      throw new Error('Moonglade.Editor rich HTML editor instance has been destroyed.');
+    }
   }
 }
 
