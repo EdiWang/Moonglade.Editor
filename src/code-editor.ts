@@ -110,6 +110,7 @@ export class MoongladeCodeEditor {
     this.ensureActive();
     assertString(value, 'value');
 
+    const previousValue = this.getValue();
     this.view.dispatch({
       changes: {
         from: 0,
@@ -117,7 +118,10 @@ export class MoongladeCodeEditor {
         insert: value
       }
     });
-    this.syncToTextarea();
+
+    if (value === previousValue) {
+      this.writeEditorValue(value, false);
+    }
   }
 
   getLanguage(): MoongladeCodeLanguage {
@@ -185,9 +189,16 @@ export class MoongladeCodeEditor {
 
   syncToTextarea(): void {
     this.ensureActive();
+    this.writeEditorValue(this.getValue(), false);
+  }
 
+  private writeEditorValue(value: string, notifyHost: boolean): void {
     if (this.textarea) {
-      this.textarea.value = this.getValue();
+      this.textarea.value = value;
+    }
+
+    if (notifyHost) {
+      this.onChange?.(value);
     }
   }
 
@@ -256,8 +267,7 @@ export class MoongladeCodeEditor {
           return;
         }
 
-        this.syncToTextarea();
-        this.onChange?.(this.getValue());
+        this.writeEditorValue(update.state.doc.toString(), true);
       }),
       keymap.of([
         ...closeBracketsKeymap,

@@ -319,6 +319,7 @@ All questions were answered on 2026-07-18:
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 - **依赖关系**：依赖 Task 1。
+- **状态**：DONE (2026-07-30). `src/code-editor.ts` now reuses a single `update.state.doc.toString()` value in the CodeMirror `updateListener` to update the textarea and call `onChange`, preserving synchronous automatic sync behavior and explicit `syncToTextarea()` semantics. `setValue()` keeps same-value textarea sync without host notification. Verified: `npm test` (6 files, 108 tests passing), `npm run build` (types, bundle, and size budgets passing), and real Chromium browser smoke test via Playwright CLI against `http://localhost:5173/demo/` confirming typed Markdown updates `getValue()`, textarea, and `onChange`.
 
 ### Task 4：确认并可选优化 CodeMirror 自动同步时序
 
