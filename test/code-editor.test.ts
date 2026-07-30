@@ -306,6 +306,73 @@ describe('code editor public modes', () => {
     editor.destroy();
   });
 
+  it('ignores pasted Markdown images outside the default extension allowlist', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const file = new File(['fake-image'], 'animation.gif', { type: 'image/gif' });
+    const upload = vi.fn(async () => '/media/animation.gif');
+    const editor = createMoongladeCodeEditor({
+      element: host,
+      language: 'markdown',
+      content: 'Existing',
+      markdownImageUpload: {
+        upload
+      }
+    });
+
+    const event = createClipboardImagePasteEvent(file);
+    dispatchPasteToEditorContent(host, event);
+    await waitForAsyncWork();
+
+    expect(upload).not.toHaveBeenCalled();
+    expect(editor.getValue()).toBe('Existing');
+
+    editor.destroy();
+  });
+
+  it('uses custom Markdown image upload extension allowlists', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const file = new File(['fake-image'], 'animation.gif', { type: 'image/gif' });
+    const upload = vi.fn(async () => '/media/animation.gif');
+    const editor = createMoongladeCodeEditor({
+      element: host,
+      language: 'markdown',
+      content: '',
+      markdownImageUpload: {
+        upload,
+        allowedImageExtensions: ['gif']
+      }
+    });
+
+    const event = createClipboardImagePasteEvent(file);
+    dispatchPasteToEditorContent(host, event);
+
+    expect(event.defaultPrevented).toBe(true);
+
+    await waitForExpectation(() => {
+      expect(upload).toHaveBeenCalledWith(file);
+      expect(editor.getValue()).toBe('![animation](/media/animation.gif)');
+    });
+
+    expect(host.querySelector('.mg-code-editor-status')?.textContent).toBe('Inserted 1 image.');
+
+    editor.destroy();
+  });
+
+  it('rejects invalid Markdown image upload extension allowlists', () => {
+    const host = document.createElement('div');
+
+    expect(() => createMoongladeCodeEditor({
+      element: host,
+      language: 'markdown',
+      markdownImageUpload: {
+        upload: async () => '/media/image.png',
+        allowedImageExtensions: ['.png', 42] as unknown as string[]
+      }
+    })).toThrow('Moonglade.Editor markdownImageUpload.allowedImageExtensions must be an array of strings.');
+  });
+
   it('ignores pasted images outside Markdown mode', async () => {
     const host = document.createElement('div');
     const file = new File(['fake-image'], 'ignored.png', { type: 'image/png' });

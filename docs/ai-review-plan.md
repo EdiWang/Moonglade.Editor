@@ -382,6 +382,7 @@ All questions were answered on 2026-07-18:
 - **是否需要我确认**：是。
 - **需要确认的问题**：Markdown 模式默认允许格式应与富文本一致，还是保持当前更宽松集合？
 - **依赖关系**：建议在 Task 2 后执行。
+- **状态**：DONE (2026-07-30). Maintainer confirmed Markdown image upload defaults should stay consistent with rich HTML. `MarkdownImageUploadOptions` now supports `allowedImageExtensions`, and `src/markdown-image-upload.ts` reuses the shared default `.jpg`, `.png`, `.webp`, `.svg` allowlist plus extension normalization/checking from `src/image-upload.ts`. Added tests for default `.gif` rejection, custom `.gif` allowlist acceptance, and invalid allowlist option validation. Updated README API examples and upload documentation. Verified: `npm test` (6 files, 114 tests passing), `npm run build` (types, bundle, and size budgets passing), and real Chromium browser smoke test via Playwright CLI against `http://localhost:5173/demo/` confirming default Markdown paste rejects `.gif` while `markdownImageUpload.allowedImageExtensions: ['gif']` inserts the image.
 
 ### Task 8：小范围抽取 CodeMirror 共享 helper
 

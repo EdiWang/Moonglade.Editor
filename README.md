@@ -129,6 +129,7 @@ const editor = createMoongladeEditor({
   lineWrapping: true,
   tabSize: 2,
   markdownImageUpload: {
+    allowedImageExtensions: ['.jpg', '.png', '.webp', '.svg'],
     upload: async (file) => ({
       url: await uploadMarkdownImage(file)
     })
@@ -163,7 +164,7 @@ The two upload options use different response shapes:
 - `uploadImage(file)` resolves directly to the editor result `{ src, alt?, title? }`, where `src` must be a safe image URL. `alt` and `title` are optional.
 - `uploadUrl` posts the file as multipart form-data (field name `file`, `credentials: 'same-origin'`, `Accept: application/json`) and expects a JSON response `{ location, filename?, title? }`. The editor maps `location` to `src`, `filename` to `alt` (falling back to the original file name), and `title` to `title`. A missing or empty `location`, or a non-JSON response, is treated as an upload error.
 
-Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Hosts can override that list with `allowedImageExtensions`; values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the image toolbar dialog, direct editor paste, and drag/drop upload flows, but upload endpoints should still validate file content server-side. Pasted clipboard images show a temporary local preview while the upload is pending; saved HTML only receives the safe URL returned by the configured uploader.
+Image uploads allow `.jpg`, `.png`, `.webp`, and `.svg` by default. Rich HTML hosts can override that list with top-level `allowedImageExtensions`; Markdown hosts can override it with `markdownImageUpload.allowedImageExtensions`. Values are case-insensitive and may include or omit the leading dot. This client-side filter applies to the rich HTML image toolbar dialog, rich HTML paste/drop uploads, and Markdown paste/drop uploads, but upload endpoints should still validate file content server-side. Pasted clipboard images in rich HTML show a temporary local preview while the upload is pending; saved HTML only receives the safe URL returned by the configured uploader.
 
 Code snippet languages use the default built-in dropdown unless hosts pass `codesample_languages`. Each entry uses `{ text, value }`, where `text` is the displayed label and `value` becomes the sanitized code language class suffix, such as `language-bicep`. The Insert code toolbar button wraps selected text as inline `<code>`; with an empty selection it opens the code snippet dialog.
 

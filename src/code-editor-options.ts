@@ -15,6 +15,7 @@ export interface MoongladeCodeEditorOptions {
 
 export interface MarkdownImageUploadOptions {
   upload: (file: File) => Promise<MarkdownImageUploadResult | string>;
+  allowedImageExtensions?: readonly string[];
   getAltText?: (file: File) => string;
   onError?: (error: unknown, file: File) => void;
 }

@@ -5,6 +5,7 @@ import type {
   MarkdownImageUploadResult,
   MoongladeCodeLanguage
 } from './code-editor-options';
+import { hasAllowedImageUploadExtension, normalizeAllowedImageExtensions } from './image-upload';
 import { sanitizeImageUrl } from './safety';
 
 interface UploadAndInsertOptions {
@@ -25,8 +26,6 @@ interface MarkdownImageUploadStatusResult {
   markdownImages: readonly string[];
 }
 
-const imageFileNamePattern = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
-
 export function createMarkdownImageUploadExtension(
   options: MarkdownImageUploadOptions | undefined,
   getLanguage: () => MoongladeCodeLanguage,
@@ -36,9 +35,11 @@ export function createMarkdownImageUploadExtension(
     return [];
   }
 
+  const allowedImageExtensions = normalizeAllowedImageExtensions(options.allowedImageExtensions);
+
   return EditorView.domEventHandlers({
     paste: (event, view) => {
-      const files = getImageFiles(event.clipboardData?.files);
+      const files = getImageFiles(event.clipboardData?.files, allowedImageExtensions);
 
       if (!shouldHandleImageFiles(files, view, getLanguage)) {
         return false;
@@ -49,7 +50,7 @@ export function createMarkdownImageUploadExtension(
       return true;
     },
     drop: (event, view) => {
-      const files = getImageFiles(event.dataTransfer?.files);
+      const files = getImageFiles(event.dataTransfer?.files, allowedImageExtensions);
 
       if (!shouldHandleImageFiles(files, view, getLanguage)) {
         return false;
@@ -85,6 +86,16 @@ export function assertOptionalMarkdownImageUploadOptions(value: unknown): assert
     throw new TypeError('Moonglade.Editor markdownImageUpload.upload must be a function.');
   }
 
+  if (
+    options.allowedImageExtensions !== undefined
+    && (
+      !Array.isArray(options.allowedImageExtensions)
+      || options.allowedImageExtensions.some((extension) => typeof extension !== 'string')
+    )
+  ) {
+    throw new TypeError('Moonglade.Editor markdownImageUpload.allowedImageExtensions must be an array of strings.');
+  }
+
   if (options.getAltText !== undefined && typeof options.getAltText !== 'function') {
     throw new TypeError('Moonglade.Editor markdownImageUpload.getAltText must be a function.');
   }
@@ -94,12 +105,15 @@ export function assertOptionalMarkdownImageUploadOptions(value: unknown): assert
   }
 }
 
-export function getImageFiles(files: FileList | File[] | undefined): File[] {
+export function getImageFiles(
+  files: FileList | File[] | undefined,
+  allowedImageExtensions = normalizeAllowedImageExtensions()
+): File[] {
   if (!files) {
     return [];
   }
 
-  return Array.from(files).filter(isImageFile);
+  return Array.from(files).filter((file) => hasAllowedImageUploadExtension(file, allowedImageExtensions));
 }
 
 export function createMarkdownImageText(
@@ -175,10 +189,6 @@ function insertMarkdown(view: EditorView, markdown: string, options: UploadAndIn
     },
     scrollIntoView: true
   });
-}
-
-function isImageFile(file: File): boolean {
-  return file.type.startsWith('image/') || imageFileNamePattern.test(file.name);
 }
 
 function normalizeUploadResult(uploaded: MarkdownImageUploadResult | string): MarkdownImageUploadResult {
