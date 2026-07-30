@@ -1,98 +1,203 @@
-# AI 代码审查待办计划
+# AI 代码审查与改进计划
 
-本文件用于记录当前仍需要处理的代码审查问题和后续执行计划。已完成任务、历史执行记录和不再需要处理的事项已移除，避免后续 AI 或维护者误读。
+本文件用于记录当前仍需要处理的代码审查问题和后续执行计划。它是本仓库当前适合长期保留的 AI 记忆文件；本轮没有修改业务代码、配置、测试或依赖文件。
 
 ## 1. 分析日期
 
-- 初始审查日期：2026-07-18
-- 最近整理日期：2026-07-30
+- 本轮审查日期：2026-07-30
+- 本轮验证命令：未运行。按用户要求，本轮不执行测试、构建、lint、安装、格式化或生成文件命令。
 
-## 2. 当前分析范围
+## 2. 分析范围
 
-当前待办来自前几轮对以下模块的审查和改进执行记录：
+本轮基于只读命令和代码阅读，覆盖以下主要区域：
 
-- `src/editor.ts`：富文本编辑器生命周期、textarea 同步、HTML 序列化。
-- `src/code-editor.ts`：Markdown/HTML/CSS 代码模式、CodeMirror 同步、搜索与格式化。
-- `src/source-code-editor.ts`：富文本 HTML source dialog 内部 CodeMirror 编辑器。
-- `src/markdown-image-upload.ts`：Markdown 图片 paste/drop 上传。
-- `src/image-upload.ts`、`src/safety.ts`：图片上传扩展名与 URL 安全边界。
-- `README.md`、`docs/`：集成文档和长期任务记录。
-- `test/`：Vitest/jsdom 回归测试。
+- 根目录项目文件：`package.json`、`tsconfig.json`、`tsconfig.build.json`、`vitest.config.ts`、`.gitignore`、`README.md`、`AGENTS.md`。
+- CI / 构建脚本：`.github/workflows/build.yml`、`scripts/build.mjs`、`scripts/check-size.mjs`、`scripts/upload-test-server.mjs`。
+- 公共入口与模式路由：`src/index.ts`、`src/code-editor-options.ts`、`src/code-languages.ts`。
+- 富文本编辑器主流程：`src/editor.ts`、`src/commands.ts`、`src/editor-state.ts`、`src/schema.ts`、`src/html.ts`、`src/safety.ts`。
+- CodeMirror 公共模式和 source dialog：`src/code-editor.ts`、`src/source-code-editor.ts`、`src/code-editor-shared.ts`、`src/code-formatter.ts`、`src/code-formatter-runtime.ts`。
+- 上传相关模块：`src/image-upload.ts`、`src/markdown-image-upload.ts`、`src/upload-preview.ts`、`src/toolbar/image-files.ts`。
+- 工具栏和对话框：`src/toolbar.ts`、`src/toolbar/`、`src/dialogs.ts`。
+- 测试覆盖：`test/editor.test.ts`、`test/code-editor.test.ts`、`test/html.test.ts`、`test/safety.test.ts`、`test/commands.test.ts`、`test/unified-editor.test.ts`。
+- 既有 AI 记忆：`docs/ai-review-plan.md`、`docs/tasks/task-template.md`。
 
 ## 3. 总体结论
 
-- 整体风险等级：低。
-- 当前代码已完成主要安全、生命周期、运行时校验和 CodeMirror 重复逻辑整理。
-- 目前最值得继续处理的问题是：是否对 CodeMirror 公共模式的自动 `textarea` / `onChange` 同步引入短 debounce，并同步 README 中的同步语义说明。
-- 不建议继续保留已完成任务的长篇执行记录；如需查看具体实现，可通过 Git 历史或相关测试追踪。
+- 整体风险等级：中。
+- 没有发现 P0/P1 级别的确定性问题。HTML rich mode 的主要 XSS 边界集中在 `parseHtml(...)`、schema 和 `safety.ts`，并已有较多 sanitizer 回归测试。
+- 最值得优先处理的问题是：富文本上传文件选择的 allowlist 边界、CodeMirror 公共模式自动同步缺少 debounce、CI 没有自动运行 `npm test`、README 中不存在的续接文档引用。
+- 不建议现在做大规模架构重写、替换 ProseMirror / CodeMirror / Prettier、盲目升级依赖或为本地 demo 增加复杂安全策略。
 
-## 4. 当前仍需处理的问题
+## 4. 问题列表
 
 | ID | 优先级 | 类型 | 位置 | 问题描述 | 影响 | 证据 | 建议方向 |
 |---|---|---|---|---|---|---|---|
-| O1 | P2 | 性能 / 集成行为 | `src/code-editor.ts` CodeMirror `updateListener`、`syncToTextarea()`、`onChange` | CodeMirror 公共模式当前在每次 `docChanged` 后同步写入 textarea 并立即触发 `onChange`。维护者已确认允许短 debounce，但尚未实现。 | 长 Markdown/HTML/CSS 文档连续输入时，仍可能频繁读取完整文本并通知宿主。若改为 debounce，会改变宿主收到自动同步通知的时机。 | 当前 `updateListener` 在每次文档变化后调用 `writeEditorValue(update.state.doc.toString(), true)`；富文本模式已存在自动同步 debounce。 | 在不改变 `getValue()` 和显式 `syncToTextarea()` 立即语义的前提下，为自动同步增加短 debounce，并在 destroy / 显式同步时 flush。 |
-| O2 | P3 | 文档 / 集成说明 | `README.md`、必要时 `docs/` | 文档需要准确说明富文本模式和代码模式的同步语义：哪些 API 立即返回，哪些自动通知可能 debounce。 | 集成方可能误解 `textarea` 和 `onChange` 的时序保证。 | 代码中富文本自动同步已有 debounce；代码模式是否 debounce 取决于 O1。README 仍需要按最终行为同步。 | O1 完成后更新 README：`getHTML()` / `getValue()` / 显式 `syncToTextarea()` 立即；自动 `onChange` / textarea 同步按对应模式说明。 |
+| R1 | P2 | 稳定性 / 上传边界 | `src/toolbar/image-files.ts` `getFirstImageFile(...)`、`getFirstImageFileFromItems(...)` | 富文本图片选择会先接受任意 `image/*` MIME，再在上传前由 `hasAllowedImageUploadExtension(...)` 拒绝。单个不支持文件会被正确拦截，但多文件时若第一个是默认不允许的 `image/gif`、后面是允许的 `.png`，当前逻辑会选中 GIF 并报错，忽略后面的允许文件。 | 上传不会越过最终校验，但用户可能看到错误且无法按预期插入同一批文件里的允许图片。 | `src/toolbar/image-files.ts:3-5` 使用 `file.type.startsWith('image/') || hasAllowedImageUploadExtension(...)`；最终上传前仍在 `src/editor.ts:347-350` 校验并拒绝。现有 `test/editor.test.ts:1237-1263` 只覆盖单个 GIF 被拒绝。 | 让富文本文件选择阶段与最终上传校验使用同一 allowlist 规则；新增多文件顺序测试。 |
+| R2 | P2 | 性能 / 集成行为 | `src/code-editor.ts` CodeMirror `onDocChanged` | CodeMirror 公共模式每次 `docChanged` 都立即 `update.state.doc.toString()`、写入 textarea 并触发 `onChange`。富文本模式已有 200ms 自动同步 debounce，两套模式同步时序不一致。 | 长 Markdown/HTML/CSS 文档连续输入时可能频繁读取完整 buffer 并通知宿主。引入 debounce 会改变自动 `onChange` 时机，需要测试锁定显式 API 仍立即。 | `src/code-editor.ts:242-244` 每次变化立即 `writeEditorValue(update.state.doc.toString(), true)`；富文本模式有 `TEXTAREA_SYNC_DEBOUNCE_MS = 200`、`scheduleTextareaSync()` 和 destroy flush，见 `src/editor.ts:36`、`src/editor.ts:250-258`、`src/editor.ts:270-278`、`src/editor.ts:395-399`。 | 为 CodeMirror 公共模式增加短 debounce；保留 `getValue()`、显式 `syncToTextarea()` 和 `destroy()` flush 的立即/最终一致语义。 |
+| R3 | P2 | 测试 / 上线保障 | `.github/workflows/build.yml` | GitHub Actions release workflow 只执行 `npm run build`，没有执行 `npm test`。 | sanitizer、上传、同步、toolbar 等回归只靠本地执行，release 分支自动化不能阻止测试退化。 | `.github/workflows/build.yml:27-30` 只有 `npm ci` 和 `npm run build`；`package.json:29` 定义了 `test: vitest run`；AGENTS 验证规则要求行为变更运行 `npm test`。 | 在 CI 中增加 `npm test`，并确认是否要扩展到 PR / main 分支。配置改动需单独提交。 |
+| R4 | P3 | 安全 / 集成边界（已确认） | `src/index.ts`、`src/code-editor.ts`、README / AGENTS raw HTML 说明 | `mode: 'html'` 是 raw HTML 代码模式，按设计保留文本 buffer，不经过 rich HTML schema 和 sanitizer。维护者已确认不需要在本仓对 raw HTML mode 增加“仅受信任管理员”限制。 | 本仓后续不应把 raw HTML mode 改成 sanitizer-backed rich HTML，也不应新增权限限制。raw HTML 渲染安全由主应用业务边界承担。 | `src/index.ts:38-44` 将 `mode: 'html'` 路由到 `createMoongladeCodeEditor(...)`；`src/code-editor.ts:88-109` 直接 `getValue()` / `setValue()` 文本 buffer；AGENTS 明确 “Code-like raw HTML mode ... must preserve the text buffer instead of routing content through the rich HTML schema”。维护者于 2026-07-30 确认“不用做这个限制”。 | 保持 raw HTML code mode 文本保留设计；文档只需说明它与 rich HTML mode 的 sanitizer 边界不同，不要提出权限限制作为待办。 |
+| R5 | P3 | 安全 / 集成边界（已确认） | `src/image-upload.ts`、README image upload 说明 | 默认允许 `.svg` 上传扩展名。维护者已确认允许上传 SVG。客户端仍只做扩展名/MIME 初筛，服务端仍需负责文件内容和响应策略。 | 不应移除 `.svg` 默认支持；后续只可强化服务端责任说明或测试，不应把禁用 SVG 作为默认改进方向。 | `src/image-upload.ts:9` 默认值包含 `.svg`；`src/image-upload.ts:14-18` 将 `image/svg+xml` 映射到 `.svg`；`README.md:167` 说明服务端仍需验证文件内容。维护者于 2026-07-30 确认“允许上传SVG”。 | 保留 `.svg` 默认支持；如更新文档，应强调服务端校验和安全响应仍是 host responsibility。 |
+| R6 | P3 | 文档 / 可维护性 | `README.md` “For Codex continuation” | README 指向不存在的续接文档，后续维护者或 AI 会被误导。 | 影响上下文恢复和交接效率，不影响运行时。 | `README.md:88-92` 指向 `docs/CODEX_HANDOFF.md` 和 `docs/tasks/task-moonglade-editor-implementation.md`；当前 `docs/` 只有 `docs/ai-review-plan.md` 和 `docs/tasks/task-template.md`。 | 更新 README 到现有文件，或按实际需要创建新的任务/交接文档。 |
+| R7 | P3 | 结构 / 可维护性 | `src/editor.ts`、`src/code-editor.ts` option validators | 富文本和代码模式各自复制了相似的 DOM / textarea / string / boolean / function option 校验函数。 | 当前不影响行为，但后续新增公共选项时容易出现错误信息或校验规则漂移。 | `src/editor.ts:669-720` 与 `src/code-editor.ts:367-420` 都定义 `assertHTMLElement`、`assertOptionalTextArea`、`assertOptionalString`、`assertBoolean`、`assertOptionalBoolean`、`assertOptionalFunction` 等。 | 在不改变错误语义的前提下抽出小型内部校验 helper；先加/保留现有无效选项测试。 |
+| R8 | P3 | 结构 / 测试维护性 | `src/editor.ts`、`test/editor.test.ts` | `src/editor.ts` 和 `test/editor.test.ts` 都偏大。当前职责基本符合 AGENTS 中的模块划分，但继续增长会增加定位和 review 成本。 | 长期维护成本上升；大规模拆分本身有回归风险，不宜优先处理。 | 行数统计：`src/editor.ts` 约 662 行，`test/editor.test.ts` 约 1158 行；测试文件同时覆盖 toolbar、同步、source dialog、上传、销毁等多类行为。 | 仅在触及相关区域时小步拆分，例如按 sync / upload / dialog 切分测试文件；暂不做纯结构性大重构。 |
 
 ## 5. 分批次改进计划
 
-### Task 1：为 CodeMirror 公共模式增加自动同步 debounce
+### Task 1：修正富文本图片选择的 allowlist 边界
 
 - **优先级**：P2
-- **关联问题**：O1
-- **目标**：减少长文档编辑时每次按键后的同步写入和宿主通知频率，同时保留显式读取 / 显式同步的立即语义。
-- **改动范围**：`src/code-editor.ts`，必要的测试文件。
-- **不包含的内容**：不改变 `getValue()`；不改变显式 `syncToTextarea()` 的立即行为；不改变 formatter、Markdown 图片上传、搜索面板或 public API 名称。
-- **预期结果**：连续编辑时自动 `textarea` / `onChange` 同步被短 debounce 合并；调用 `syncToTextarea()` 或 `destroy()` 时会 flush 未完成同步。
-- **验证方式**：`npm test`；新增或调整 CodeMirror 同步测试，使用 fake timers 覆盖 debounce、显式 sync 和 destroy flush；`npm run build`。
-- **上线风险**：中。自动 `onChange` 触发时机改变，但维护者已确认允许短 debounce。
-- **回滚方案**：恢复为 `updateListener` 中每次 `docChanged` 立即调用 `writeEditorValue(..., true)`。
-- **是否需要维护者确认**：否。
+- **关联问题**：R1
+- **目标**：让文件选择阶段只选择当前配置允许的图片，避免多文件场景中不支持图片阻断后续允许图片。
+- **改动范围**：`src/toolbar/image-files.ts`、`test/editor.test.ts` 或新增上传相关测试文件。
+- **不包含的内容**：不改变 `allowedImageExtensions` 默认值；不改变 `uploadImage` / `uploadUrl` API；不引入服务端校验逻辑。
+- **预期结果**：默认配置下 GIF 不会被选为待上传文件；同一批文件中后续 `.jpg` / `.png` / `.webp` / `.svg` 仍可被选择并上传；无文件名但 MIME 可映射到允许扩展名的剪贴板图片仍可工作。
+- **验证方式**：新增/调整 Vitest：单个不允许文件被忽略或显示既定提示；不允许文件在前、允许文件在后时选择允许文件；无文件名 `image/png` 剪贴板图片仍上传。执行 `npm test` 和 `npm run build`。
+- **上线风险**：低。
+- **回滚方案**：恢复 `getFirstImageFile(...)` / `getFirstImageFileFromItems(...)` 当前的 `image/* || allowlist` 判断。
+- **是否需要我确认**：否。
 - **需要确认的问题**：无。
 
-### Task 2：同步 README 中的编辑器同步语义
+### Task 2：为 CodeMirror 公共模式增加自动同步 debounce
+
+- **优先级**：P2
+- **关联问题**：R2
+- **目标**：减少长文档连续输入时的完整 buffer 读取和宿主通知频率，同时保持显式读取与提交路径可靠。
+- **改动范围**：`src/code-editor.ts`、`test/code-editor.test.ts`，必要时复用或抽出同步 helper。
+- **不包含的内容**：不改变 public API 名称；不改变 `getValue()` 的立即读取；不改变 formatter、搜索、Markdown 图片上传逻辑。
+- **预期结果**：自动 textarea / `onChange` 通知被短 debounce 合并；`syncToTextarea()` 立即写入 textarea；`destroy()` flush 未完成同步。
+- **验证方式**：使用 fake timers 覆盖连续编辑合并、显式 sync 立即、destroy flush、formatter/setValue 后最终同步。执行 `npm test` 和 `npm run build`。
+- **上线风险**：中。自动 `onChange` 触发时机改变，但既有 AI 记忆记录维护者已确认允许短 debounce。
+- **回滚方案**：恢复 `onDocChanged` 中每次变化立即 `writeEditorValue(update.state.doc.toString(), true)`。
+- **是否需要我确认**：否。
+- **需要确认的问题**：无。
+
+### Task 3：同步 README 的同步语义和续接文档引用
 
 - **优先级**：P3
-- **关联问题**：O2
-- **目标**：让集成文档准确描述富文本模式和代码模式的内容读取、textarea 同步、`onChange` 时序。
-- **改动范围**：`README.md`，必要时补充 `docs/` 中的简短说明。
-- **不包含的内容**：不改运行时代码；不重新设计同步 API。
-- **预期结果**：文档明确说明 `getHTML()`、`getValue()`、显式 `syncToTextarea()` 是立即的；自动同步和 `onChange` 可能 debounce，并说明各模式最终行为。
-- **验证方式**：Markdown diff review；如 Task 1 改动已完成，配合 `npm test` / `npm run build` 的结果一起记录。
+- **关联问题**：R2、R6
+- **目标**：让文档准确说明 rich HTML 和 code-like modes 的 `getHTML()` / `getValue()` / `syncToTextarea()` / `onChange` 时序，并移除或修正不存在的续接文档路径。
+- **改动范围**：`README.md`，必要时 `docs/ai-review-plan.md` 或新增 `docs/tasks/...` 任务记录。
+- **不包含的内容**：不改运行时代码；不重新设计同步 API；不编辑 AGENTS.md，除非后续用户明确允许。
+- **预期结果**：README 不再指向不存在的文档；集成方知道自动同步可能 debounce，显式读取/同步的保证清楚。
+- **验证方式**：Markdown diff review；如果 Task 2 已完成，配合 `npm test` / `npm run build` 结果记录。
 - **上线风险**：低。
 - **回滚方案**：回退 README 文档变更。
-- **是否需要维护者确认**：否。
+- **是否需要我确认**：是。
+- **需要确认的问题**：无。维护者已确认删除 README 中缺失的 `docs/CODEX_HANDOFF.md` / `docs/tasks/task-moonglade-editor-implementation.md` 引用。
+- **依赖关系**：建议在 Task 2 后执行，避免文档提前描述尚未实现的 code mode debounce。
+
+### Task 4：让 CI 覆盖单元测试
+
+- **优先级**：P2
+- **关联问题**：R3
+- **目标**：让 release 自动化同时覆盖 Vitest 回归，降低发布时 sanitizer、上传和同步行为退化风险。
+- **改动范围**：`.github/workflows/build.yml`。
+- **不包含的内容**：不引入新的测试框架；不升级依赖；不改变 npm scripts。
+- **预期结果**：CI 在 `npm ci` 后运行 `npm test`，再运行 `npm run build`；维护者已确认需要覆盖 PR / main 分支，不仅限 `release` 分支。
+- **验证方式**：本地可先运行 `npm test` 和 `npm run build`；合并后观察 GitHub Actions。
+- **上线风险**：低到中。可能暴露已有 flaky 测试或增加 CI 时间。
+- **回滚方案**：移除新增 test step 或恢复原 workflow。
+- **是否需要我确认**：否。
 - **需要确认的问题**：无。
-- **依赖关系**：建议在 Task 1 完成后执行，避免文档描述和代码行为不一致。
+
+### Task 5：记录 raw HTML code mode 的非限制决策
+
+- **优先级**：P3
+- **关联问题**：R4
+- **目标**：记录 raw HTML mode 按文本保留且不在本仓增加权限限制的产品决策，避免后续 AI 或维护者误提 sanitizer/权限限制改造。
+- **改动范围**：README / docs；如主 Moonglade 仓库有对应集成文档，则另起任务处理主仓。
+- **不包含的内容**：不在本仓直接为 `mode: 'html'` 增加 sanitizer；不改变 raw HTML mode 存储文本的设计；不新增“仅受信任管理员”限制。
+- **预期结果**：集成方清楚 rich HTML mode 和 raw HTML code mode 的 sanitizer 差异，同时知道本仓不负责新增 raw HTML 权限限制。
+- **验证方式**：文档 review。
+- **上线风险**：低。
+- **回滚方案**：回退文档变更。
+- **是否需要我确认**：否。
+- **需要确认的问题**：无。
+
+### Task 6：保留 SVG 默认支持并强化服务端责任说明
+
+- **优先级**：P3
+- **关联问题**：R5
+- **目标**：保留 `.svg` 默认允许上传的产品约束，同时确保文档继续强调服务端必须验证文件内容和安全响应策略。
+- **改动范围**：README / docs；如仅保持当前说明充分，可不执行代码改动。
+- **不包含的内容**：不移除 `.svg` 默认支持；不在前端尝试解析或净化 SVG 内容。
+- **预期结果**：后续任务不会把禁用 SVG 当成默认改进方向；文档对服务端责任说明清楚。
+- **验证方式**：Markdown review；如未来仅改文档，无需运行完整构建。
+- **上线风险**：低。
+- **回滚方案**：回退文档变更。
+- **是否需要我确认**：否。
+- **需要确认的问题**：无。
+
+### Task 7：抽取共享 option 校验 helper
+
+- **优先级**：P3
+- **关联问题**：R7
+- **目标**：降低 rich HTML 和 code-like mode option runtime validation 的重复，避免未来公共选项校验漂移。
+- **改动范围**：新增内部 helper（例如 `src/options-validation.ts`）或合适的现有模块；更新 `src/editor.ts`、`src/code-editor.ts`；保留现有错误消息语义。
+- **不包含的内容**：不改变 public API；不改变错误类型；不扩大选项集合。
+- **预期结果**：公共 DOM/string/boolean/function/textarea 校验只有一处实现；现有无效选项测试继续通过。
+- **验证方式**：`npm test`、`npm run build`。
+- **上线风险**：低。
+- **回滚方案**：恢复两个 editor 文件内的本地 validator。
+- **是否需要我确认**：否。
+- **需要确认的问题**：无。
+
+### Task 8：按触达区域小步拆分大型测试文件
+
+- **优先级**：P3
+- **关联问题**：R8
+- **目标**：降低 `test/editor.test.ts` 的维护成本，让同步、上传、dialog、toolbar 行为更容易定位。
+- **改动范围**：测试文件组织，必要时抽出测试 helper。
+- **不包含的内容**：不改生产代码；不改变测试语义；不追求一次性重排所有测试。
+- **预期结果**：后续改上传或同步时，只需阅读相应测试文件；review diff 更小。
+- **验证方式**：拆分前后运行 `npm test`；确认测试名称和覆盖场景保留。
+- **上线风险**：低。
+- **回滚方案**：恢复原测试文件组织。
+- **是否需要我确认**：否。
+- **需要确认的问题**：无。
 
 ## 6. 建议执行顺序
 
-1. Task 1：先实现 CodeMirror 公共模式自动同步 debounce，并用测试固定时序。
-2. Task 2：再更新 README 的同步语义说明，确保文档匹配最终代码行为。
+1. Task 1：先修正富文本图片选择 allowlist 边界，改动小、行为清晰、可快速测试。
+2. Task 2：再处理 CodeMirror 公共模式 debounce，用测试固定时序。
+3. Task 3：同步 README 的同步语义，并处理不存在的续接文档引用。
+4. Task 4：补强 CI，让后续任务更容易上线。
+5. Task 5：记录 raw HTML code mode 不做权限限制的决策。
+6. Task 6：保留 SVG 默认支持，并视需要强化服务端责任说明。
+7. Task 7：抽取共享 option validation，作为低风险维护性改进。
+8. Task 8：后续按触达区域拆分测试，避免纯重排造成 review 噪音。
 
 ## 7. 暂不建议处理的事项
 
-- 不建议重新拆分或大规模重构 `MoongladeEditor` / `MoongladeCodeEditor`；当前剩余问题不需要架构级改造。
-- 不建议替换 ProseMirror、CodeMirror 或 Prettier；当前问题可在现有技术栈内解决。
-- 不建议为本地 demo 补 SRI/CSP；维护者已确认 `demo/index.html` 不会公开部署。
-- 不建议收紧任意 class passthrough；维护者已确认这是设计选择。
-- 不建议盲目升级依赖；没有基于安全公告或明确收益的升级任务。
+- 不建议大规模拆分 `MoongladeEditor` 或重写 toolbar 架构；当前模块职责基本符合 AGENTS，主要问题可以小步修复。
+- 不建议替换 ProseMirror、CodeMirror 或 Prettier；现有需求和测试都围绕这些库建立。
+- 不建议盲目升级依赖；本轮未查询安全公告，也没有发现必须通过升级解决的问题。
+- 不建议把 raw HTML code mode 改成 sanitizer-backed rich HTML mode，也不建议新增 raw HTML mode 权限限制；维护者已确认不做该限制。
+- 不建议仅为本地 `demo/` 增加复杂 CSP/SRI 工作；既有记忆记录 `demo/index.html` 不公开部署。
+- 不建议在本仓实现服务端级别 SVG 内容净化或禁用 SVG 默认支持；维护者已确认允许上传 SVG，前端只能做初筛，真正安全边界在上传服务和静态文件响应策略。
 
 ## 8. 当前未确认问题
 
 暂无。
 
-已确认的长期上下文：
+已确认的长期上下文（来自既有记忆和 AGENTS）：
 
-- 允许运行 `npm test`、`npm run build` 做验证。
+- `dist/` 是生成物，日常开发不应手工编辑或提交。
+- Moonglade 主仓应消费预构建静态资源，不应新增前端构建流水线。
 - Markdown 图片上传 URL 策略应与富文本图片 URL 策略保持一致。
 - Markdown 图片默认允许扩展名应与富文本默认值保持一致。
 - CodeMirror 公共模式允许引入短 debounce。
 - `demo/index.html` 不会公开部署。
+- README 中缺失的旧续接文档引用应删除，而不是重新创建。
+- CI 测试覆盖应包含 PR / main 分支，不仅限 `release` 分支。
+- Raw HTML code mode 不需要新增“仅受信任管理员”限制。
+- `.svg` 默认允许上传应保留。
 
 ## 9. 后续执行注意事项
 
-- 不要编辑 `dist/`；如需验证 build，可以运行构建，但不要手工修改生成产物。
+- 本轮只完成分析和计划。后续执行任何代码、配置、测试或依赖修改前，应按任务独立处理。
+- 不要编辑 `dist/`；需要验证 release 产物时运行构建，但不要手工改生成文件。
+- 涉及同步时序的改动必须保留 `getHTML()` / `getValue()` 的立即读取语义，并清楚区分自动通知与显式 `syncToTextarea()`。
+- 涉及上传的改动必须同时考虑富文本和 Markdown 模式，避免两个上传入口规则漂移。
+- 涉及 raw HTML 和 SVG 的安全建议必须先确认主 Moonglade 的权限、上传和渲染策略，不要把未确认推测当成漏洞事实。
 - 每个任务应单独提交、单独验证、可独立回滚。
-- 改变 `onChange` 或 textarea 自动同步时序时，必须保留显式 `syncToTextarea()` 的立即语义。
-- 文档更新应跟随最终代码行为，不要提前记录尚未实现的同步策略。
-- 安全边界优先复用 `safety.ts` 和现有上传校验工具，不引入不必要的新依赖。
