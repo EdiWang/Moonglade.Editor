@@ -12,6 +12,8 @@
 - Task 3 / Task 4 验证方式：Markdown / workflow diff review；未重新运行测试或构建，因为本次只修改文档和 CI 配置。
 - Task 2 执行日期：2026-07-30
 - Task 2 验证命令：`npm test -- test/code-editor.test.ts`、`npm test`、`npm run build`。
+- Task 7 执行日期：2026-07-30
+- Task 7 验证命令：`npm test -- test/editor.test.ts test/code-editor.test.ts`、`npm test`、`npm run build`、最终再次 `npm test`。
 
 ## 2. 分析范围
 
@@ -44,7 +46,7 @@
 | R4 | P3 | 安全 / 集成边界（已确认） | `src/index.ts`、`src/code-editor.ts`、README / AGENTS raw HTML 说明 | `mode: 'html'` 是 raw HTML 代码模式，按设计保留文本 buffer，不经过 rich HTML schema 和 sanitizer。维护者已确认不需要在本仓对 raw HTML mode 增加“仅受信任管理员”限制。 | 本仓后续不应把 raw HTML mode 改成 sanitizer-backed rich HTML，也不应新增权限限制。raw HTML 渲染安全由主应用业务边界承担。 | `src/index.ts:38-44` 将 `mode: 'html'` 路由到 `createMoongladeCodeEditor(...)`；`src/code-editor.ts:88-109` 直接 `getValue()` / `setValue()` 文本 buffer；AGENTS 明确 “Code-like raw HTML mode ... must preserve the text buffer instead of routing content through the rich HTML schema”。维护者于 2026-07-30 确认“不用做这个限制”。 | 保持 raw HTML code mode 文本保留设计；文档只需说明它与 rich HTML mode 的 sanitizer 边界不同，不要提出权限限制作为待办。 |
 | R5 | P3 | 安全 / 集成边界（已确认） | `src/image-upload.ts`、README image upload 说明 | 默认允许 `.svg` 上传扩展名。维护者已确认允许上传 SVG。客户端仍只做扩展名/MIME 初筛，服务端仍需负责文件内容和响应策略。 | 不应移除 `.svg` 默认支持；后续只可强化服务端责任说明或测试，不应把禁用 SVG 作为默认改进方向。 | `src/image-upload.ts:9` 默认值包含 `.svg`；`src/image-upload.ts:14-18` 将 `image/svg+xml` 映射到 `.svg`；`README.md:167` 说明服务端仍需验证文件内容。维护者于 2026-07-30 确认“允许上传SVG”。 | 保留 `.svg` 默认支持；如更新文档，应强调服务端校验和安全响应仍是 host responsibility。 |
 | R6 | Done | 文档 / 可维护性 | `README.md` “For AI continuation” | 已完成。README 不再指向不存在的 `docs/CODEX_HANDOFF.md` 和旧 task 文件，改为引用 `AGENTS.md` 和 `docs/ai-review-plan.md`。 | 后续维护者或 AI 有可用的续接入口。 | 2026-07-30 执行 Task 3：删除缺失文档引用，并补充当前同步语义说明。 | 无后续待办。 |
-| R7 | P3 | 结构 / 可维护性 | `src/editor.ts`、`src/code-editor.ts` option validators | 富文本和代码模式各自复制了相似的 DOM / textarea / string / boolean / function option 校验函数。 | 当前不影响行为，但后续新增公共选项时容易出现错误信息或校验规则漂移。 | `src/editor.ts:669-720` 与 `src/code-editor.ts:367-420` 都定义 `assertHTMLElement`、`assertOptionalTextArea`、`assertOptionalString`、`assertBoolean`、`assertOptionalBoolean`、`assertOptionalFunction` 等。 | 在不改变错误语义的前提下抽出小型内部校验 helper；先加/保留现有无效选项测试。 |
+| R7 | Done | 结构 / 可维护性 | `src/options-validation.ts`、`src/editor.ts`、`src/code-editor.ts` option validators | 已完成。富文本和代码模式共享 DOM / textarea / string / boolean / function / string array option 校验 helper，各自只传入错误上下文。 | 公共选项运行时校验不再在两个 editor 文件中重复实现；后续新增公共选项时更不容易出现错误信息或规则漂移。 | 2026-07-30 执行 Task 7：新增 `src/options-validation.ts`，迁移 `src/editor.ts` 和 `src/code-editor.ts` 通用校验调用；保留 `codesample_languages`、`tabSize`、Markdown 上传配置等专属校验。验证 `npm test -- test/editor.test.ts test/code-editor.test.ts`、`npm test`、`npm run build`、最终再次 `npm test` 均通过。 | 无后续待办。 |
 | R8 | P3 | 结构 / 测试维护性 | `src/editor.ts`、`test/editor.test.ts` | `src/editor.ts` 和 `test/editor.test.ts` 都偏大。当前职责基本符合 AGENTS 中的模块划分，但继续增长会增加定位和 review 成本。 | 长期维护成本上升；大规模拆分本身有回归风险，不宜优先处理。 | 行数统计：`src/editor.ts` 约 662 行，`test/editor.test.ts` 约 1158 行；测试文件同时覆盖 toolbar、同步、source dialog、上传、销毁等多类行为。 | 仅在触及相关区域时小步拆分，例如按 sync / upload / dialog 切分测试文件；暂不做纯结构性大重构。 |
 
 ## 5. 分批次改进计划
@@ -84,7 +86,7 @@
 - **目标**：让文档准确说明 rich HTML 和 code-like modes 的 `getHTML()` / `getValue()` / `syncToTextarea()` / `onChange` 时序，并移除或修正不存在的续接文档路径。
 - **改动范围**：`README.md`，必要时 `docs/ai-review-plan.md` 或新增 `docs/tasks/...` 任务记录。
 - **不包含的内容**：不改运行时代码；不重新设计同步 API；不编辑 AGENTS.md，除非后续用户明确允许。
-- **预期结果**：已完成。README 不再指向不存在的文档；集成方知道 `getHTML()` / `getValue()` 和显式 `syncToTextarea()` 立即，rich HTML 自动同步 debounced，code-like modes 当前仍每次 CodeMirror 文档变化自动同步。
+- **预期结果**：已完成。README 不再指向不存在的文档；集成方知道 `getHTML()` / `getValue()` 和显式 `syncToTextarea()` 立即，rich HTML 和 code-like modes 自动同步均 debounced。
 - **验证方式**：Markdown diff review。
 - **上线风险**：低。
 - **回滚方案**：回退 README 文档变更。
@@ -134,17 +136,17 @@
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 
-### Task 7：抽取共享 option 校验 helper
+### Task 7：抽取共享 option 校验 helper（已完成）
 
 - **优先级**：P3
 - **关联问题**：R7
 - **目标**：降低 rich HTML 和 code-like mode option runtime validation 的重复，避免未来公共选项校验漂移。
 - **改动范围**：新增内部 helper（例如 `src/options-validation.ts`）或合适的现有模块；更新 `src/editor.ts`、`src/code-editor.ts`；保留现有错误消息语义。
 - **不包含的内容**：不改变 public API；不改变错误类型；不扩大选项集合。
-- **预期结果**：公共 DOM/string/boolean/function/textarea 校验只有一处实现；现有无效选项测试继续通过。
-- **验证方式**：`npm test`、`npm run build`。
+- **预期结果**：已完成。公共 DOM/string/boolean/function/textarea/string array 校验只有一处实现；现有无效选项测试继续通过。
+- **验证方式**：已执行 `npm test -- test/editor.test.ts test/code-editor.test.ts`、`npm test`、`npm run build`、最终再次 `npm test`，均通过。
 - **上线风险**：低。
-- **回滚方案**：恢复两个 editor 文件内的本地 validator。
+- **回滚方案**：移除 `src/options-validation.ts`，恢复两个 editor 文件内的本地 validator。
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 
@@ -170,7 +172,7 @@
 4. Task 4：已完成，CI 已覆盖 tests + build 以及 main/release PR。
 5. Task 5：记录 raw HTML code mode 不做权限限制的决策。
 6. Task 6：保留 SVG 默认支持，并视需要强化服务端责任说明。
-7. Task 7：抽取共享 option validation，作为低风险维护性改进。
+7. Task 7：已完成，共享 option validation 已抽取。
 8. Task 8：后续按触达区域拆分测试，避免纯重排造成 review 噪音。
 
 ## 7. 暂不建议处理的事项
@@ -202,6 +204,7 @@
 - Task 2 已完成：CodeMirror 公共模式自动同步已 debounce；`setValue()`、`getValue()`、显式 `syncToTextarea()` 的立即语义应保留。
 - Task 3 已完成：README 已记录 rich HTML 和 code-like modes 自动同步均 debounced。
 - Task 4 已完成：workflow 应继续在 build 前运行 `npm test`，并覆盖 `main` / `release` push 和 pull request。
+- Task 7 已完成：通用 option runtime validation 位于 `src/options-validation.ts`；编辑器专属校验继续留在对应模块。
 
 ## 9. 执行记录
 
@@ -211,6 +214,7 @@
 | 2026-07-30 | Task 3：同步 README 的同步语义和续接文档引用 | `README.md` 删除不存在的续接文档引用，改为 `AGENTS.md` 和 `docs/ai-review-plan.md`；补充 rich HTML / code-like modes 当前同步语义。 | Markdown diff review。 | 完成。 |
 | 2026-07-30 | Task 4：让 CI 覆盖单元测试 | `.github/workflows/build.yml` 增加 `main` push、`pull_request` 触发，并在 build 前运行 `npm test`。 | Workflow diff review；等待合并后 GitHub Actions 验证。 | 完成。 |
 | 2026-07-30 | Task 2：为 CodeMirror 公共模式增加自动同步 debounce | `src/code-editor.ts` 增加自动同步 debounce 和 flush；`test/code-editor.test.ts` 增加 fake timer 同步测试并调整 Markdown 图片上传 onChange 等待；`README.md` 更新同步语义。 | `npm test -- test/code-editor.test.ts`；`npm test`；`npm run build`。 | 通过。完整测试 6 个测试文件、117 个用例通过；构建和 size budget 通过。 |
+| 2026-07-30 | Task 7：抽取共享 option 校验 helper | 新增 `src/options-validation.ts`；`src/editor.ts` 和 `src/code-editor.ts` 改为复用通用 option 校验 helper，并保留各自专属校验。构建中发现并修正 `setReadOnly()`、`setLineWrapping()` 的旧签名调用。 | `npm test -- test/editor.test.ts test/code-editor.test.ts`；`npm test`；`npm run build`；最终再次 `npm test`。 | 通过。完整测试 6 个测试文件、117 个用例通过；构建和 size budget 通过。 |
 
 ## 10. 后续执行注意事项
 

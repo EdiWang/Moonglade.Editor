@@ -17,10 +17,20 @@ import {
   createMarkdownImageUploadExtension
 } from './markdown-image-upload';
 import { createMoongladeCodeEditorTheme } from './code-theme';
+import {
+  assertHTMLElement,
+  assertBoolean,
+  assertOptionalBoolean,
+  assertOptionalFunction,
+  assertOptionalString,
+  assertOptionalTextArea,
+  assertString
+} from './options-validation';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
 const DEFAULT_TAB_SIZE = 2;
 const TEXTAREA_SYNC_DEBOUNCE_MS = 200;
+const codeEditorValidationContext = 'Moonglade.Editor code editor';
 type StatusTone = 'info' | 'success' | 'error';
 
 interface ToolbarElements {
@@ -94,7 +104,7 @@ export class MoongladeCodeEditor {
 
   setValue(value: string): void {
     this.ensureActive();
-    assertString(value, 'value');
+    assertString(value, codeEditorValidationContext, 'value');
 
     const previousValue = this.getValue();
     this.view.dispatch({
@@ -131,7 +141,7 @@ export class MoongladeCodeEditor {
 
   setReadOnly(readOnly: boolean): void {
     this.ensureActive();
-    assertBoolean(readOnly, 'readOnly');
+    assertBoolean(readOnly, codeEditorValidationContext, 'readOnly');
 
     this.readOnly = readOnly;
     this.updateToolbarState();
@@ -145,7 +155,7 @@ export class MoongladeCodeEditor {
 
   setLineWrapping(enabled: boolean): void {
     this.ensureActive();
-    assertBoolean(enabled, 'enabled');
+    assertBoolean(enabled, codeEditorValidationContext, 'enabled');
 
     this.view.dispatch({
       effects: this.wrappingCompartment.reconfigure(enabled ? EditorView.lineWrapping : [])
@@ -392,55 +402,16 @@ function assertEditorOptions(options: MoongladeCodeEditorOptions): void {
     throw new TypeError('Moonglade.Editor code editor options must be an object.');
   }
 
-  assertHTMLElement(options.element, 'element');
-  assertOptionalTextArea(options.textarea, 'textarea');
-  assertOptionalString(options.content, 'content');
+  assertHTMLElement(options.element, codeEditorValidationContext, 'element');
+  assertOptionalTextArea(options.textarea, codeEditorValidationContext, 'textarea');
+  assertOptionalString(options.content, codeEditorValidationContext, 'content');
   assertMoongladeCodeLanguage(options.language);
-  assertOptionalString(options.height, 'height');
-  assertOptionalBoolean(options.lineWrapping, 'lineWrapping');
+  assertOptionalString(options.height, codeEditorValidationContext, 'height');
+  assertOptionalBoolean(options.lineWrapping, codeEditorValidationContext, 'lineWrapping');
   assertOptionalTabSize(options.tabSize);
-  assertOptionalBoolean(options.readOnly, 'readOnly');
+  assertOptionalBoolean(options.readOnly, codeEditorValidationContext, 'readOnly');
   assertOptionalMarkdownImageUploadOptions(options.markdownImageUpload);
-  assertOptionalFunction(options.onChange, 'onChange');
-}
-
-function assertHTMLElement(value: unknown, name: string): asserts value is HTMLElement {
-  if (typeof HTMLElement === 'undefined' || !(value instanceof HTMLElement)) {
-    throw new TypeError(`Moonglade.Editor code editor ${name} must be an HTMLElement.`);
-  }
-}
-
-function assertOptionalTextArea(value: unknown, name: string): asserts value is HTMLTextAreaElement | undefined {
-  if (
-    value !== undefined &&
-    (typeof HTMLTextAreaElement === 'undefined' || !(value instanceof HTMLTextAreaElement))
-  ) {
-    throw new TypeError(`Moonglade.Editor code editor ${name} must be an HTMLTextAreaElement.`);
-  }
-}
-
-function assertString(value: unknown, name: string): asserts value is string {
-  if (typeof value !== 'string') {
-    throw new TypeError(`Moonglade.Editor code editor ${name} must be a string.`);
-  }
-}
-
-function assertOptionalString(value: unknown, name: string): asserts value is string | undefined {
-  if (value !== undefined) {
-    assertString(value, name);
-  }
-}
-
-function assertBoolean(value: unknown, name: string): asserts value is boolean {
-  if (typeof value !== 'boolean') {
-    throw new TypeError(`Moonglade.Editor code editor ${name} must be a boolean.`);
-  }
-}
-
-function assertOptionalBoolean(value: unknown, name: string): asserts value is boolean | undefined {
-  if (value !== undefined) {
-    assertBoolean(value, name);
-  }
+  assertOptionalFunction(options.onChange, codeEditorValidationContext, 'onChange');
 }
 
 function assertOptionalTabSize(value: unknown): asserts value is number | undefined {
@@ -450,12 +421,6 @@ function assertOptionalTabSize(value: unknown): asserts value is number | undefi
 
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
     throw new TypeError('Moonglade.Editor code editor tabSize must be a positive integer.');
-  }
-}
-
-function assertOptionalFunction(value: unknown, name: string): asserts value is ((value: string) => void) | undefined {
-  if (value !== undefined && typeof value !== 'function') {
-    throw new TypeError(`Moonglade.Editor code editor ${name} must be a function.`);
   }
 }
 

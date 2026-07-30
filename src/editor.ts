@@ -28,12 +28,21 @@ import {
   normalizeAllowedImageExtensions,
   type MoongladeImageUploader
 } from './image-upload';
+import {
+  assertHTMLElement,
+  assertOptionalBoolean,
+  assertOptionalFunction,
+  assertOptionalString,
+  assertOptionalStringArray,
+  assertOptionalTextArea
+} from './options-validation';
 import { moongladeSchema } from './schema';
 import { closeColorDropdowns, closeTableDropdown, createToolbar, getFirstClipboardImageFile, getFirstImageFile, type ToolbarElements } from './toolbar';
 import { createUploadPreviewPlugin, UploadPreviewManager, type UploadPreviewHandle } from './upload-preview';
 
 const DEFAULT_EDITOR_HEIGHT = '500px';
 const TEXTAREA_SYNC_DEBOUNCE_MS = 200;
+const richHtmlEditorValidationContext = 'Moonglade.Editor rich HTML editor';
 const codeBlockSpellcheckPluginKey = new PluginKey<DecorationSet>('moonglade-code-block-spellcheck');
 
 export interface MoongladeEditorOptions {
@@ -654,71 +663,16 @@ function assertEditorOptions(options: MoongladeEditorOptions): void {
     throw new TypeError('Moonglade.Editor rich HTML editor options must be an object.');
   }
 
-  assertHTMLElement(options.element, 'element');
-  assertOptionalTextArea(options.textarea, 'textarea');
-  assertOptionalString(options.content, 'content');
-  assertOptionalString(options.height, 'height');
-  assertOptionalBoolean(options.spellcheck, 'spellcheck');
-  assertOptionalString(options.uploadUrl, 'uploadUrl');
-  assertOptionalFunction(options.uploadImage, 'uploadImage');
-  assertOptionalStringArray(options.allowedImageExtensions, 'allowedImageExtensions');
+  assertHTMLElement(options.element, richHtmlEditorValidationContext, 'element');
+  assertOptionalTextArea(options.textarea, richHtmlEditorValidationContext, 'textarea');
+  assertOptionalString(options.content, richHtmlEditorValidationContext, 'content');
+  assertOptionalString(options.height, richHtmlEditorValidationContext, 'height');
+  assertOptionalBoolean(options.spellcheck, richHtmlEditorValidationContext, 'spellcheck');
+  assertOptionalString(options.uploadUrl, richHtmlEditorValidationContext, 'uploadUrl');
+  assertOptionalFunction(options.uploadImage, richHtmlEditorValidationContext, 'uploadImage');
+  assertOptionalStringArray(options.allowedImageExtensions, richHtmlEditorValidationContext, 'allowedImageExtensions');
   assertOptionalCodeSampleLanguages(options.codesample_languages);
-  assertOptionalFunction(options.onChange, 'onChange');
-}
-
-function assertHTMLElement(value: unknown, name: string): asserts value is HTMLElement {
-  if (typeof HTMLElement === 'undefined' || !(value instanceof HTMLElement)) {
-    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be an HTMLElement.`);
-  }
-}
-
-function assertOptionalTextArea(value: unknown, name: string): asserts value is HTMLTextAreaElement | undefined {
-  if (
-    value !== undefined &&
-    (typeof HTMLTextAreaElement === 'undefined' || !(value instanceof HTMLTextAreaElement))
-  ) {
-    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be an HTMLTextAreaElement.`);
-  }
-}
-
-function assertString(value: unknown, name: string): asserts value is string {
-  if (typeof value !== 'string') {
-    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be a string.`);
-  }
-}
-
-function assertOptionalString(value: unknown, name: string): asserts value is string | undefined {
-  if (value !== undefined) {
-    assertString(value, name);
-  }
-}
-
-function assertBoolean(value: unknown, name: string): asserts value is boolean {
-  if (typeof value !== 'boolean') {
-    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be a boolean.`);
-  }
-}
-
-function assertOptionalBoolean(value: unknown, name: string): asserts value is boolean | undefined {
-  if (value !== undefined) {
-    assertBoolean(value, name);
-  }
-}
-
-function assertOptionalFunction(value: unknown, name: string): asserts value is Function | undefined {
-  if (value !== undefined && typeof value !== 'function') {
-    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be a function.`);
-  }
-}
-
-function assertOptionalStringArray(value: unknown, name: string): asserts value is readonly string[] | undefined {
-  if (value === undefined) {
-    return;
-  }
-
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
-    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be an array of strings.`);
-  }
+  assertOptionalFunction(options.onChange, richHtmlEditorValidationContext, 'onChange');
 }
 
 function assertOptionalCodeSampleLanguages(value: unknown): asserts value is readonly CodeSampleLanguageOption[] | undefined {
