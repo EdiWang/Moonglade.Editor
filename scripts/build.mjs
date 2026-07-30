@@ -1,9 +1,9 @@
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { watch as watchFile } from 'node:fs';
 import { context, build, transform } from 'esbuild';
 
 const watch = process.argv.includes('--watch');
-const styleSource = 'src/styles.css';
+const styleSources = ['src/styles.css', 'src/code-styles.css'];
 const styleOutput = 'dist/moonglade-editor.css';
 
 const shared = {
@@ -26,6 +26,12 @@ const builds = [
     outfile: 'dist/moonglade-editor.global.js',
     format: 'iife',
     globalName: 'MoongladeEditor'
+  },
+  {
+    ...shared,
+    entryPoints: ['src/code-formatter-runtime.ts'],
+    outfile: 'dist/moonglade-editor.formatter.js',
+    format: 'esm'
   }
 ];
 
@@ -35,16 +41,20 @@ await copyStyles({ minify: !watch });
 if (watch) {
   const contexts = await Promise.all(builds.map((options) => context(options)));
   await Promise.all(contexts.map((ctx) => ctx.watch()));
-  const styleWatcher = watchFile(styleSource, async () => {
-    try {
-      await copyStyles({ minify: false });
-      console.log(`Copied ${styleOutput}`);
-    } catch (error) {
-      console.error(error);
-    }
-  });
+  const styleWatchers = styleSources.map((styleSource) =>
+    watchFile(styleSource, async () => {
+      try {
+        await copyStyles({ minify: false });
+        console.log(`Copied ${styleOutput}`);
+      } catch (error) {
+        console.error(error);
+      }
+    })
+  );
   const stop = async () => {
-    styleWatcher.close();
+    for (const styleWatcher of styleWatchers) {
+      styleWatcher.close();
+    }
     await Promise.all(contexts.map((ctx) => ctx.dispose()));
     process.exit(0);
   };
@@ -60,12 +70,13 @@ if (watch) {
 }
 
 async function copyStyles({ minify }) {
+  const css = (await Promise.all(styleSources.map((styleSource) => readFile(styleSource, 'utf8')))).join('\n\n');
+
   if (!minify) {
-    await copyFile(styleSource, styleOutput);
+    await writeFile(styleOutput, css);
     return;
   }
 
-  const css = await readFile(styleSource, 'utf8');
   const result = await transform(css, {
     loader: 'css',
     minify: true,

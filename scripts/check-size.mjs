@@ -1,9 +1,10 @@
 import { stat } from 'node:fs/promises';
 
 const budgets = [
-  { file: 'dist/moonglade-editor.js', maxBytes: 825 * 1024 },
-  { file: 'dist/moonglade-editor.global.js', maxBytes: 850 * 1024 },
-  { file: 'dist/moonglade-editor.css', maxBytes: 17 * 1024 }
+  { file: 'dist/moonglade-editor.js', maxBytes: 1500 * 1024 },
+  { file: 'dist/moonglade-editor.global.js', maxBytes: 1530 * 1024 },
+  { file: 'dist/moonglade-editor.formatter.js', maxBytes: 1400 * 1024 },
+  { file: 'dist/moonglade-editor.css', maxBytes: 32 * 1024 }
 ];
 
 let failed = false;

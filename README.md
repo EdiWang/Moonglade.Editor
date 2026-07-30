@@ -1,16 +1,17 @@
 # Moonglade.Editor
 
-Standalone ProseMirror-based rich text editor for Moonglade.
+Standalone unified editor package for Moonglade.
 
 This repository keeps editor source code, dependencies, tests, and build tooling outside the main Moonglade ASP.NET Core application. Moonglade can consume compiled release assets without introducing a frontend build step into that repository.
 
 ## Project Overview
 
-Moonglade.Editor is a focused HTML editor for Moonglade blog posts. It replaces the need for a large third-party hosted editor in the HTML post workflow while preserving Moonglade's existing content model: posts are stored as HTML strings and rendered by the main application.
+Moonglade.Editor is a focused unified editor for Moonglade admin content. It uses ProseMirror for rich HTML blog post editing and CodeMirror for code-like Markdown, raw HTML, and CSS editing while preserving Moonglade's existing content model.
 
 The main use cases are:
 
-- Editing Moonglade HTML blog post content.
+- Editing Moonglade HTML blog post content in rich HTML mode.
+- Editing Markdown post content, raw HTML page content, page CSS, and site custom CSS in code-like modes.
 - Producing constrained, predictable HTML for Moonglade's raw HTML renderer.
 - Uploading and inserting post images through a configurable upload endpoint.
 - Shipping browser-ready JavaScript and CSS that Moonglade can reference as static assets.
@@ -36,7 +37,7 @@ Key concepts:
 - Code snippet languages are configured through `codesample_languages`, with values filtered by the same code language sanitizer used for stored HTML.
 - HTML source mode uses an internal CodeMirror 6 HTML editor for syntax highlighting, folding, and find/replace while keeping saved content routed through the same sanitizer-backed HTML boundary.
 
-Supported editing capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit with code highlighting, folding, and find/replace.
+Supported rich HTML capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit with code highlighting, folding, and find/replace. Supported code-like modes are `markdown`, `html`, and `css`, with search/replace, folding, syntax highlighting, formatting, textarea synchronization, and Markdown image paste/drop upload.
 
 ## Development
 
@@ -74,6 +75,7 @@ The build emits:
 
 - `dist/moonglade-editor.js` - bundled and minified ESM entry.
 - `dist/moonglade-editor.global.js` - bundled and minified browser global entry.
+- `dist/moonglade-editor.formatter.js` - lazy-loaded Prettier formatter asset for code-like modes.
 - `dist/moonglade-editor.css` - minified editor styles.
 - `dist/*.d.ts` - TypeScript declarations.
 
@@ -95,6 +97,7 @@ For Codex continuation, read:
 import { createMoongladeEditor } from '@moonglade/editor';
 
 const editor = createMoongladeEditor({
+  mode: 'rich-html',
   element: document.querySelector('#editor')!,
   textarea: document.querySelector('#content')!,
   height: '500px',
@@ -114,6 +117,31 @@ const editor = createMoongladeEditor({
 editor.setSpellcheck(false);
 editor.syncToTextarea();
 ```
+
+For Markdown, raw HTML, and CSS code-like modes, pass `mode`:
+
+```ts
+const editor = createMoongladeEditor({
+  mode: 'markdown',
+  element: document.querySelector('#markdown-content-editor')!,
+  textarea: document.querySelector('#content')!,
+  height: '500px',
+  lineWrapping: true,
+  tabSize: 2,
+  markdownImageUpload: {
+    upload: async (file) => ({
+      url: await uploadMarkdownImage(file)
+    })
+  }
+});
+
+editor.getValue();
+editor.setValue('# Updated');
+await editor.format();
+editor.syncToTextarea();
+```
+
+`createMoongladeCodeEditor(...)` remains exported as a compatibility factory during migration, but new host code should prefer `createMoongladeEditor({ mode })`.
 
 For custom image upload flows, pass `uploadImage` instead of `uploadUrl`:
 
@@ -168,6 +196,7 @@ Static asset option:
 <script src="/lib/moonglade-editor/moonglade-editor.global.js"></script>
 <script>
   const editor = MoongladeEditor.createMoongladeEditor({
+    mode: 'rich-html',
     element: document.querySelector('#editor'),
     textarea: document.querySelector('#post-content'),
     height: '500px',
@@ -186,6 +215,8 @@ Static asset option:
 </script>
 ```
 
+Copy `moonglade-editor.formatter.js` to the same folder as `moonglade-editor.js`; it is loaded only when code-like mode formatting is used.
+
 Package options that preserve the same contract:
 
 - Build this project for release, attach the generated `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` files to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
@@ -195,9 +226,9 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed HTML source mode, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, rich editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed code modes, consumption docs, tests, and build pipeline are present.
 
-Moonglade integration is planned follow-up work and should happen without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
+Moonglade consumes this package through checked-in static assets and should continue doing so without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 
 This is a single-package repository, not a monorepo.
 

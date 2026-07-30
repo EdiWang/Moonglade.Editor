@@ -4,9 +4,9 @@ This file is for AI agents and engineers working in this repository. Read it bef
 
 ## Project Purpose
 
-Moonglade.Editor is a standalone, first-party rich text editor package for Moonglade. It exists so the main Moonglade ASP.NET Core repository can consume prebuilt static editor assets without adding a frontend build pipeline to that application.
+Moonglade.Editor is a standalone, first-party unified editor package for Moonglade. It exists so the main Moonglade ASP.NET Core repository can consume prebuilt static editor assets without adding a frontend build pipeline to that application.
 
-The editor is built directly on ProseMirror and should stay focused on Moonglade's blog post editing needs:
+The package exposes one mode-based entry point while keeping two internal engines: ProseMirror for rich HTML post editing, and CodeMirror for code-like Markdown, raw HTML, and CSS editing. The rich HTML mode should stay focused on Moonglade's blog post editing needs:
 
 - Headings H1-H6 and paragraphs.
 - Bold, italic, underline, strikethrough.
@@ -20,6 +20,9 @@ The editor is built directly on ProseMirror and should stay focused on Moonglade
 - Bullet and numbered lists.
 - Text alignment.
 - HTML source view/edit.
+- Markdown post content.
+- Raw HTML page content.
+- Page-level CSS and site-level custom CSS.
 
 Do not add broad word-processor features unless explicitly requested. In particular, do not add Word/Office paste cleanup, emoji insertion, special-symbol insertion, line-height controls, paragraph-spacing controls, collaboration, or a media library by default.
 
@@ -42,15 +45,16 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 - Language: TypeScript.
 - TypeScript version: `^5.8.3` in `package.json`.
 - JavaScript target: ES2020 in `tsconfig.json` and `scripts/build.mjs`.
-- Runtime environment: Browser DOM through ProseMirror `EditorView`.
+- Runtime environment: Browser DOM through ProseMirror `EditorView` and CodeMirror 6 `EditorView`.
 - Node.js version: To be confirmed. No `engines` field is currently defined.
 - Package manager: npm, with `package-lock.json` committed.
-- Editor framework: ProseMirror core packages (`prosemirror-model`, `prosemirror-state`, `prosemirror-view`, commands, history, keymap, schema-list, tables, gapcursor).
-- Source editor framework: CodeMirror 6 packages for HTML source mode only (`@codemirror/lang-html`, language folding/highlighting, search, state, view, and commands).
+- Rich HTML editor framework: ProseMirror core packages (`prosemirror-model`, `prosemirror-state`, `prosemirror-view`, commands, history, keymap, schema-list, tables, gapcursor).
+- Code editor framework: CodeMirror 6 packages for HTML source mode plus public Markdown, raw HTML, and CSS modes (`@codemirror/lang-markdown`, `@codemirror/lang-html`, `@codemirror/lang-css`, autocomplete, language folding/highlighting, search, state, view, and commands).
 - UI framework: No SPA framework. Toolbar/dialogs are built with DOM APIs and Bootstrap-compatible classes.
 - Host UI dependencies: Bootstrap 5 CSS and Bootstrap Icons CSS are expected to be loaded by the consuming host page.
 - Theme behavior: Custom editor styles use Bootstrap CSS variables and should inherit the nearest host `data-bs-theme` scope. Keep theme switching host-owned; do not add editor-specific theme APIs unless explicitly requested.
 - Build tooling: esbuild via `scripts/build.mjs`; TypeScript declarations via `tsc -p tsconfig.build.json`.
+- Runtime formatting: Prettier standalone for Markdown, HTML, and CSS, lazy-loaded through `moonglade-editor.formatter.js`.
 - Testing: Vitest with jsdom.
 - Type checking: `npm run types`.
 - Bundle size checking: `scripts/check-size.mjs`, run by `npm run build`.
@@ -73,8 +77,12 @@ Important directories:
 
 Key source modules:
 
-- `src/index.ts` is the public package export surface.
+- `src/index.ts` is the public package export surface and mode-based factory.
 - `src/editor.ts` owns `MoongladeEditor`, `createMoongladeEditor(...)`, `EditorView` setup, plugins, toolbar wiring, textarea sync, source updates, and image paste/drop/upload integration.
+- `src/code-editor.ts` owns `MoongladeCodeEditor`, CodeMirror setup, the built-in code toolbar, textarea sync, language switching, read-only mode, line wrapping, and status UX.
+- `src/code-languages.ts` maps supported code-like modes to CodeMirror language extensions. Keep this list intentionally limited to Markdown, HTML, and CSS unless Moonglade gains a confirmed business need.
+- `src/code-formatter.ts` and `src/code-formatter-runtime.ts` own the lazy Prettier formatting boundary for Markdown, HTML, and CSS.
+- `src/markdown-image-upload.ts` owns Markdown-only image paste/drop upload handling.
 - `src/schema.ts` defines the ProseMirror schema, including alignment-aware paragraphs/headings that serialize Bootstrap text alignment classes, code block language attributes, table nodes, underline/strike marks, and constrained color marks.
 - `src/html.ts` is the HTML import/export boundary. It removes unsafe URL/event attributes before schema parsing, adds lazy loading to serialized images, and newline-formats block-oriented output for source editing.
 - `src/safety.ts` contains reusable sanitizers for links, image URLs, style color values, text alignment, code language names, and HTML class attributes.
@@ -83,14 +91,14 @@ Key source modules:
 - `src/toolbar.ts` assembles the framework-free toolbar and preserves the narrow toolbar export surface used by `src/editor.ts`.
 - `src/toolbar/` contains toolbar contracts, shared DOM helpers, and focused tool modules for history, block format selection, inline marks, colors, blocks/lists, alignment, insertion, tables, source mode, dialogs, and upload status. Add new toolbar tools by creating or extending a focused tool module and registering it from `src/toolbar.ts`.
 - `src/dialogs.ts` creates link, code snippet, image upload, and HTML source dialog shells.
-- `src/source-code-editor.ts` contains the internal CodeMirror-backed HTML source editor used by the source dialog, including syntax highlighting, line numbers, folding, and find/replace. Keep it internal; do not add a public code editor API here.
+- `src/source-code-editor.ts` contains the internal CodeMirror-backed HTML source editor used by the rich HTML source dialog, including syntax highlighting, line numbers, folding, and find/replace.
 - `src/editor-options.ts` contains supported block formats, color palette values, and code language options.
 - `src/image-upload.ts` contains upload URL and custom uploader integration.
-- `src/styles.css` contains editor styles copied to `dist/moonglade-editor.css` by the build.
+- `src/styles.css` contains rich HTML editor styles, and `src/code-styles.css` contains code editor styles. The build combines both into `dist/moonglade-editor.css`.
 
 Core flow:
 
-1. `createMoongladeEditor(options)` constructs `MoongladeEditor`.
+1. `createMoongladeEditor(options)` constructs a rich HTML editor by default, or a code editor when `mode` is `markdown`, `html`, or `css`.
 2. Initial content comes from `options.content`, `options.textarea.value`, or an empty string.
 3. `parseHtml(schema, html)` sanitizes incoming HTML attributes and parses content into the ProseMirror schema.
 4. `EditorView` applies commands and transactions.
@@ -103,6 +111,7 @@ Keep the main API centered on:
 
 ```ts
 const editor = createMoongladeEditor({
+  mode: 'rich-html',
   element,
   textarea,
   height: '500px',
@@ -125,6 +134,32 @@ editor.focus();
 editor.destroy();
 ```
 
+For code-like modes:
+
+```ts
+const editor = createMoongladeEditor({
+  mode: 'markdown',
+  element,
+  textarea,
+  height: '500px',
+  lineWrapping: true,
+  tabSize: 2,
+  markdownImageUpload: {
+    upload: async (file) => ({ url: await uploadMarkdownImage(file) })
+  },
+  onChange
+});
+
+editor.getValue();
+editor.setValue('# Updated');
+await editor.format();
+editor.syncToTextarea();
+editor.focus();
+editor.destroy();
+```
+
+The compatibility `createMoongladeCodeEditor(...)` export remains available during migration. New Moonglade integration code should use `createMoongladeEditor({ mode })`.
+
 `uploadImage` can replace `uploadUrl` for custom upload behavior. Uploaded images must return a safe URL through `{ src, alt?, title? }`.
 `allowedImageExtensions` constrains the client-side upload file picker, paste, and drag/drop flows. It defaults to `.jpg`, `.png`, `.webp`, and `.svg`; hosts can override it with case-insensitive extension strings with or without the leading dot. Server-side upload handlers must still validate file content and extension.
 `codesample_languages` configures the code snippet dialog language dropdown with `{ text, value }` entries. Values are normalized through the code language sanitizer before rendering and do not relax imported HTML safety rules.
@@ -137,7 +172,7 @@ Do not require Moonglade to understand ProseMirror JSON as the storage format un
 
 - Preserve the goal that Moonglade itself does not need npm, Vite, webpack, Rollup, or esbuild to run.
 - Prefer explicit schema definitions and commands over large editor frameworks.
-- Keep CodeMirror usage scoped to HTML source mode unless a future task explicitly expands that boundary.
+- Keep CodeMirror usage scoped to HTML source mode and the public Markdown, raw HTML, and CSS code-like modes.
 - Keep ProseMirror schema output compatible with Moonglade's existing public post renderer.
 - Treat HTML source mode and pasted/imported HTML as untrusted input that must pass through the schema and sanitizer.
 - Preserve safe URL handling for links and images. Reject script-like protocols.
@@ -163,8 +198,8 @@ Configuration files:
 - `tsconfig.json` - shared TypeScript compiler settings for source, tests, scripts, and Vitest config.
 - `tsconfig.build.json` - declaration-only TypeScript build output to `dist/`.
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
-- `scripts/build.mjs` - esbuild ESM/global bundles and CSS output; release builds are minified while `--watch` keeps readable output.
-- `scripts/check-size.mjs` - size budgets for generated JavaScript and CSS artifacts.
+- `scripts/build.mjs` - esbuild ESM/global bundles, lazy formatter bundle, and CSS output; release builds are minified while `--watch` keeps readable output.
+- `scripts/check-size.mjs` - size budgets for generated JavaScript, formatter JavaScript, and CSS artifacts.
 - `scripts/upload-test-server.mjs` - local Node.js static demo server and `POST /image` upload test endpoint.
 
 If environment variables are added later, document each name, purpose, whether it is required, and an example format. Do not document real secrets.
@@ -185,7 +220,7 @@ Command meanings:
 - `npm install` installs dependencies from `package-lock.json`.
 - `npm test` runs Vitest in jsdom.
 - `npm run types` emits declaration files only.
-- `npm run bundle` runs esbuild and writes minified JS/CSS release assets.
+- `npm run bundle` runs esbuild and writes minified JS/CSS release assets, including the lazy formatter asset.
 - `npm run size` checks configured bundle size budgets.
 - `npm run build` cleans `dist/`, emits declarations, bundles assets, and checks size budgets.
 - `npm run dev` watches source files and rebuilds bundles/styles.
@@ -198,19 +233,20 @@ For editor behavior changes:
 - Run `npm test`.
 - Run `npm run build`.
 - Add or update tests for HTML parsing/serialization when changing schema, marks, nodes, commands, or sanitization.
+- Add or update tests for public code mode behavior when changing editor lifecycle, language switching, formatting, upload insertion, or textarea sync.
 - Browser-check the demo for interaction-heavy changes such as selection, tables, dialogs, drag/drop, paste, image upload, and source mode.
 
 For documentation-only changes, running the full build is usually not required. Review Markdown diffs and keep commands accurate.
 
 ## Integration Notes
 
-Moonglade currently stores HTML post content as an HTML string and renders it as raw content. This editor must therefore produce constrained, predictable HTML and should not preserve arbitrary tags, event attributes, unsafe protocols, or unsafe styles.
+Moonglade currently stores HTML post content as an HTML string and renders it as raw content. Rich HTML mode must therefore produce constrained, predictable HTML and should not preserve arbitrary tags, event attributes, unsafe protocols, or unsafe styles. Code-like raw HTML mode is for page source editing and must preserve the text buffer instead of routing content through the rich HTML schema.
 
 The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets. The editor automatically follows the nearest Bootstrap `data-bs-theme` scope through CSS variables; host pages should own theme switching.
 
 Preferred integration models remain:
 
-- Build this project for release, attach generated `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
+- Build this project for release, attach generated `dist/moonglade-editor.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.js` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
 - Publish a NuGet package with static web assets once the editor API is stable.
 - Use a submodule/subtree only if the project later decides to track generated assets again.

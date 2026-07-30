@@ -13,16 +13,31 @@
       min-height: 100dvh;
     }
 
+    .demo-toolbar {
+      gap: .75rem;
+    }
+
+    .mode-switcher .btn {
+      min-width: 6.75rem;
+    }
+
     #editor {
       flex: 1 1 0;
       min-height: 16rem;
+    }
+
+    .sample-caption {
+      min-height: 1.5rem;
     }
   </style>
 </head>
 <body class="bg-body-tertiary">
   <main class="container py-4 demo-shell d-flex flex-column">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-      <h1 class="h3 mb-0">Moonglade.Editor Demo</h1>
+    <div class="d-flex flex-wrap align-items-start justify-content-between demo-toolbar mb-3">
+      <div>
+        <h1 class="h3 mb-1">Moonglade.Editor Demo</h1>
+        <div id="sample-caption" class="sample-caption text-body-secondary small"></div>
+      </div>
       <div class="d-flex flex-wrap gap-2">
         <button id="theme-toggle" type="button" class="btn btn-outline-secondary btn-sm" aria-pressed="false">
           <i class="bi bi-moon-stars me-1" aria-hidden="true"></i><span>Dark theme</span>
@@ -30,59 +45,166 @@
         <button id="spellcheck-toggle" type="button" class="btn btn-outline-secondary btn-sm" aria-pressed="true">Spellcheck on</button>
       </div>
     </div>
+
+    <div class="btn-group mode-switcher mb-3" role="group" aria-label="Editor mode">
+      <button type="button" class="btn btn-outline-primary active" data-mode="rich-html" aria-pressed="true">Rich HTML</button>
+      <button type="button" class="btn btn-outline-primary" data-mode="markdown" aria-pressed="false">Markdown</button>
+      <button type="button" class="btn btn-outline-primary" data-mode="html" aria-pressed="false">Raw HTML</button>
+      <button type="button" class="btn btn-outline-primary" data-mode="css" aria-pressed="false">CSS</button>
+    </div>
+
     <div id="editor" class="flex-grow-1"></div>
-    <textarea id="content" hidden><h1>Moonglade.Editor capability tour</h1><p>This default post shows a focused editing surface for Moonglade posts: <strong>bold</strong>, <em>italic</em>, <u>underline</u>, <s>strikethrough</s>, <span style="color: #0d6efd;">colored text</span>, and <span style="background-color: #ffc107;">highlighted text</span>. It also includes a <a href="https://github.com/EdiWang/Moonglade" title="Moonglade on GitHub">safe link</a> for link editing.</p><h2 style="text-align: center;">Centered heading level two</h2><p style="text-align: left;">Left aligned body text keeps the usual reading rhythm for long-form blog content.</p><p style="text-align: center;">Centered text is useful for short announcements, captions, or section breaks.</p><p style="text-align: right;">Right aligned text can support attribution lines or compact metadata.</p><p style="text-align: justify;">Justified text is represented with enough words to make the alignment visible across the editor width while still staying close to the kind of post content Moonglade is expected to publish.</p><h3>Lists and quotation</h3><ul><li><p>Bullet lists for quick notes and post outlines.</p></li><li><p>Nested styling still works with <strong>strong text</strong> and <span style="color: #198754;">palette colors</span>.</p></li></ul><ol><li><p>Numbered lists for ordered steps.</p></li><li><p>Each item remains plain, predictable HTML.</p></li></ol><blockquote><p>A focused editor should make common blog formatting feel natural without turning into a full word processor.</p></blockquote><hr><h3>Code snippet</h3><pre><code class="language-typescript">const publishPost = (title: string) =&gt; `Publishing ${title}`;
-console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3><table><tbody><tr><th><p>Capability</p></th><th><p>Demo content</p></th><th><p>Status</p></th></tr><tr><td><p>Formatting</p></td><td><p>Bold, italic, underline, strike, colors</p></td><td><p>Visible</p></td></tr><tr><td><p>Structure</p></td><td><p>Headings, lists, quote, rule, table</p></td><td><p>Visible</p></td></tr><tr><td><p>Source mode</p></td><td><p>Inspect and edit this sanitized HTML</p></td><td><p>Available</p></td></tr></tbody></table><h4>Heading level four</h4><p>Use this for subsections that need more depth than the main story flow.</p><h5>Heading level five</h5><p>Smaller headings can label compact notes or implementation details.</p><h6>Heading level six</h6><p>The smallest heading remains available for deeply nested post sections.</p></textarea>
+    <textarea id="content" hidden></textarea>
   </main>
 
   <script src="../dist/moonglade-editor.global.js"></script>
   <script>
-    const textarea = document.querySelector('#content');
+    const modeSamples = {
+      'rich-html': {
+        caption: 'ProseMirror rich HTML mode for normal blog post authoring.',
+        content: `<h1>Moonglade.Editor capability tour</h1><p>This rich HTML sample shows a focused editing surface for Moonglade posts: <strong>bold</strong>, <em>italic</em>, <u>underline</u>, <s>strikethrough</s>, <span style="color: #0d6efd;">colored text</span>, and <span style="background-color: #ffc107;">highlighted text</span>. It also includes a <a href="https://github.com/EdiWang/Moonglade" title="Moonglade on GitHub">safe link</a> for link editing.</p><h2 style="text-align: center;">Centered heading level two</h2><p style="text-align: left;">Left aligned body text keeps the usual reading rhythm for long-form blog content.</p><p style="text-align: center;">Centered text is useful for short announcements, captions, or section breaks.</p><p style="text-align: right;">Right aligned text can support attribution lines or compact metadata.</p><p style="text-align: justify;">Justified text is represented with enough words to make the alignment visible across the editor width while still staying close to the kind of post content Moonglade is expected to publish.</p><h3>Lists and quotation</h3><ul><li><p>Bullet lists for quick notes and post outlines.</p></li><li><p>Nested styling still works with <strong>strong text</strong> and <span style="color: #198754;">palette colors</span>.</p></li></ul><ol><li><p>Numbered lists for ordered steps.</p></li><li><p>Each item remains plain, predictable HTML.</p></li></ol><blockquote><p>A focused editor should make common blog formatting feel natural without turning into a full word processor.</p></blockquote><hr><h3>Code snippet</h3><pre><code class="language-typescript">const publishPost = (title: string) =&gt; \`Publishing \${title}\`;
+console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3><table><tbody><tr><th><p>Capability</p></th><th><p>Demo content</p></th><th><p>Status</p></th></tr><tr><td><p>Formatting</p></td><td><p>Bold, italic, underline, strike, colors</p></td><td><p>Visible</p></td></tr><tr><td><p>Structure</p></td><td><p>Headings, lists, quote, rule, table</p></td><td><p>Visible</p></td></tr><tr><td><p>Source mode</p></td><td><p>Inspect and edit this sanitized HTML</p></td><td><p>Available</p></td></tr></tbody></table>`
+      },
+      markdown: {
+        caption: 'CodeMirror Markdown mode for Markdown posts.',
+        content: `# Markdown post draft
 
+This sample is loaded when the demo switches to Markdown mode.
+
+- Write the article in plain Markdown.
+- Paste images into the editor when a host provides an upload handler.
+- Use fenced code blocks for technical posts.
+
+\`\`\`csharp
+public static string Slugify(string title) =>
+    title.Trim().ToLowerInvariant().Replace(" ", "-");
+\`\`\`
+
+> Markdown mode keeps the source text visible while still using the shared Moonglade.Editor package.`
+      },
+      html: {
+        caption: 'CodeMirror raw HTML mode for Pages content.',
+        content: `<section class="page-intro">
+  <h1>About This Blog</h1>
+  <p>This raw HTML sample mirrors the Pages editor scenario.</p>
+  <a class="btn btn-primary" href="/archive">Browse the archive</a>
+</section>
+
+<section class="feature-grid">
+  <article>
+    <h2>Writing</h2>
+    <p>Long-form notes, release posts, and engineering essays.</p>
+  </article>
+  <article>
+    <h2>Projects</h2>
+    <p>Open-source work and experiments that need a permanent page.</p>
+  </article>
+</section>`
+      },
+      css: {
+        caption: 'CodeMirror CSS mode for Pages CSS and custom theme CSS.',
+        content: `:root {
+  --accent-color1: #0d6efd;
+  --accent-color2: #20c997;
+}
+
+.page-intro {
+  border-left: 4px solid var(--accent-color1);
+  padding: 1rem 1.25rem;
+}
+
+.feature-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}`
+      }
+    };
+
+    const textarea = document.querySelector('#content');
+    const editorElement = document.querySelector('#editor');
+    const sampleCaption = document.querySelector('#sample-caption');
+    const modeButtons = Array.from(document.querySelectorAll('[data-mode]'));
     const themeToggle = document.querySelector('#theme-toggle');
     const themeIcon = themeToggle.querySelector('.bi');
     const themeLabel = themeToggle.querySelector('span');
     const spellcheckToggle = document.querySelector('#spellcheck-toggle');
-    const editor = MoongladeEditor.createMoongladeEditor({
-      element: document.querySelector('#editor'),
-      textarea,
-      height: 'auto',
-      spellcheck: true,
-      uploadUrl: '/image',
-      codesample_languages: [
-        { text: 'Bash', value: 'bash' },
-        { text: 'Bicep', value: 'bicep' },
-        { text: 'C#', value: 'csharp' },
-        { text: 'C', value: 'c' },
-        { text: 'C++', value: 'cpp' },
-        { text: 'CSS', value: 'css' },
-        { text: 'Dockerfile', value: 'dockerfile' },
-        { text: 'Go', value: 'go' },
-        { text: 'GraphQL', value: 'graphql' },
-        { text: 'HTML/XML', value: 'xml' },
-        { text: 'JavaScript', value: 'javascript' },
-        { text: 'Json', value: 'json' },
-        { text: 'Kotlin', value: 'kotlin' },
-        { text: 'Kusto', value: 'kusto' },
-        { text: 'LaTeX', value: 'latex' },
-        { text: 'Lua', value: 'lua' },
-        { text: 'Markdown', value: 'markdown' },
-        { text: 'Nginx', value: 'nginx' },
-        { text: 'PowerShell', value: 'powershell' },
-        { text: 'Plain Text', value: 'plaintext' },
-        { text: 'Puppet', value: 'puppet' },
-        { text: 'Python', value: 'python' },
-        { text: 'R', value: 'r' },
-        { text: 'Rust', value: 'rust' },
-        { text: 'SCSS', value: 'scss' },
-        { text: 'Shell', value: 'shell' },
-        { text: 'SQL', value: 'sql' },
-        { text: 'Swift', value: 'swift' },
-        { text: 'TypeScript', value: 'typescript' },
-        { text: 'WASM', value: 'wasm' },
-        { text: 'YAML', value: 'yaml' }
-      ]
-    });
+
+    let activeMode = 'rich-html';
+    let editor;
+
+    const codeSampleLanguages = [
+      { text: 'Bash', value: 'bash' },
+      { text: 'Bicep', value: 'bicep' },
+      { text: 'C#', value: 'csharp' },
+      { text: 'C', value: 'c' },
+      { text: 'C++', value: 'cpp' },
+      { text: 'CSS', value: 'css' },
+      { text: 'Dockerfile', value: 'dockerfile' },
+      { text: 'Go', value: 'go' },
+      { text: 'GraphQL', value: 'graphql' },
+      { text: 'HTML/XML', value: 'xml' },
+      { text: 'JavaScript', value: 'javascript' },
+      { text: 'Json', value: 'json' },
+      { text: 'Kotlin', value: 'kotlin' },
+      { text: 'Kusto', value: 'kusto' },
+      { text: 'LaTeX', value: 'latex' },
+      { text: 'Lua', value: 'lua' },
+      { text: 'Markdown', value: 'markdown' },
+      { text: 'Nginx', value: 'nginx' },
+      { text: 'PowerShell', value: 'powershell' },
+      { text: 'Plain Text', value: 'plaintext' },
+      { text: 'Puppet', value: 'puppet' },
+      { text: 'Python', value: 'python' },
+      { text: 'R', value: 'r' },
+      { text: 'Rust', value: 'rust' },
+      { text: 'SCSS', value: 'scss' },
+      { text: 'Shell', value: 'shell' },
+      { text: 'SQL', value: 'sql' },
+      { text: 'Swift', value: 'swift' },
+      { text: 'TypeScript', value: 'typescript' },
+      { text: 'WASM', value: 'wasm' },
+      { text: 'YAML', value: 'yaml' }
+    ];
+
+    function createEditor(mode) {
+      const sample = modeSamples[mode];
+      textarea.value = sample.content;
+      sampleCaption.textContent = sample.caption;
+      activeMode = mode;
+
+      if (editor) {
+        editor.destroy();
+        editor = undefined;
+      }
+
+      editorElement.replaceChildren();
+      editorElement.className = 'flex-grow-1';
+      editor = MoongladeEditor.createMoongladeEditor({
+        mode,
+        element: editorElement,
+        textarea,
+        content: sample.content,
+        height: 'auto',
+        lineWrapping: true,
+        tabSize: 2,
+        spellcheck: true,
+        uploadUrl: '/image',
+        codesample_languages: codeSampleLanguages
+      });
+
+      updateModeButtons();
+      updateSpellcheckToggle();
+      editor.focus();
+    }
+
+    function updateModeButtons() {
+      for (const button of modeButtons) {
+        const selected = button.dataset.mode === activeMode;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      }
+    }
 
     const getTheme = () => document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
     const setTheme = (theme) => {
@@ -95,6 +217,13 @@ console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3>
     };
 
     const updateSpellcheckToggle = () => {
+      const richHtmlMode = activeMode === 'rich-html';
+      spellcheckToggle.hidden = !richHtmlMode;
+
+      if (!richHtmlMode || typeof editor?.getSpellcheck !== 'function') {
+        return;
+      }
+
       const enabled = editor.getSpellcheck();
       spellcheckToggle.textContent = enabled ? 'Spellcheck on' : 'Spellcheck off';
       spellcheckToggle.classList.toggle('btn-outline-secondary', enabled);
@@ -102,17 +231,27 @@ console.log(publishPost('Moonglade.Editor'));</code></pre><h3>Table editing</h3>
       spellcheckToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
     };
 
+    for (const button of modeButtons) {
+      button.addEventListener('click', () => {
+        createEditor(button.dataset.mode);
+      });
+    }
+
     themeToggle.addEventListener('click', () => {
       setTheme(getTheme() === 'dark' ? 'light' : 'dark');
     });
 
     spellcheckToggle.addEventListener('click', () => {
+      if (typeof editor?.setSpellcheck !== 'function' || typeof editor?.getSpellcheck !== 'function') {
+        return;
+      }
+
       editor.setSpellcheck(!editor.getSpellcheck());
       updateSpellcheckToggle();
     });
 
     setTheme(getTheme());
-    updateSpellcheckToggle();
+    createEditor(activeMode);
   </script>
 </body>
 </html>
