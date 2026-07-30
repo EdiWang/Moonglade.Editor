@@ -25,7 +25,7 @@ The editor flow is intentionally narrow:
 3. HTML is parsed through the ProseMirror schema after unsafe URL attributes are removed or normalized.
 4. Users edit content through the ProseMirror `EditorView` and the framework-free toolbar.
 5. Commands update the document for headings, marks, links, colors, alignment, lists, blockquotes, horizontal rules, inline code, code blocks, tables, source mode, and images.
-6. On document changes, the editor serializes the ProseMirror document back to HTML and syncs it to the attached `textarea` and optional `onChange` callback.
+6. On rich HTML document changes, the editor serializes the ProseMirror document back to HTML and schedules automatic sync to the attached `textarea` and optional `onChange` callback.
 
 Key concepts:
 
@@ -81,15 +81,14 @@ The build emits:
 
 `npm run build` also checks bundle size budgets for the generated JavaScript and CSS files. The current budgets include the internal CodeMirror runtime used by HTML source mode.
 
-GitHub Actions runs the build workflow only for pushes to the `release` branch.
+GitHub Actions runs tests and the build workflow for pushes to `main` and `release`, and for pull requests targeting those branches.
 
 `dist/` is generated locally and ignored by Git so routine source changes do not include bundle churn in code review. For releases, build the package and attach the generated `dist` assets to the GitHub Release. When Moonglade needs an update, copy the release artifacts into the Moonglade application manually.
 
-For Codex continuation, read:
+For AI continuation, read:
 
 - `AGENTS.md`
-- `docs/CODEX_HANDOFF.md`
-- `docs/tasks/task-moonglade-editor-implementation.md`
+- `docs/ai-review-plan.md`
 
 ## Main API
 
@@ -143,6 +142,8 @@ editor.syncToTextarea();
 ```
 
 `createMoongladeCodeEditor(...)` remains exported as a compatibility factory during migration, but new host code should prefer `createMoongladeEditor({ mode })`.
+
+Content access is immediate through `getHTML()` in rich HTML mode and `getValue()` in code-like modes. Explicit `syncToTextarea()` writes immediately. Rich HTML automatic `textarea` and `onChange` sync is debounced after document edits, while code-like modes currently sync automatically on each CodeMirror document change.
 
 For custom image upload flows, pass `uploadImage` instead of `uploadUrl`:
 

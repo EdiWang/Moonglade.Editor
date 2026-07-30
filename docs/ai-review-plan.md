@@ -8,6 +8,8 @@
 - 本轮验证命令：未运行。按用户要求，本轮不执行测试、构建、lint、安装、格式化或生成文件命令。
 - Task 1 执行日期：2026-07-30
 - Task 1 验证命令：`npm test -- test/editor.test.ts`、`npm test`、`npm run build`。
+- Task 3 / Task 4 执行日期：2026-07-30
+- Task 3 / Task 4 验证方式：Markdown / workflow diff review；未重新运行测试或构建，因为本次只修改文档和 CI 配置。
 
 ## 2. 分析范围
 
@@ -27,7 +29,7 @@
 
 - 整体风险等级：中。
 - 没有发现 P0/P1 级别的确定性问题。HTML rich mode 的主要 XSS 边界集中在 `parseHtml(...)`、schema 和 `safety.ts`，并已有较多 sanitizer 回归测试。
-- 最值得优先处理的问题是：CodeMirror 公共模式自动同步缺少 debounce、CI 没有自动运行 `npm test`、README 中不存在的续接文档引用。
+- 最值得优先处理的问题是：CodeMirror 公共模式自动同步缺少 debounce，以及后续低风险维护性整理。
 - 不建议现在做大规模架构重写、替换 ProseMirror / CodeMirror / Prettier、盲目升级依赖或为本地 demo 增加复杂安全策略。
 
 ## 4. 问题列表
@@ -36,10 +38,10 @@
 |---|---|---|---|---|---|---|---|
 | R1 | Done | 稳定性 / 上传边界 | `src/toolbar/image-files.ts` `getFirstImageFile(...)`、`getFirstImageFileFromItems(...)`；`test/editor.test.ts` | 已完成。富文本图片选择阶段现在复用 `hasAllowedImageUploadExtension(...)`，不再先接受任意 `image/*`。新增多文件顺序测试，覆盖不允许 GIF 在前、允许 PNG 在后时仍上传 PNG。 | 默认不允许的图片不会阻断同一批文件里的允许图片；上传前最终校验仍保留。 | 2026-07-30 执行 Task 1：更新 `src/toolbar/image-files.ts`，调整默认不支持 GIF 测试，并新增 “uploads the first allowed image when earlier files are unsupported”。验证 `npm test -- test/editor.test.ts`、`npm test`、`npm run build` 均通过。 | 无后续待办。 |
 | R2 | P2 | 性能 / 集成行为 | `src/code-editor.ts` CodeMirror `onDocChanged` | CodeMirror 公共模式每次 `docChanged` 都立即 `update.state.doc.toString()`、写入 textarea 并触发 `onChange`。富文本模式已有 200ms 自动同步 debounce，两套模式同步时序不一致。 | 长 Markdown/HTML/CSS 文档连续输入时可能频繁读取完整 buffer 并通知宿主。引入 debounce 会改变自动 `onChange` 时机，需要测试锁定显式 API 仍立即。 | `src/code-editor.ts:242-244` 每次变化立即 `writeEditorValue(update.state.doc.toString(), true)`；富文本模式有 `TEXTAREA_SYNC_DEBOUNCE_MS = 200`、`scheduleTextareaSync()` 和 destroy flush，见 `src/editor.ts:36`、`src/editor.ts:250-258`、`src/editor.ts:270-278`、`src/editor.ts:395-399`。 | 为 CodeMirror 公共模式增加短 debounce；保留 `getValue()`、显式 `syncToTextarea()` 和 `destroy()` flush 的立即/最终一致语义。 |
-| R3 | P2 | 测试 / 上线保障 | `.github/workflows/build.yml` | GitHub Actions release workflow 只执行 `npm run build`，没有执行 `npm test`。 | sanitizer、上传、同步、toolbar 等回归只靠本地执行，release 分支自动化不能阻止测试退化。 | `.github/workflows/build.yml:27-30` 只有 `npm ci` 和 `npm run build`；`package.json:29` 定义了 `test: vitest run`；AGENTS 验证规则要求行为变更运行 `npm test`。 | 在 CI 中增加 `npm test`，并确认是否要扩展到 PR / main 分支。配置改动需单独提交。 |
+| R3 | Done | 测试 / 上线保障 | `.github/workflows/build.yml` | 已完成。GitHub Actions 现在覆盖 `main` / `release` push 和 pull request，并在 `npm run build` 前运行 `npm test`。 | release 和 PR 自动化能覆盖 Vitest 回归。 | 2026-07-30 执行 Task 4：workflow 增加 `main` push、`pull_request` 触发，以及 `Test` step。 | 无后续待办。 |
 | R4 | P3 | 安全 / 集成边界（已确认） | `src/index.ts`、`src/code-editor.ts`、README / AGENTS raw HTML 说明 | `mode: 'html'` 是 raw HTML 代码模式，按设计保留文本 buffer，不经过 rich HTML schema 和 sanitizer。维护者已确认不需要在本仓对 raw HTML mode 增加“仅受信任管理员”限制。 | 本仓后续不应把 raw HTML mode 改成 sanitizer-backed rich HTML，也不应新增权限限制。raw HTML 渲染安全由主应用业务边界承担。 | `src/index.ts:38-44` 将 `mode: 'html'` 路由到 `createMoongladeCodeEditor(...)`；`src/code-editor.ts:88-109` 直接 `getValue()` / `setValue()` 文本 buffer；AGENTS 明确 “Code-like raw HTML mode ... must preserve the text buffer instead of routing content through the rich HTML schema”。维护者于 2026-07-30 确认“不用做这个限制”。 | 保持 raw HTML code mode 文本保留设计；文档只需说明它与 rich HTML mode 的 sanitizer 边界不同，不要提出权限限制作为待办。 |
 | R5 | P3 | 安全 / 集成边界（已确认） | `src/image-upload.ts`、README image upload 说明 | 默认允许 `.svg` 上传扩展名。维护者已确认允许上传 SVG。客户端仍只做扩展名/MIME 初筛，服务端仍需负责文件内容和响应策略。 | 不应移除 `.svg` 默认支持；后续只可强化服务端责任说明或测试，不应把禁用 SVG 作为默认改进方向。 | `src/image-upload.ts:9` 默认值包含 `.svg`；`src/image-upload.ts:14-18` 将 `image/svg+xml` 映射到 `.svg`；`README.md:167` 说明服务端仍需验证文件内容。维护者于 2026-07-30 确认“允许上传SVG”。 | 保留 `.svg` 默认支持；如更新文档，应强调服务端校验和安全响应仍是 host responsibility。 |
-| R6 | P3 | 文档 / 可维护性 | `README.md` “For Codex continuation” | README 指向不存在的续接文档，后续维护者或 AI 会被误导。 | 影响上下文恢复和交接效率，不影响运行时。 | `README.md:88-92` 指向 `docs/CODEX_HANDOFF.md` 和 `docs/tasks/task-moonglade-editor-implementation.md`；当前 `docs/` 只有 `docs/ai-review-plan.md` 和 `docs/tasks/task-template.md`。 | 更新 README 到现有文件，或按实际需要创建新的任务/交接文档。 |
+| R6 | Done | 文档 / 可维护性 | `README.md` “For AI continuation” | 已完成。README 不再指向不存在的 `docs/CODEX_HANDOFF.md` 和旧 task 文件，改为引用 `AGENTS.md` 和 `docs/ai-review-plan.md`。 | 后续维护者或 AI 有可用的续接入口。 | 2026-07-30 执行 Task 3：删除缺失文档引用，并补充当前同步语义说明。 | 无后续待办。 |
 | R7 | P3 | 结构 / 可维护性 | `src/editor.ts`、`src/code-editor.ts` option validators | 富文本和代码模式各自复制了相似的 DOM / textarea / string / boolean / function option 校验函数。 | 当前不影响行为，但后续新增公共选项时容易出现错误信息或校验规则漂移。 | `src/editor.ts:669-720` 与 `src/code-editor.ts:367-420` 都定义 `assertHTMLElement`、`assertOptionalTextArea`、`assertOptionalString`、`assertBoolean`、`assertOptionalBoolean`、`assertOptionalFunction` 等。 | 在不改变错误语义的前提下抽出小型内部校验 helper；先加/保留现有无效选项测试。 |
 | R8 | P3 | 结构 / 测试维护性 | `src/editor.ts`、`test/editor.test.ts` | `src/editor.ts` 和 `test/editor.test.ts` 都偏大。当前职责基本符合 AGENTS 中的模块划分，但继续增长会增加定位和 review 成本。 | 长期维护成本上升；大规模拆分本身有回归风险，不宜优先处理。 | 行数统计：`src/editor.ts` 约 662 行，`test/editor.test.ts` 约 1158 行；测试文件同时覆盖 toolbar、同步、source dialog、上传、销毁等多类行为。 | 仅在触及相关区域时小步拆分，例如按 sync / upload / dialog 切分测试文件；暂不做纯结构性大重构。 |
 
@@ -73,30 +75,30 @@
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 
-### Task 3：同步 README 的同步语义和续接文档引用
+### Task 3：同步 README 的同步语义和续接文档引用（已完成）
 
 - **优先级**：P3
 - **关联问题**：R2、R6
 - **目标**：让文档准确说明 rich HTML 和 code-like modes 的 `getHTML()` / `getValue()` / `syncToTextarea()` / `onChange` 时序，并移除或修正不存在的续接文档路径。
 - **改动范围**：`README.md`，必要时 `docs/ai-review-plan.md` 或新增 `docs/tasks/...` 任务记录。
 - **不包含的内容**：不改运行时代码；不重新设计同步 API；不编辑 AGENTS.md，除非后续用户明确允许。
-- **预期结果**：README 不再指向不存在的文档；集成方知道自动同步可能 debounce，显式读取/同步的保证清楚。
-- **验证方式**：Markdown diff review；如果 Task 2 已完成，配合 `npm test` / `npm run build` 结果记录。
+- **预期结果**：已完成。README 不再指向不存在的文档；集成方知道 `getHTML()` / `getValue()` 和显式 `syncToTextarea()` 立即，rich HTML 自动同步 debounced，code-like modes 当前仍每次 CodeMirror 文档变化自动同步。
+- **验证方式**：Markdown diff review。
 - **上线风险**：低。
 - **回滚方案**：回退 README 文档变更。
-- **是否需要我确认**：是。
+- **是否需要我确认**：否。
 - **需要确认的问题**：无。维护者已确认删除 README 中缺失的 `docs/CODEX_HANDOFF.md` / `docs/tasks/task-moonglade-editor-implementation.md` 引用。
-- **依赖关系**：建议在 Task 2 后执行，避免文档提前描述尚未实现的 code mode debounce。
+- **依赖关系**：Task 2 尚未完成；README 当前按现有代码行为记录。Task 2 完成后如 code-like modes 自动同步改为 debounce，需要再次同步 README。
 
-### Task 4：让 CI 覆盖单元测试
+### Task 4：让 CI 覆盖单元测试（已完成）
 
 - **优先级**：P2
 - **关联问题**：R3
 - **目标**：让 release 自动化同时覆盖 Vitest 回归，降低发布时 sanitizer、上传和同步行为退化风险。
 - **改动范围**：`.github/workflows/build.yml`。
 - **不包含的内容**：不引入新的测试框架；不升级依赖；不改变 npm scripts。
-- **预期结果**：CI 在 `npm ci` 后运行 `npm test`，再运行 `npm run build`；维护者已确认需要覆盖 PR / main 分支，不仅限 `release` 分支。
-- **验证方式**：本地可先运行 `npm test` 和 `npm run build`；合并后观察 GitHub Actions。
+- **预期结果**：已完成。CI 在 `npm ci` 后运行 `npm test`，再运行 `npm run build`；覆盖 `main` / `release` push 和 pull request。
+- **验证方式**：workflow diff review；合并后观察 GitHub Actions。
 - **上线风险**：低到中。可能暴露已有 flaky 测试或增加 CI 时间。
 - **回滚方案**：移除新增 test step 或恢复原 workflow。
 - **是否需要我确认**：否。
@@ -162,8 +164,8 @@
 
 1. Task 1：先修正富文本图片选择 allowlist 边界，改动小、行为清晰、可快速测试。
 2. Task 2：再处理 CodeMirror 公共模式 debounce，用测试固定时序。
-3. Task 3：同步 README 的同步语义，并处理不存在的续接文档引用。
-4. Task 4：补强 CI，让后续任务更容易上线。
+3. Task 3：已完成，README 同步语义和续接文档引用已更新。
+4. Task 4：已完成，CI 已覆盖 tests + build 以及 main/release PR。
 5. Task 5：记录 raw HTML code mode 不做权限限制的决策。
 6. Task 6：保留 SVG 默认支持，并视需要强化服务端责任说明。
 7. Task 7：抽取共享 option validation，作为低风险维护性改进。
@@ -195,12 +197,16 @@
 - Raw HTML code mode 不需要新增“仅受信任管理员”限制。
 - `.svg` 默认允许上传应保留。
 - Task 1 已完成：富文本图片选择阶段应继续复用 `hasAllowedImageUploadExtension(...)`，不要恢复为任意 `image/*` 先选中再上传前拒绝。
+- Task 3 已完成：README 当前记录的是现有同步行为；Task 2 改变 code-like modes 同步时序后需要再次更新 README。
+- Task 4 已完成：workflow 应继续在 build 前运行 `npm test`，并覆盖 `main` / `release` push 和 pull request。
 
 ## 9. 执行记录
 
 | 日期 | 任务 | 改动 | 验证 | 结果 |
 |---|---|---|---|---|
 | 2026-07-30 | Task 1：修正富文本图片选择的 allowlist 边界 | `src/toolbar/image-files.ts` 改为选择阶段只接受 `hasAllowedImageUploadExtension(...)` 通过的文件；`test/editor.test.ts` 更新默认 GIF 行为测试并新增多文件顺序测试。 | `npm test -- test/editor.test.ts`；`npm test`；`npm run build`。 | 通过。完整测试 6 个测试文件、115 个用例通过；构建和 size budget 通过。 |
+| 2026-07-30 | Task 3：同步 README 的同步语义和续接文档引用 | `README.md` 删除不存在的续接文档引用，改为 `AGENTS.md` 和 `docs/ai-review-plan.md`；补充 rich HTML / code-like modes 当前同步语义。 | Markdown diff review。 | 完成。 |
+| 2026-07-30 | Task 4：让 CI 覆盖单元测试 | `.github/workflows/build.yml` 增加 `main` push、`pull_request` 触发，并在 build 前运行 `npm test`。 | Workflow diff review；等待合并后 GitHub Actions 验证。 | 完成。 |
 
 ## 10. 后续执行注意事项
 
