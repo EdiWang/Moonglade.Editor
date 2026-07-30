@@ -5,6 +5,7 @@ import type {
   MarkdownImageUploadResult,
   MoongladeCodeLanguage
 } from './code-editor-options';
+import { sanitizeImageUrl } from './safety';
 
 interface UploadAndInsertOptions {
   insertPosition?: number;
@@ -197,7 +198,15 @@ function assertUploadUrl(result: MarkdownImageUploadResult): MarkdownImageUpload
     throw new TypeError('Moonglade.Editor markdown image upload result url must be a non-empty string.');
   }
 
-  return result;
+  const url = sanitizeImageUrl(result.url);
+  if (!url) {
+    throw new TypeError('Moonglade.Editor markdown image upload result url must be a safe image URL.');
+  }
+
+  return {
+    ...result,
+    url
+  };
 }
 
 function getDefaultAltText(file: File): string {

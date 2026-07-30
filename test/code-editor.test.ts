@@ -205,7 +205,7 @@ describe('code editor public modes', () => {
     const upload = vi.fn(async (uploadedFile: File) => {
       expect(uploadedFile).toBe(file);
       return {
-        url: '/media/hello world.png',
+        url: '/media/hello(world).png',
         alt: 'Alt ] text',
         title: 'Title "quoted"'
       };
@@ -228,10 +228,10 @@ describe('code editor public modes', () => {
 
     await waitForExpectation(() => {
       expect(upload).toHaveBeenCalledWith(file);
-      expect(editor.getValue()).toBe('![Alt \\] text](</media/hello world.png> "Title \\"quoted\\"")');
+      expect(editor.getValue()).toBe('![Alt \\] text](</media/hello(world).png> "Title \\"quoted\\"")');
     });
 
-    expect(onChange).toHaveBeenLastCalledWith('![Alt \\] text](</media/hello world.png> "Title \\"quoted\\"")');
+    expect(onChange).toHaveBeenLastCalledWith('![Alt \\] text](</media/hello(world).png> "Title \\"quoted\\"")');
     expect(host.querySelector('.mg-code-editor-status')?.textContent).toBe('Inserted 1 image.');
 
     editor.destroy();
@@ -265,6 +265,41 @@ describe('code editor public modes', () => {
       expect(upload).toHaveBeenCalledWith(file);
       expect(onError).toHaveBeenCalledWith(uploadError, file);
       expect(host.querySelector('.mg-code-editor-status')?.textContent).toBe('Image upload failed: Upload rejected.');
+    });
+    expect(editor.getValue()).toBe('Existing');
+
+    editor.destroy();
+  });
+
+  it('rejects unsafe Markdown image upload result URLs', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const file = new File(['fake-image'], 'unsafe.png', { type: 'image/png' });
+    const upload = vi.fn(async () => ({
+      url: 'javascript:alert(1)',
+      alt: 'Unsafe'
+    }));
+    const onError = vi.fn();
+    const editor = createMoongladeCodeEditor({
+      element: host,
+      language: 'markdown',
+      content: 'Existing',
+      markdownImageUpload: {
+        upload,
+        onError
+      }
+    });
+
+    const event = createClipboardImagePasteEvent(file);
+    dispatchPasteToEditorContent(host, event);
+
+    expect(event.defaultPrevented).toBe(true);
+
+    await waitForExpectation(() => {
+      expect(upload).toHaveBeenCalledWith(file);
+      expect(onError).toHaveBeenCalledWith(expect.any(TypeError), file);
+      expect(host.querySelector('.mg-code-editor-status')?.textContent)
+        .toBe('Image upload failed: Moonglade.Editor markdown image upload result url must be a safe image URL.');
     });
     expect(editor.getValue()).toBe('Existing');
 

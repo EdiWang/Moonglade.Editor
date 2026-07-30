@@ -303,6 +303,7 @@ All questions were answered on 2026-07-18:
 - **是否需要我确认**：是。
 - **需要确认的问题**：Markdown 上传是否允许 `data:image/*` 或协议相对 URL？当前富文本图片 URL 均不允许，建议 Markdown 保持一致。
 - **依赖关系**：建议依赖 Task 1。
+- **状态**：DONE (2026-07-30). Maintainer confirmed Markdown image upload URLs should match rich HTML image URL policy. `src/markdown-image-upload.ts` now normalizes upload result URLs through `sanitizeImageUrl`, rejects unsafe upload result URLs with a clear `TypeError`, and preserves the sanitized URL for Markdown insertion. Added `test/code-editor.test.ts` coverage for unsafe upload result URLs and adjusted the success case to use a sanitizer-safe URL that still exercises Markdown angle-bracket URL formatting. Verified: `npm test` (6 files, 108 tests passing), `npm run build` (types, bundle, and size budgets passing).
 
 ### Task 3：减少 CodeMirror 文档变化时的重复完整文本读取
 
