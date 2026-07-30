@@ -79,6 +79,8 @@ export class MoongladeEditor {
   private destroyed = false;
 
   constructor(options: MoongladeEditorOptions) {
+    assertEditorOptions(options);
+
     this.schema = moongladeSchema;
     this.commands = createCommands(this.schema);
     this.alignmentCommands = {
@@ -645,6 +647,93 @@ export class MoongladeEditor {
 
 export function createMoongladeEditor(options: MoongladeEditorOptions): MoongladeEditor {
   return new MoongladeEditor(options);
+}
+
+function assertEditorOptions(options: MoongladeEditorOptions): void {
+  if (!options || typeof options !== 'object') {
+    throw new TypeError('Moonglade.Editor rich HTML editor options must be an object.');
+  }
+
+  assertHTMLElement(options.element, 'element');
+  assertOptionalTextArea(options.textarea, 'textarea');
+  assertOptionalString(options.content, 'content');
+  assertOptionalString(options.height, 'height');
+  assertOptionalBoolean(options.spellcheck, 'spellcheck');
+  assertOptionalString(options.uploadUrl, 'uploadUrl');
+  assertOptionalFunction(options.uploadImage, 'uploadImage');
+  assertOptionalStringArray(options.allowedImageExtensions, 'allowedImageExtensions');
+  assertOptionalCodeSampleLanguages(options.codesample_languages);
+  assertOptionalFunction(options.onChange, 'onChange');
+}
+
+function assertHTMLElement(value: unknown, name: string): asserts value is HTMLElement {
+  if (typeof HTMLElement === 'undefined' || !(value instanceof HTMLElement)) {
+    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be an HTMLElement.`);
+  }
+}
+
+function assertOptionalTextArea(value: unknown, name: string): asserts value is HTMLTextAreaElement | undefined {
+  if (
+    value !== undefined &&
+    (typeof HTMLTextAreaElement === 'undefined' || !(value instanceof HTMLTextAreaElement))
+  ) {
+    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be an HTMLTextAreaElement.`);
+  }
+}
+
+function assertString(value: unknown, name: string): asserts value is string {
+  if (typeof value !== 'string') {
+    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be a string.`);
+  }
+}
+
+function assertOptionalString(value: unknown, name: string): asserts value is string | undefined {
+  if (value !== undefined) {
+    assertString(value, name);
+  }
+}
+
+function assertBoolean(value: unknown, name: string): asserts value is boolean {
+  if (typeof value !== 'boolean') {
+    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be a boolean.`);
+  }
+}
+
+function assertOptionalBoolean(value: unknown, name: string): asserts value is boolean | undefined {
+  if (value !== undefined) {
+    assertBoolean(value, name);
+  }
+}
+
+function assertOptionalFunction(value: unknown, name: string): asserts value is Function | undefined {
+  if (value !== undefined && typeof value !== 'function') {
+    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be a function.`);
+  }
+}
+
+function assertOptionalStringArray(value: unknown, name: string): asserts value is readonly string[] | undefined {
+  if (value === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+    throw new TypeError(`Moonglade.Editor rich HTML editor ${name} must be an array of strings.`);
+  }
+}
+
+function assertOptionalCodeSampleLanguages(value: unknown): asserts value is readonly CodeSampleLanguageOption[] | undefined {
+  if (value === undefined) {
+    return;
+  }
+
+  if (!Array.isArray(value) || value.some((item) =>
+    !item ||
+    typeof item !== 'object' ||
+    typeof (item as Partial<CodeSampleLanguageOption>).text !== 'string' ||
+    typeof (item as Partial<CodeSampleLanguageOption>).value !== 'string'
+  )) {
+    throw new TypeError('Moonglade.Editor rich HTML editor codesample_languages must be an array of code sample language options.');
+  }
 }
 
 function setButtonState(button: HTMLButtonElement, active: boolean, enabled: boolean): void {

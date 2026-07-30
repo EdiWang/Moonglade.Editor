@@ -366,6 +366,7 @@ All questions were answered on 2026-07-18:
 - **是否需要我确认**：否。
 - **需要确认的问题**：无。
 - **依赖关系**：无。
+- **状态**：DONE (2026-07-30). `src/editor.ts` now validates rich HTML editor options before setup, matching the `MoongladeCodeEditor` style: `element`, `textarea`, `content`, `height`, `spellcheck`, `uploadUrl`, `uploadImage`, `allowedImageExtensions`, `codesample_languages`, and `onChange` now fail early with clear `TypeError` messages when the runtime shape is invalid. Added `test/editor.test.ts` coverage for invalid option shapes. Verified: `npm test` (6 files, 111 tests passing), `npm run build` (types, bundle, and size budgets passing), and real Chromium browser smoke test via Playwright CLI against `http://localhost:5173/demo/` confirming valid rich HTML options still create an editor and invalid `uploadImage` rejects clearly.
 
 ### Task 7：确认 Markdown 图片扩展名 allowlist 策略
 
