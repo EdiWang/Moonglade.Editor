@@ -1234,7 +1234,7 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
-  it('rejects unsupported image upload extensions by default', () => {
+  it('ignores unsupported image upload extensions by default', () => {
     const uploadImage = vi.fn(async () => ({
       src: '/media/animation.gif'
     }));
@@ -1257,8 +1257,49 @@ describe('editor toolbar', () => {
     const uploadStatus = host.querySelector('.mg-editor-upload-status') as HTMLDivElement;
     expect(uploadImage).not.toHaveBeenCalled();
     expect(editor.getHTML()).toBe('<p>Hello</p>');
-    expect(uploadStatus.hidden).toBe(false);
-    expect(uploadStatus.textContent).toBe('Image uploads only support .jpg, .png, .webp, .svg.');
+    expect(uploadStatus.hidden).toBe(true);
+    expect(uploadStatus.textContent).toBe('');
+
+    editor.destroy();
+  });
+
+  it('uploads the first allowed image when earlier files are unsupported', async () => {
+    const unsupportedFile = new File(['fake-image'], 'animation.gif', { type: 'image/gif' });
+    const allowedFile = new File(['fake-image'], 'photo.png', { type: 'image/png' });
+    const uploadImage = vi.fn(async (uploadedFile: File) => {
+      expect(uploadedFile).toBe(allowedFile);
+      return {
+        src: '/media/photo.png',
+        alt: 'Photo'
+      };
+    });
+
+    const host = document.createElement('div');
+    const editor = createMoongladeEditor({
+      element: host,
+      content: '<p>Hello</p>',
+      uploadImage
+    });
+    const input = host.querySelector('input[type="file"]') as HTMLInputElement;
+
+    editor.run((state, dispatch) => {
+      dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, 6)));
+      return true;
+    });
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [unsupportedFile, allowedFile]
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await waitForExpectation(() => {
+      expect(uploadImage).toHaveBeenCalledWith(allowedFile);
+      expect(editor.getHTML()).toContain('<img');
+    });
+
+    expect(uploadImage).toHaveBeenCalledTimes(1);
+    expect(editor.getHTML()).toBe('<p>Hello<img src="/media/photo.png" alt="Photo" loading="lazy"></p>');
 
     editor.destroy();
   });

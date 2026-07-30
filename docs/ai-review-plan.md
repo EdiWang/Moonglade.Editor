@@ -1,11 +1,13 @@
 # AI 代码审查与改进计划
 
-本文件用于记录当前仍需要处理的代码审查问题和后续执行计划。它是本仓库当前适合长期保留的 AI 记忆文件；本轮没有修改业务代码、配置、测试或依赖文件。
+本文件用于记录当前仍需要处理的代码审查问题和后续执行计划。它是本仓库当前适合长期保留的 AI 记忆文件。
 
 ## 1. 分析日期
 
 - 本轮审查日期：2026-07-30
 - 本轮验证命令：未运行。按用户要求，本轮不执行测试、构建、lint、安装、格式化或生成文件命令。
+- Task 1 执行日期：2026-07-30
+- Task 1 验证命令：`npm test -- test/editor.test.ts`、`npm test`、`npm run build`。
 
 ## 2. 分析范围
 
@@ -25,14 +27,14 @@
 
 - 整体风险等级：中。
 - 没有发现 P0/P1 级别的确定性问题。HTML rich mode 的主要 XSS 边界集中在 `parseHtml(...)`、schema 和 `safety.ts`，并已有较多 sanitizer 回归测试。
-- 最值得优先处理的问题是：富文本上传文件选择的 allowlist 边界、CodeMirror 公共模式自动同步缺少 debounce、CI 没有自动运行 `npm test`、README 中不存在的续接文档引用。
+- 最值得优先处理的问题是：CodeMirror 公共模式自动同步缺少 debounce、CI 没有自动运行 `npm test`、README 中不存在的续接文档引用。
 - 不建议现在做大规模架构重写、替换 ProseMirror / CodeMirror / Prettier、盲目升级依赖或为本地 demo 增加复杂安全策略。
 
 ## 4. 问题列表
 
 | ID | 优先级 | 类型 | 位置 | 问题描述 | 影响 | 证据 | 建议方向 |
 |---|---|---|---|---|---|---|---|
-| R1 | P2 | 稳定性 / 上传边界 | `src/toolbar/image-files.ts` `getFirstImageFile(...)`、`getFirstImageFileFromItems(...)` | 富文本图片选择会先接受任意 `image/*` MIME，再在上传前由 `hasAllowedImageUploadExtension(...)` 拒绝。单个不支持文件会被正确拦截，但多文件时若第一个是默认不允许的 `image/gif`、后面是允许的 `.png`，当前逻辑会选中 GIF 并报错，忽略后面的允许文件。 | 上传不会越过最终校验，但用户可能看到错误且无法按预期插入同一批文件里的允许图片。 | `src/toolbar/image-files.ts:3-5` 使用 `file.type.startsWith('image/') || hasAllowedImageUploadExtension(...)`；最终上传前仍在 `src/editor.ts:347-350` 校验并拒绝。现有 `test/editor.test.ts:1237-1263` 只覆盖单个 GIF 被拒绝。 | 让富文本文件选择阶段与最终上传校验使用同一 allowlist 规则；新增多文件顺序测试。 |
+| R1 | Done | 稳定性 / 上传边界 | `src/toolbar/image-files.ts` `getFirstImageFile(...)`、`getFirstImageFileFromItems(...)`；`test/editor.test.ts` | 已完成。富文本图片选择阶段现在复用 `hasAllowedImageUploadExtension(...)`，不再先接受任意 `image/*`。新增多文件顺序测试，覆盖不允许 GIF 在前、允许 PNG 在后时仍上传 PNG。 | 默认不允许的图片不会阻断同一批文件里的允许图片；上传前最终校验仍保留。 | 2026-07-30 执行 Task 1：更新 `src/toolbar/image-files.ts`，调整默认不支持 GIF 测试，并新增 “uploads the first allowed image when earlier files are unsupported”。验证 `npm test -- test/editor.test.ts`、`npm test`、`npm run build` 均通过。 | 无后续待办。 |
 | R2 | P2 | 性能 / 集成行为 | `src/code-editor.ts` CodeMirror `onDocChanged` | CodeMirror 公共模式每次 `docChanged` 都立即 `update.state.doc.toString()`、写入 textarea 并触发 `onChange`。富文本模式已有 200ms 自动同步 debounce，两套模式同步时序不一致。 | 长 Markdown/HTML/CSS 文档连续输入时可能频繁读取完整 buffer 并通知宿主。引入 debounce 会改变自动 `onChange` 时机，需要测试锁定显式 API 仍立即。 | `src/code-editor.ts:242-244` 每次变化立即 `writeEditorValue(update.state.doc.toString(), true)`；富文本模式有 `TEXTAREA_SYNC_DEBOUNCE_MS = 200`、`scheduleTextareaSync()` 和 destroy flush，见 `src/editor.ts:36`、`src/editor.ts:250-258`、`src/editor.ts:270-278`、`src/editor.ts:395-399`。 | 为 CodeMirror 公共模式增加短 debounce；保留 `getValue()`、显式 `syncToTextarea()` 和 `destroy()` flush 的立即/最终一致语义。 |
 | R3 | P2 | 测试 / 上线保障 | `.github/workflows/build.yml` | GitHub Actions release workflow 只执行 `npm run build`，没有执行 `npm test`。 | sanitizer、上传、同步、toolbar 等回归只靠本地执行，release 分支自动化不能阻止测试退化。 | `.github/workflows/build.yml:27-30` 只有 `npm ci` 和 `npm run build`；`package.json:29` 定义了 `test: vitest run`；AGENTS 验证规则要求行为变更运行 `npm test`。 | 在 CI 中增加 `npm test`，并确认是否要扩展到 PR / main 分支。配置改动需单独提交。 |
 | R4 | P3 | 安全 / 集成边界（已确认） | `src/index.ts`、`src/code-editor.ts`、README / AGENTS raw HTML 说明 | `mode: 'html'` 是 raw HTML 代码模式，按设计保留文本 buffer，不经过 rich HTML schema 和 sanitizer。维护者已确认不需要在本仓对 raw HTML mode 增加“仅受信任管理员”限制。 | 本仓后续不应把 raw HTML mode 改成 sanitizer-backed rich HTML，也不应新增权限限制。raw HTML 渲染安全由主应用业务边界承担。 | `src/index.ts:38-44` 将 `mode: 'html'` 路由到 `createMoongladeCodeEditor(...)`；`src/code-editor.ts:88-109` 直接 `getValue()` / `setValue()` 文本 buffer；AGENTS 明确 “Code-like raw HTML mode ... must preserve the text buffer instead of routing content through the rich HTML schema”。维护者于 2026-07-30 确认“不用做这个限制”。 | 保持 raw HTML code mode 文本保留设计；文档只需说明它与 rich HTML mode 的 sanitizer 边界不同，不要提出权限限制作为待办。 |
@@ -43,15 +45,15 @@
 
 ## 5. 分批次改进计划
 
-### Task 1：修正富文本图片选择的 allowlist 边界
+### Task 1：修正富文本图片选择的 allowlist 边界（已完成）
 
 - **优先级**：P2
 - **关联问题**：R1
 - **目标**：让文件选择阶段只选择当前配置允许的图片，避免多文件场景中不支持图片阻断后续允许图片。
 - **改动范围**：`src/toolbar/image-files.ts`、`test/editor.test.ts` 或新增上传相关测试文件。
 - **不包含的内容**：不改变 `allowedImageExtensions` 默认值；不改变 `uploadImage` / `uploadUrl` API；不引入服务端校验逻辑。
-- **预期结果**：默认配置下 GIF 不会被选为待上传文件；同一批文件中后续 `.jpg` / `.png` / `.webp` / `.svg` 仍可被选择并上传；无文件名但 MIME 可映射到允许扩展名的剪贴板图片仍可工作。
-- **验证方式**：新增/调整 Vitest：单个不允许文件被忽略或显示既定提示；不允许文件在前、允许文件在后时选择允许文件；无文件名 `image/png` 剪贴板图片仍上传。执行 `npm test` 和 `npm run build`。
+- **预期结果**：已完成。默认配置下 GIF 不会被选为待上传文件；同一批文件中后续 `.jpg` / `.png` / `.webp` / `.svg` 仍可被选择并上传；无文件名但 MIME 可映射到允许扩展名的剪贴板图片仍可工作。
+- **验证方式**：已执行 `npm test -- test/editor.test.ts`、`npm test`、`npm run build`，均通过。
 - **上线风险**：低。
 - **回滚方案**：恢复 `getFirstImageFile(...)` / `getFirstImageFileFromItems(...)` 当前的 `image/* || allowlist` 判断。
 - **是否需要我确认**：否。
@@ -192,8 +194,15 @@
 - CI 测试覆盖应包含 PR / main 分支，不仅限 `release` 分支。
 - Raw HTML code mode 不需要新增“仅受信任管理员”限制。
 - `.svg` 默认允许上传应保留。
+- Task 1 已完成：富文本图片选择阶段应继续复用 `hasAllowedImageUploadExtension(...)`，不要恢复为任意 `image/*` 先选中再上传前拒绝。
 
-## 9. 后续执行注意事项
+## 9. 执行记录
+
+| 日期 | 任务 | 改动 | 验证 | 结果 |
+|---|---|---|---|---|
+| 2026-07-30 | Task 1：修正富文本图片选择的 allowlist 边界 | `src/toolbar/image-files.ts` 改为选择阶段只接受 `hasAllowedImageUploadExtension(...)` 通过的文件；`test/editor.test.ts` 更新默认 GIF 行为测试并新增多文件顺序测试。 | `npm test -- test/editor.test.ts`；`npm test`；`npm run build`。 | 通过。完整测试 6 个测试文件、115 个用例通过；构建和 size budget 通过。 |
+
+## 10. 后续执行注意事项
 
 - 本轮只完成分析和计划。后续执行任何代码、配置、测试或依赖修改前，应按任务独立处理。
 - 不要编辑 `dist/`；需要验证 release 产物时运行构建，但不要手工改生成文件。

@@ -1,7 +1,7 @@
 import { hasAllowedImageUploadExtension } from '../image-upload';
 
 export function getFirstImageFile(files: FileList | File[] | null | undefined, allowedImageExtensions: readonly string[]): File | null {
-  return Array.from(files ?? []).find((file) => file.type.startsWith('image/') || hasAllowedImageUploadExtension(file, allowedImageExtensions)) ?? null;
+  return Array.from(files ?? []).find((file) => hasAllowedImageUploadExtension(file, allowedImageExtensions)) ?? null;
 }
 
 export function getFirstClipboardImageFile(clipboardData: DataTransfer | null | undefined, allowedImageExtensions: readonly string[]): File | null {
@@ -20,7 +20,7 @@ function getFirstImageFileFromItems(items: DataTransferItemList | null | undefin
       continue;
     }
 
-    if (file.type.startsWith('image/') || hasAllowedImageUploadExtension(file, allowedImageExtensions)) {
+    if (hasAllowedImageUploadExtension(file, allowedImageExtensions)) {
       return file;
     }
   }
