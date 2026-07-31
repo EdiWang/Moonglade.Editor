@@ -14,6 +14,7 @@ Moonglade.Editor already builds browser-ready assets under `dist/`. The main Moo
 - Add a deterministic local package script that builds `dist/`, stages only browser assets, and runs `dotnet pack`.
 - Document the NuGet consumption path and package command.
 - Keep the NuGet version synchronized from `package.json` only.
+- Add release branch GitHub Actions publishing for the NuGet package.
 - Keep generated build output ignored by Git.
 
 ## Out of Scope
@@ -50,6 +51,7 @@ NuGet static asset packaging is implemented and verified. The package now target
 | 2026-07-31 | Temporary ASP.NET Core `net10.0` app restore/build with local package source and isolated `NUGET_PACKAGES` | Passed | Consumer app restored and built with `Moonglade.Editor.StaticAssets` 0.5.0 from the newly generated package. |
 | 2026-07-31 | Consumer `staticwebassets` manifest inspection | Passed | Manifest exposes `_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.global.js`, CSS, ESM JS, formatter JS, and source maps. |
 | 2026-07-31 | Direct `dotnet pack Moonglade.Editor.StaticAssets.csproj` without `npm run pack:nuget` | Passed | Command failed intentionally with the package.json single-version-source error. |
+| 2026-07-31 | GitHub Actions release branch NuGet publishing workflow review | Passed | `publish-nuget` job is guarded to push events on `refs/heads/release`, installs .NET 10, runs `npm run pack:nuget`, and pushes with `NUGET_API_KEY`. |
 
 ## Issues and Resolutions
 
@@ -84,7 +86,6 @@ NuGet static asset packaging is implemented and verified. The package now target
 ## Follow-ups
 
 - Decide where to publish the NuGet package.
-- Add CI publishing once the package feed and credentials are confirmed.
 - Update the main Moonglade repository to reference `Moonglade.Editor.StaticAssets` and the `_content/...` URLs.
 
 ## Notes

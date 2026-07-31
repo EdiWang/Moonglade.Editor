@@ -88,6 +88,8 @@ GitHub Actions runs tests and the build workflow for pushes to `main` and `relea
 
 `dist/` and the NuGet staging files under `wwwroot/moonglade-editor/` are generated locally and ignored by Git so routine source changes do not include bundle churn in code review. For releases, prefer publishing `Moonglade.Editor.StaticAssets` as a NuGet package. GitHub Release assets can still be attached as a manual fallback.
 
+Pushes to the `release` branch also pack and publish `Moonglade.Editor.StaticAssets` to NuGet. Configure the GitHub Actions repository secret `NUGET_API_KEY` with a NuGet API key before using the release workflow.
+
 For AI continuation, read:
 
 - `AGENTS.md`

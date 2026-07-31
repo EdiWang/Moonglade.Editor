@@ -203,6 +203,7 @@ Configuration files:
 - `tsconfig.json` - shared TypeScript compiler settings for source, tests, scripts, and Vitest config.
 - `tsconfig.build.json` - declaration-only TypeScript build output to `dist/`.
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
+- `.github/workflows/build.yml` - CI workflow for tests/builds on `main` and `release`, plus NuGet publishing on release branch pushes.
 - `scripts/build.mjs` - esbuild ESM/global bundles, lazy formatter bundle, and CSS output; release builds are minified while `--watch` keeps readable output.
 - `scripts/check-size.mjs` - size budgets for generated JavaScript, formatter JavaScript, and CSS artifacts.
 - `scripts/pack-nuget.mjs` - builds `dist/`, stages browser assets under `wwwroot/moonglade-editor/`, and runs `dotnet pack` for `Moonglade.Editor.StaticAssets`.
@@ -210,6 +211,10 @@ Configuration files:
 - `scripts/upload-test-server.mjs` - local Node.js static demo server and `POST /image` upload test endpoint.
 
 If environment variables are added later, document each name, purpose, whether it is required, and an example format. Do not document real secrets.
+
+GitHub Actions secrets:
+
+- `NUGET_API_KEY` - Required only for `release` branch NuGet publishing. Store a NuGet API key with permission to push `Moonglade.Editor.StaticAssets`.
 
 ## Common Commands
 
