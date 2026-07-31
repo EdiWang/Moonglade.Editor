@@ -1,5 +1,9 @@
 node_modules/
 dist/
+artifacts/
+bin/
+obj/
+wwwroot/moonglade-editor/
 coverage/
 .vite/
 output/

@@ -47,6 +47,7 @@ Configured commands:
 npm install
 npm test
 npm run build
+npm run pack:nuget
 npm run dev
 npm run demo:upload
 npm run size
@@ -81,9 +82,11 @@ The build emits:
 
 `npm run build` also checks bundle size budgets for the generated JavaScript and CSS files. The current budgets include the internal CodeMirror runtime used by HTML source mode.
 
+`npm run pack:nuget` requires the .NET 10 SDK. It builds the editor, stages only browser assets under `wwwroot/moonglade-editor/`, and creates `artifacts/nuget/Moonglade.Editor.StaticAssets.{version}.nupkg`. The NuGet package version is read from `package.json` `version`, which is the single version source; set `NUGET_OUTPUT` to change the output directory.
+
 GitHub Actions runs tests and the build workflow for pushes to `main` and `release`, and for pull requests targeting those branches.
 
-`dist/` is generated locally and ignored by Git so routine source changes do not include bundle churn in code review. For releases, build the package and attach the generated `dist` assets to the GitHub Release. When Moonglade needs an update, copy the release artifacts into the Moonglade application manually.
+`dist/` and the NuGet staging files under `wwwroot/moonglade-editor/` are generated locally and ignored by Git so routine source changes do not include bundle churn in code review. For releases, prefer publishing `Moonglade.Editor.StaticAssets` as a NuGet package. GitHub Release assets can still be attached as a manual fallback.
 
 For AI continuation, read:
 
@@ -189,6 +192,19 @@ Moonglade should consume prebuilt release files from this repository and should 
 
 The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `bi-*` icon classes. The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before using the editor assets. Custom editor styles inherit Bootstrap CSS variables, so the editor follows the nearest host `data-bs-theme` scope; omit the attribute or set `data-bs-theme="light"` for the default light theme, and set `data-bs-theme="dark"` for dark mode.
 
+Preferred NuGet static web assets option:
+
+```xml
+<PackageReference Include="Moonglade.Editor.StaticAssets" Version="0.5.0" />
+```
+
+```html
+<link rel="stylesheet" href="~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.css" asp-append-version="true">
+<script src="~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.global.js" asp-append-version="true"></script>
+```
+
+The lazy formatter asset is packaged beside the main JavaScript at `~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.formatter.js`, which matches the editor's default runtime lookup.
+
 Static asset option:
 
 ```html
@@ -221,16 +237,16 @@ Copy `moonglade-editor.formatter.js` to the same folder as `moonglade-editor.js`
 
 Package options that preserve the same contract:
 
-- Build this project for release, attach the generated `dist/moonglade-editor.global.js` and `dist/moonglade-editor.css` files to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
+- Publish `Moonglade.Editor.StaticAssets` as a NuGet package with static web assets, then update the `PackageReference` version in Moonglade.
+- Build this project for release, attach the generated `dist/moonglade-editor.global.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.js` files to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` only as a fallback.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
-- Publish a NuGet package with static web assets once the editor API is stable.
 - Use a submodule/subtree only if the project later decides to track generated assets again.
 
 ## Repository Status
 
 The schema, parser/serializer, rich editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed code modes, consumption docs, tests, and build pipeline are present.
 
-Moonglade consumes this package through checked-in static assets and should continue doing so without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
+Moonglade should consume this package through the `Moonglade.Editor.StaticAssets` NuGet package, or through manually copied prebuilt static assets as a fallback. It should continue doing so without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 
 This is a single-package repository, not a monorepo.
 

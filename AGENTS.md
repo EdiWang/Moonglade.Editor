@@ -30,6 +30,7 @@ Do not add broad word-processor features unless explicitly requested. In particu
 
 - Source code lives under `src/`.
 - Browser-ready output is generated under `dist/` by the build.
+- NuGet static web asset packages are generated under `artifacts/nuget/` by `npm run pack:nuget`.
 - Tests live under `test/`.
 - Demo files live under `demo/`.
 - Long-lived project documentation lives under `docs/`.
@@ -44,6 +45,7 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 
 - Language: TypeScript.
 - TypeScript version: `^5.8.3` in `package.json`.
+- .NET SDK version: .NET 10 SDK is required for `npm run pack:nuget`. No `global.json` is currently defined.
 - JavaScript target: ES2020 in `tsconfig.json` and `scripts/build.mjs`.
 - Runtime environment: Browser DOM through ProseMirror `EditorView` and CodeMirror 6 `EditorView`.
 - Node.js version: To be confirmed. No `engines` field is currently defined.
@@ -72,6 +74,8 @@ Important directories:
 - `test/` - Vitest/jsdom unit tests for parsing, sanitization, commands, toolbar wiring, upload handling, and source mode.
 - `scripts/` - Build and bundle size scripts.
 - `dist/` - Ignored generated browser-ready JavaScript, CSS, source maps, and declaration files.
+- `wwwroot/moonglade-editor/` - Ignored NuGet static web asset staging folder populated from `dist/` by `npm run pack:nuget`.
+- `artifacts/nuget/` - Ignored generated NuGet package output.
 - `demo/` - Static demo page for manual browser checks.
 - `docs/` - Long-lived handoff, task, and project documentation.
 
@@ -190,6 +194,7 @@ Do not require Moonglade to understand ProseMirror JSON as the storage format un
 Project-specific environment variables:
 
 - `PORT` - Optional port for the local Node.js upload test server used by `npm run demo:upload`. Example: `5173`.
+- `NUGET_OUTPUT` - Optional NuGet package output directory for `npm run pack:nuget`. Defaults to `artifacts/nuget`. Example: `artifacts/nuget-preview`.
 
 Configuration files:
 
@@ -200,6 +205,8 @@ Configuration files:
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
 - `scripts/build.mjs` - esbuild ESM/global bundles, lazy formatter bundle, and CSS output; release builds are minified while `--watch` keeps readable output.
 - `scripts/check-size.mjs` - size budgets for generated JavaScript, formatter JavaScript, and CSS artifacts.
+- `scripts/pack-nuget.mjs` - builds `dist/`, stages browser assets under `wwwroot/moonglade-editor/`, and runs `dotnet pack` for `Moonglade.Editor.StaticAssets`.
+- `Moonglade.Editor.StaticAssets.csproj` - Razor SDK package project that turns staged browser assets into ASP.NET Core static web assets.
 - `scripts/upload-test-server.mjs` - local Node.js static demo server and `POST /image` upload test endpoint.
 
 If environment variables are added later, document each name, purpose, whether it is required, and an example format. Do not document real secrets.
@@ -209,6 +216,7 @@ If environment variables are added later, document each name, purpose, whether i
 ```powershell
 npm install
 npm run build
+npm run pack:nuget
 npm test
 npm run dev
 npm run demo:upload
@@ -223,6 +231,7 @@ Command meanings:
 - `npm run bundle` runs esbuild and writes minified JS/CSS release assets, including the lazy formatter asset.
 - `npm run size` checks configured bundle size budgets.
 - `npm run build` cleans `dist/`, emits declarations, bundles assets, and checks size budgets.
+- `npm run pack:nuget` builds the editor and creates `artifacts/nuget/Moonglade.Editor.StaticAssets.{version}.nupkg`, using `package.json` `version` as the single version source.
 - `npm run dev` watches source files and rebuilds bundles/styles.
 - `npm run demo:upload` serves the built demo and a local `POST /image` endpoint for testing image uploads.
 
@@ -246,9 +255,9 @@ The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before 
 
 Preferred integration models remain:
 
-- Build this project for release, attach generated `dist/moonglade-editor.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.js` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` when updating the main application.
+- Publish `Moonglade.Editor.StaticAssets` as a NuGet package with static web assets, then update the `PackageReference` version in Moonglade.
+- Build this project for release, attach generated `dist/moonglade-editor.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.js` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` only as a fallback.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
-- Publish a NuGet package with static web assets once the editor API is stable.
 - Use a submodule/subtree only if the project later decides to track generated assets again.
 
 Moonglade integration is not completed in this repository.

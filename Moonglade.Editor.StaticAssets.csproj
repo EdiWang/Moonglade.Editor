@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>Moonglade.Editor.StaticAssets</PackageId>
+    <Version Condition="'$(MoongladeEditorPackageVersion)' != ''">$(MoongladeEditorPackageVersion)</Version>
+    <PackageVersion Condition="'$(MoongladeEditorPackageVersion)' != ''">$(MoongladeEditorPackageVersion)</PackageVersion>
+    <Authors>Moonglade</Authors>
+    <Description>Browser-ready static web assets for Moonglade.Editor.</Description>
+    <PackageTags>Moonglade;editor;static-web-assets;aspnetcore</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/ediwang/Moonglade.Editor</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ediwang/Moonglade.Editor</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="wwwroot\**\*" Exclude="wwwroot\**\.gitkeep" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <Target Name="ValidateMoongladeEditorStaticAssets" BeforeTargets="ResolveStaticWebAssetsInputs">
+    <Error Condition="'$(MoongladeEditorPackageVersion)' == ''"
+           Text="Run npm run pack:nuget so the NuGet package version is read from package.json, the single version source." />
+    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.global.js')"
+           Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
+    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.css')"
+           Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
+    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.formatter.js')"
+           Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
+  </Target>
+</Project>

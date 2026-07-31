@@ -26,6 +26,7 @@
     "build": "npm run clean && npm run types && npm run bundle && npm run size",
     "dev": "node scripts/build.mjs --watch",
     "demo:upload": "node scripts/upload-test-server.mjs",
+    "pack:nuget": "node scripts/pack-nuget.mjs",
     "test": "vitest run"
   },
   "dependencies": {
