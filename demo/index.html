@@ -190,12 +190,36 @@ public static string Slugify(string title) =>
         tabSize: 2,
         spellcheck: true,
         uploadUrl: '/image',
+        markdownImageUpload: {
+          upload: uploadMarkdownImage
+        },
         codesample_languages: codeSampleLanguages
       });
 
       updateModeButtons();
       updateSpellcheckToggle();
       editor.focus();
+    }
+
+    async function uploadMarkdownImage(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Markdown image upload failed with status ${response.status}.`);
+      }
+
+      const result = await response.json();
+      return {
+        url: result.location,
+        alt: result.filename
+      };
     }
 
     function updateModeButtons() {

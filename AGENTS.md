@@ -57,7 +57,7 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 - Theme behavior: Custom editor styles use Bootstrap CSS variables and should inherit the nearest host `data-bs-theme` scope. Keep theme switching host-owned; do not add editor-specific theme APIs unless explicitly requested.
 - Build tooling: esbuild via `scripts/build.mjs`; TypeScript declarations via `tsc -p tsconfig.build.json`.
 - Runtime formatting: Prettier standalone for Markdown, HTML, and CSS, lazy-loaded through language-specific `moonglade-editor.formatter.*.js` assets.
-- Testing: Vitest with jsdom.
+- Testing: Vitest with jsdom plus Playwright demo smoke tests.
 - Type checking: `npm run types`.
 - Bundle size checking: `scripts/check-size.mjs`, run by `npm run build`.
 - Formatting: To be confirmed. No formatter script is currently configured.
@@ -203,6 +203,7 @@ Configuration files:
 - `tsconfig.json` - shared TypeScript compiler settings for source, tests, scripts, and Vitest config.
 - `tsconfig.build.json` - declaration-only TypeScript build output to `dist/`.
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
+- `playwright.config.ts` - Playwright smoke configuration for the built demo page and upload test server.
 - `.github/workflows/build.yml` - CI workflow for tests/builds on `main` and `release`, plus NuGet publishing on release branch pushes.
 - `scripts/build.mjs` - esbuild ESM/global bundles, split ESM entries (`moonglade-editor.js`, `moonglade-editor.rich-html.js`, `moonglade-editor.code.js`), shared chunks, language-specific lazy formatter bundles, and CSS output; release builds are minified while `--watch` keeps readable output.
 - `scripts/check-size.mjs` - size budgets for generated JavaScript entries, chunks, formatter JavaScript, and CSS artifacts.
@@ -223,6 +224,7 @@ npm install
 npm run build
 npm run pack:nuget
 npm test
+npm run test:demo
 npm run dev
 npm run demo:upload
 npm run size
@@ -232,6 +234,7 @@ Command meanings:
 
 - `npm install` installs dependencies from `package-lock.json`.
 - `npm test` runs Vitest in jsdom.
+- `npm run test:demo` builds the editor, starts the upload test server, and runs Playwright smoke tests for demo focus, source dialog, toolbar interaction, and Markdown paste/drop image upload. Run `npx playwright install chromium` first on machines without the Playwright Chromium browser.
 - `npm run types` emits declaration files only.
 - `npm run bundle` runs esbuild and writes minified JS/CSS release assets, including the language-specific lazy formatter assets.
 - `npm run size` checks configured bundle size budgets.
@@ -246,6 +249,7 @@ For editor behavior changes:
 
 - Run `npm test`.
 - Run `npm run build`.
+- Run `npm run test:demo` for interaction-heavy browser coverage, especially when changing focus, dialogs, toolbar behavior, paste/drop, upload, source mode, or demo integration.
 - Add or update tests for HTML parsing/serialization when changing schema, marks, nodes, commands, or sanitization.
 - Add or update tests for public code mode behavior when changing editor lifecycle, language switching, formatting, upload insertion, or textarea sync.
 - Browser-check the demo for interaction-heavy changes such as selection, tables, dialogs, drag/drop, paste, image upload, and source mode.

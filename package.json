@@ -35,7 +35,8 @@
     "dev": "node scripts/build.mjs --watch",
     "demo:upload": "node scripts/upload-test-server.mjs",
     "pack:nuget": "node scripts/pack-nuget.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:demo": "npm run build && playwright test -c playwright.config.ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
@@ -61,6 +62,7 @@
     "prosemirror-view": "^1.42.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.13.3",
     "esbuild": "0.28.1",
     "jsdom": "^26.1.0",

@@ -46,6 +46,7 @@ Configured commands:
 ```powershell
 npm install
 npm test
+npm run test:demo
 npm run build
 npm run pack:nuget
 npm run dev
@@ -72,6 +73,15 @@ npm run demo:upload
 
 Then open `http://localhost:5173/demo/`. The server accepts `POST /image` uploads from the demo editor's `uploadUrl`, stores files under `output/upload-test/`, and returns the `location` field expected by the editor. This server is for local testing only, not production image handling.
 
+To run the real-browser demo smoke tests:
+
+```powershell
+npx playwright install chromium
+npm run test:demo
+```
+
+`npm run test:demo` builds the editor, starts the upload test server on port `6173`, and runs Playwright checks for focus handling, the HTML source dialog, toolbar interaction, and Markdown paste/drop image upload. Set `MOONGLADE_EDITOR_DEMO_BASE_URL` to test an already-running demo server, or `MOONGLADE_EDITOR_DEMO_PORT` to change the managed server port.
+
 The build emits:
 
 - `dist/moonglade-editor.js` - bundled and minified ESM entry.
@@ -83,7 +93,7 @@ The build emits:
 - `dist/moonglade-editor.css` - minified editor styles.
 - `dist/*.d.ts` - TypeScript declarations.
 
-`npm run build` also checks bundle size budgets for the generated JavaScript and CSS files. The current budgets include the internal CodeMirror runtime used by HTML source mode.
+`npm run build` also checks bundle size budgets for the generated JavaScript and CSS files. The current budgets include the internal CodeMirror runtime used by HTML source mode. `npm test` runs the jsdom unit tests, while `npm run test:demo` runs the Playwright smoke suite against the built demo in Chromium.
 
 `npm run pack:nuget` requires the .NET 10 SDK. It builds the editor, stages only browser assets under `wwwroot/moonglade-editor/`, and creates `artifacts/nuget/Moonglade.Editor.StaticAssets.{version}.nupkg`. The NuGet package version is read from `package.json` `version`, which is the single version source; set `NUGET_OUTPUT` to change the output directory.
 
@@ -251,7 +261,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, rich editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed code modes, consumption docs, tests, and build pipeline are present.
+The schema, parser/serializer, rich editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed code modes, jsdom tests, Playwright demo smoke tests, consumption docs, and build pipeline are present.
 
 Moonglade should consume this package through the `Moonglade.Editor.StaticAssets` NuGet package, or through manually copied prebuilt static assets as a fallback. It should continue doing so without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

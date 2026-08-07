@@ -5,6 +5,9 @@ bin/
 obj/
 wwwroot/moonglade-editor/
 coverage/
+test-results/
+playwright-report/
+.playwright-cli/
 .vite/
 output/
 *.log
