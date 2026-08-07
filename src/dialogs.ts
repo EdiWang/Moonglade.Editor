@@ -1,7 +1,7 @@
 import type { Command } from 'prosemirror-state';
 import type { MoongladeEditorCommands } from './commands';
 import type { CodeSampleLanguageOption } from './editor-options';
-import { HtmlSourceCodeEditor } from './source-code-editor';
+import type { HtmlSourceCodeEditor } from './source-code-editor';
 
 export interface EditorDialogActions {
   executeWithSavedSelection(command: Command): boolean;
@@ -32,11 +32,13 @@ export interface CodeDialogElements {
 export interface SourceDialogElements {
   root: HTMLDivElement;
   form: HTMLFormElement;
-  sourceEditor: HtmlSourceCodeEditor;
   sourceTextarea: HTMLTextAreaElement;
   findButton: HTMLButtonElement;
   replaceButton: HTMLButtonElement;
   cancelButton: HTMLButtonElement;
+  setValue(value: string): Promise<void>;
+  focus(): Promise<void>;
+  destroy(): void;
 }
 
 export interface ImageDialogElements {
@@ -265,8 +267,16 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   sourceToolbar.append(findButton, replaceButton);
   header.append(title, sourceToolbar);
 
-  const sourceEditor = new HtmlSourceCodeEditor();
-  const { textarea: sourceTextarea } = sourceEditor;
+  const sourceEditorHost = document.createElement('div');
+  let sourceEditor: HtmlSourceCodeEditor | undefined;
+  let sourceEditorPromise: Promise<HtmlSourceCodeEditor> | undefined;
+
+  const sourceTextarea = document.createElement('textarea');
+  sourceTextarea.className = 'mg-editor-source-textarea';
+  sourceTextarea.name = 'source';
+  sourceTextarea.hidden = true;
+  sourceTextarea.spellcheck = false;
+  sourceTextarea.setAttribute('aria-label', 'HTML source');
 
   const actionsElement = document.createElement('div');
   actionsElement.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
@@ -283,11 +293,15 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   cancelButton.addEventListener('click', () => actions.closeSourceDialog(true));
 
   actionsElement.append(saveButton, cancelButton);
-  form.append(header, sourceEditor.root, actionsElement);
+  form.append(header, sourceEditorHost, sourceTextarea, actionsElement);
   root.append(form);
 
-  findButton.addEventListener('click', () => sourceEditor.openSearchPanel('search'));
-  replaceButton.addEventListener('click', () => sourceEditor.openSearchPanel('replace'));
+  findButton.addEventListener('click', () => {
+    void ensureSourceEditor().then((editor) => editor.openSearchPanel('search'));
+  });
+  replaceButton.addEventListener('click', () => {
+    void ensureSourceEditor().then((editor) => editor.openSearchPanel('replace'));
+  });
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -296,7 +310,41 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   });
   closeOnEscape(root, () => actions.closeSourceDialog(true));
 
-  return { root, form, sourceEditor, sourceTextarea, findButton, replaceButton, cancelButton };
+  async function ensureSourceEditor(): Promise<HtmlSourceCodeEditor> {
+    if (sourceEditor) {
+      return sourceEditor;
+    }
+
+    sourceEditorPromise ??= import('./source-code-editor').then(({ HtmlSourceCodeEditor }) => {
+      const editor = new HtmlSourceCodeEditor((value) => {
+        sourceTextarea.value = value;
+      });
+      sourceEditorHost.replaceChildren(editor.root);
+      sourceEditor = editor;
+      return editor;
+    });
+
+    return sourceEditorPromise;
+  }
+
+  async function setValue(value: string): Promise<void> {
+    sourceTextarea.value = value;
+    const editor = await ensureSourceEditor();
+    editor.setValue(value);
+  }
+
+  async function focus(): Promise<void> {
+    const editor = await ensureSourceEditor();
+    editor.focus();
+  }
+
+  function destroy(): void {
+    sourceEditor?.destroy();
+    sourceEditor = undefined;
+    sourceEditorPromise = undefined;
+  }
+
+  return { root, form, sourceTextarea, findButton, replaceButton, cancelButton, setValue, focus, destroy };
 }
 
 function createSourceActionButton(command: string, icon: string, label: string): HTMLButtonElement {

@@ -12,6 +12,8 @@ const stagingDirectory = path.join(repoRoot, 'wwwroot', 'moonglade-editor');
 const requiredAssets = [
   'moonglade-editor.global.js',
   'moonglade-editor.js',
+  'moonglade-editor.rich-html.js',
+  'moonglade-editor.code.js',
   'moonglade-editor.css',
   'moonglade-editor.formatter.js'
 ];
@@ -47,22 +49,38 @@ async function stageStaticAssets() {
   await rm(stagingDirectory, { recursive: true, force: true });
   await mkdir(stagingDirectory, { recursive: true });
 
-  const entries = await readdir(distDirectory, { withFileTypes: true });
   const copiedAssets = new Set();
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !browserAssetPattern.test(entry.name)) {
-      continue;
-    }
-
-    await cp(path.join(distDirectory, entry.name), path.join(stagingDirectory, entry.name));
-    copiedAssets.add(entry.name);
-  }
+  await copyBrowserAssets(distDirectory, stagingDirectory, copiedAssets);
 
   for (const requiredAsset of requiredAssets) {
     if (!copiedAssets.has(requiredAsset)) {
       throw new Error(`Missing required built asset: dist/${requiredAsset}`);
     }
+  }
+}
+
+async function copyBrowserAssets(sourceDirectory, targetDirectory, copiedAssets, relativeDirectory = '') {
+  await mkdir(targetDirectory, { recursive: true });
+
+  const entries = await readdir(sourceDirectory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const sourcePath = path.join(sourceDirectory, entry.name);
+    const targetPath = path.join(targetDirectory, entry.name);
+    const relativePath = path.join(relativeDirectory, entry.name);
+
+    if (entry.isDirectory()) {
+      await copyBrowserAssets(sourcePath, targetPath, copiedAssets, relativePath);
+      continue;
+    }
+
+    if (!entry.isFile() || !browserAssetPattern.test(entry.name)) {
+      continue;
+    }
+
+    await cp(sourcePath, targetPath);
+    copiedAssets.add(relativePath.replaceAll(path.sep, '/'));
   }
 }
 

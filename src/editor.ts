@@ -245,7 +245,7 @@ export class MoongladeEditor {
     document.removeEventListener('pointerdown', this.closeColorDropdownsOnDocumentPointerDown);
     this.flushScheduledTextareaSync();
     this.uploadPreviews.clear();
-    this.toolbar.sourceDialog.sourceEditor.destroy();
+    this.toolbar.sourceDialog.destroy();
     this.view.destroy();
     this.destroyed = true;
   }
@@ -510,9 +510,10 @@ export class MoongladeEditor {
   private openSourceDialog(): void {
     const { sourceDialog } = this.toolbar;
 
-    sourceDialog.sourceEditor.setValue(this.getHTML());
     sourceDialog.root.hidden = false;
-    sourceDialog.sourceEditor.focus();
+    void sourceDialog
+      .setValue(this.getHTML())
+      .then(() => sourceDialog.focus());
   }
 
   private closeSourceDialog(focusEditor: boolean): void {

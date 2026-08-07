@@ -42,7 +42,7 @@ export class HtmlSourceCodeEditor {
 
   private readonly view: EditorView;
 
-  constructor() {
+  constructor(private readonly onChange?: (value: string) => void) {
     this.root = document.createElement('div');
     this.root.className = 'mg-editor-source-code-editor';
 
@@ -115,7 +115,9 @@ export class HtmlSourceCodeEditor {
   }
 
   private syncTextarea(): void {
-    this.textarea.value = this.getValue();
+    const value = this.getValue();
+    this.textarea.value = value;
+    this.onChange?.(value);
   }
 }
 

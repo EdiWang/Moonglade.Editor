@@ -94,8 +94,8 @@ Key source modules:
 - `src/editor-state.ts` contains helpers for command availability and toolbar active-state detection.
 - `src/toolbar.ts` assembles the framework-free toolbar and preserves the narrow toolbar export surface used by `src/editor.ts`.
 - `src/toolbar/` contains toolbar contracts, shared DOM helpers, and focused tool modules for history, block format selection, inline marks, colors, blocks/lists, alignment, insertion, tables, source mode, dialogs, and upload status. Add new toolbar tools by creating or extending a focused tool module and registering it from `src/toolbar.ts`.
-- `src/dialogs.ts` creates link, code snippet, image upload, and HTML source dialog shells.
-- `src/source-code-editor.ts` contains the internal CodeMirror-backed HTML source editor used by the rich HTML source dialog, including syntax highlighting, line numbers, folding, and find/replace.
+- `src/dialogs.ts` creates link, code snippet, image upload, and HTML source dialog shells. The HTML source dialog lazy-loads its CodeMirror-backed editor on first use.
+- `src/source-code-editor.ts` contains the internal CodeMirror-backed HTML source editor used by the rich HTML source dialog after it is loaded, including syntax highlighting, line numbers, folding, and find/replace.
 - `src/editor-options.ts` contains supported block formats, color palette values, and code language options.
 - `src/image-upload.ts` contains upload URL and custom uploader integration.
 - `src/styles.css` contains rich HTML editor styles, and `src/code-styles.css` contains code editor styles. The build combines both into `dist/moonglade-editor.css`.
@@ -204,9 +204,9 @@ Configuration files:
 - `tsconfig.build.json` - declaration-only TypeScript build output to `dist/`.
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
 - `.github/workflows/build.yml` - CI workflow for tests/builds on `main` and `release`, plus NuGet publishing on release branch pushes.
-- `scripts/build.mjs` - esbuild ESM/global bundles, lazy formatter bundle, and CSS output; release builds are minified while `--watch` keeps readable output.
-- `scripts/check-size.mjs` - size budgets for generated JavaScript, formatter JavaScript, and CSS artifacts.
-- `scripts/pack-nuget.mjs` - builds `dist/`, stages browser assets under `wwwroot/moonglade-editor/`, and runs `dotnet pack` for `Moonglade.Editor.StaticAssets`.
+- `scripts/build.mjs` - esbuild ESM/global bundles, split ESM entries (`moonglade-editor.js`, `moonglade-editor.rich-html.js`, `moonglade-editor.code.js`), shared chunks, lazy formatter bundle, and CSS output; release builds are minified while `--watch` keeps readable output.
+- `scripts/check-size.mjs` - size budgets for generated JavaScript entries, chunks, formatter JavaScript, and CSS artifacts.
+- `scripts/pack-nuget.mjs` - builds `dist/`, recursively stages browser assets including `chunks/` under `wwwroot/moonglade-editor/`, and runs `dotnet pack` for `Moonglade.Editor.StaticAssets`.
 - `Moonglade.Editor.StaticAssets.csproj` - Razor SDK package project that turns staged browser assets into ASP.NET Core static web assets.
 - `scripts/upload-test-server.mjs` - local Node.js static demo server and `POST /image` upload test endpoint.
 

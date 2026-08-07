@@ -12,6 +12,14 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/moonglade-editor.js"
     },
+    "./rich-html": {
+      "types": "./dist/rich-html.d.ts",
+      "import": "./dist/moonglade-editor.rich-html.js"
+    },
+    "./code": {
+      "types": "./dist/code.d.ts",
+      "import": "./dist/moonglade-editor.code.js"
+    },
     "./style.css": "./dist/moonglade-editor.css"
   },
   "files": [

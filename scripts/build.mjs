@@ -7,7 +7,6 @@ const styleSources = ['src/styles.css', 'src/code-styles.css'];
 const styleOutput = 'dist/moonglade-editor.css';
 
 const shared = {
-  entryPoints: ['src/index.ts'],
   bundle: true,
   minify: !watch,
   sourcemap: true,
@@ -18,11 +17,20 @@ const shared = {
 const builds = [
   {
     ...shared,
-    outfile: 'dist/moonglade-editor.js',
-    format: 'esm'
+    entryPoints: {
+      'moonglade-editor': 'src/index.ts',
+      'moonglade-editor.rich-html': 'src/rich-html.ts',
+      'moonglade-editor.code': 'src/code.ts'
+    },
+    outdir: 'dist',
+    entryNames: '[name]',
+    chunkNames: 'chunks/[name]-[hash]',
+    format: 'esm',
+    splitting: true
   },
   {
     ...shared,
+    entryPoints: ['src/index.ts'],
     outfile: 'dist/moonglade-editor.global.js',
     format: 'iife',
     globalName: 'MoongladeEditor'

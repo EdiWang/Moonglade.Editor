@@ -75,6 +75,9 @@ Then open `http://localhost:5173/demo/`. The server accepts `POST /image` upload
 The build emits:
 
 - `dist/moonglade-editor.js` - bundled and minified ESM entry.
+- `dist/moonglade-editor.rich-html.js` - smaller ESM entry for rich HTML mode.
+- `dist/moonglade-editor.code.js` - smaller ESM entry for Markdown, raw HTML, and CSS modes.
+- `dist/chunks/*.js` - shared ESM chunks loaded by the split entries and by lazy features such as rich HTML source mode.
 - `dist/moonglade-editor.global.js` - bundled and minified browser global entry.
 - `dist/moonglade-editor.formatter.js` - lazy-loaded Prettier formatter asset for code-like modes.
 - `dist/moonglade-editor.css` - minified editor styles.
@@ -183,6 +186,7 @@ HTML source mode and imported HTML are constrained before entering the editor sc
 - Schema-supported elements preserve safe custom `class` tokens, such as `ul class="abc"` and `table class="custom-table"`, while unsupported tags and unsafe class tokens are still dropped.
 
 The source dialog provides HTML syntax highlighting, line numbers, code folding, and find/replace. Applying source edits still re-enters through `setHTML(...)`, so unsupported tags, unsafe URLs, event attributes, and unsafe styles are not preserved just because they were typed in source mode.
+The CodeMirror runtime for this source dialog is loaded the first time source mode is opened, so rich HTML startup does not initialize the source editor until it is needed.
 
 Serialized editor output is newline-formatted around block content such as headings, paragraphs, horizontal rules, blockquotes, tables, and standalone image paragraphs so the synced HTML remains practical to hand-edit.
 
@@ -206,6 +210,7 @@ Preferred NuGet static web assets option:
 ```
 
 The lazy formatter asset is packaged beside the main JavaScript at `~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.formatter.js`, which matches the editor's default runtime lookup.
+For module-based consumers, the package also ships split ESM entry points at `moonglade-editor.rich-html.js` and `moonglade-editor.code.js`. Use the rich HTML entry on post-editing pages that only need `createMoongladeEditor(...)` for rich HTML, and use the code entry on pages that only need Markdown, raw HTML, or CSS editors. Keep the generated `chunks/` folder beside those entry files because it contains shared and lazy-loaded runtime code.
 
 Static asset option:
 

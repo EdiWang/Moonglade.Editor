@@ -875,7 +875,7 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
-  it('edits source HTML through the sanitizer-backed source dialog', () => {
+  it('edits source HTML through the sanitizer-backed source dialog', async () => {
     const host = document.createElement('div');
     document.body.append(host);
     const editor = createMoongladeEditor({
@@ -888,6 +888,10 @@ describe('editor toolbar', () => {
     const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
     const form = dialog.querySelector('form') as HTMLFormElement;
     const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
+
+    await waitForExpectation(() => {
+      expect(dialog.querySelector('.mg-editor-source-code-editor .cm-editor')).not.toBeNull();
+    });
 
     expect(dialog.hidden).toBe(false);
     expect(dialog.classList.contains('dropdown-menu')).toBe(false);
@@ -907,7 +911,7 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
-  it('opens find and replace controls in the highlighted source editor', () => {
+  it('opens find and replace controls in the highlighted source editor', async () => {
     const host = document.createElement('div');
     document.body.append(host);
     const editor = createMoongladeEditor({
@@ -918,9 +922,14 @@ describe('editor toolbar', () => {
     (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
 
     const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
-    const codeEditor = dialog.querySelector('.mg-editor-source-code-editor') as HTMLDivElement;
     const findButton = dialog.querySelector('[data-command="sourceFind"]') as HTMLButtonElement;
     const replaceButton = dialog.querySelector('[data-command="sourceReplace"]') as HTMLButtonElement;
+
+    await waitForExpectation(() => {
+      expect(dialog.querySelector('.mg-editor-source-code-editor')).not.toBeNull();
+    });
+
+    const codeEditor = dialog.querySelector('.mg-editor-source-code-editor') as HTMLDivElement;
 
     expect(codeEditor.querySelector('.cm-lineNumbers')).not.toBeNull();
     expect(codeEditor.querySelector('.cm-foldGutter')).not.toBeNull();
@@ -928,8 +937,11 @@ describe('editor toolbar', () => {
 
     findButton.click();
 
+    await waitForExpectation(() => {
+      expect(codeEditor.querySelector('.cm-search')).not.toBeNull();
+    });
+
     let searchPanel = codeEditor.querySelector('.cm-search') as HTMLElement;
-    expect(searchPanel).not.toBeNull();
     expect(searchPanel.querySelector('input[name="search"]')).not.toBeNull();
     expect(searchPanel.querySelector('input[name="replace"]')).not.toBeNull();
 
@@ -941,7 +953,7 @@ describe('editor toolbar', () => {
     editor.destroy();
   });
 
-  it('preserves custom classes edited in source HTML', () => {
+  it('preserves custom classes edited in source HTML', async () => {
     const host = document.createElement('div');
     document.body.append(host);
     const editor = createMoongladeEditor({
@@ -955,6 +967,10 @@ describe('editor toolbar', () => {
     const form = dialog.querySelector('form') as HTMLFormElement;
     const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
 
+    await waitForExpectation(() => {
+      expect(dialog.querySelector('.mg-editor-source-code-editor .cm-editor')).not.toBeNull();
+    });
+
     sourceTextarea.value = sourceTextarea.value
       .replace('<table>', '<table class="custom-table">')
       .replace('<ul>', '<ul class="abc">');
@@ -962,13 +978,17 @@ describe('editor toolbar', () => {
 
     (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
 
+    await waitForExpectation(() => {
+      expect(sourceTextarea.value).toContain('<table class="custom-table">');
+    });
+
     expect(sourceTextarea.value).toContain('<table class="custom-table">');
     expect(sourceTextarea.value).toContain('<ul class="abc">');
 
     editor.destroy();
   });
 
-  it('closes the source dialog with Escape and returns focus to the editor', () => {
+  it('closes the source dialog with Escape and returns focus to the editor', async () => {
     const host = document.createElement('div');
     document.body.append(host);
     const editor = createMoongladeEditor({
@@ -980,6 +1000,10 @@ describe('editor toolbar', () => {
 
     const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
     const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
+
+    await waitForExpectation(() => {
+      expect(dialog.querySelector('.mg-editor-source-code-editor .cm-content')).toBe(document.activeElement);
+    });
 
     expect(dialog.hidden).toBe(false);
     expect(dialog.querySelector('.mg-editor-source-code-editor .cm-content')).toBe(document.activeElement);
