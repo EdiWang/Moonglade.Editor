@@ -1,19 +1,26 @@
-import type { FormatCodeRequest, FormatCodeResult } from './code-editor-options';
+import type { FormatCodeRequest, FormatCodeResult, MoongladeCodeLanguage } from './code-editor-options';
 import { assertMoongladeCodeLanguage } from './code-languages';
 
-type FormatterRuntime = typeof import('./code-formatter-runtime');
-type FormatterRuntimeLoader = () => Promise<FormatterRuntime>;
+interface FormatterRuntime {
+  formatWithPrettier(request: FormatCodeRequest): Promise<string>;
+}
 
-const formatterAssetFileName = 'moonglade-editor.formatter.js';
-const defaultFormatterAssetUrl = getDefaultFormatterAssetUrl();
+type FormatterRuntimeLoader = (language: MoongladeCodeLanguage) => Promise<FormatterRuntime>;
+
+const formatterAssetFileNames: Record<MoongladeCodeLanguage, string> = {
+  markdown: 'moonglade-editor.formatter.markdown.js',
+  html: 'moonglade-editor.formatter.html.js',
+  css: 'moonglade-editor.formatter.css.js'
+};
+const defaultFormatterAssetUrls = getDefaultFormatterAssetUrls();
 
 let runtimeLoader: FormatterRuntimeLoader | undefined;
-let runtimePromise: Promise<FormatterRuntime> | undefined;
+let runtimePromises: Partial<Record<MoongladeCodeLanguage, Promise<FormatterRuntime>>> = {};
 
 export async function formatCode(request: FormatCodeRequest): Promise<FormatCodeResult> {
   assertFormatCodeRequest(request);
 
-  const runtime = await loadFormatterRuntime();
+  const runtime = await loadFormatterRuntime(request.language);
   const value = await runtime.formatWithPrettier(request);
 
   return {
@@ -24,11 +31,14 @@ export async function formatCode(request: FormatCodeRequest): Promise<FormatCode
 
 export function setFormatterRuntimeLoaderForTests(loader: FormatterRuntimeLoader | undefined): void {
   runtimeLoader = loader;
-  runtimePromise = undefined;
+  runtimePromises = {};
 }
 
-async function loadFormatterRuntime(): Promise<FormatterRuntime> {
-  runtimePromise ??= runtimeLoader ? runtimeLoader() : importFormatterRuntime(defaultFormatterAssetUrl);
+async function loadFormatterRuntime(language: MoongladeCodeLanguage): Promise<FormatterRuntime> {
+  const runtimePromise = runtimePromises[language] ?? (runtimeLoader
+    ? runtimeLoader(language)
+    : importFormatterRuntime(defaultFormatterAssetUrls[language]));
+  runtimePromises[language] = runtimePromise;
   return runtimePromise;
 }
 
@@ -52,22 +62,21 @@ function assertFormatCodeRequest(request: FormatCodeRequest): void {
   }
 }
 
-function getDefaultFormatterAssetUrl(): string {
-  const scriptUrl = getCurrentScriptUrl();
+function getDefaultFormatterAssetUrls(): Record<MoongladeCodeLanguage, string> {
+  const baseUrl = getCurrentScriptUrl() ?? getImportMetaUrl();
 
-  if (scriptUrl) {
-    return resolveFormatterAssetUrl(scriptUrl);
+  if (!baseUrl) {
+    return formatterAssetFileNames;
   }
 
-  const moduleUrl = getImportMetaUrl();
-  if (moduleUrl) {
-    return resolveFormatterAssetUrl(moduleUrl);
-  }
-
-  return formatterAssetFileName;
+  return {
+    markdown: resolveFormatterAssetUrl(baseUrl, formatterAssetFileNames.markdown),
+    html: resolveFormatterAssetUrl(baseUrl, formatterAssetFileNames.html),
+    css: resolveFormatterAssetUrl(baseUrl, formatterAssetFileNames.css)
+  };
 }
 
-function resolveFormatterAssetUrl(baseUrl: string): string {
+function resolveFormatterAssetUrl(baseUrl: string, formatterAssetFileName: string): string {
   const url = new URL(baseUrl);
   const assetPath = url.pathname.includes('/chunks/')
     ? `../${formatterAssetFileName}`

@@ -37,9 +37,16 @@ const builds = [
   },
   {
     ...shared,
-    entryPoints: ['src/code-formatter-runtime.ts'],
-    outfile: 'dist/moonglade-editor.formatter.js',
-    format: 'esm'
+    entryPoints: {
+      'moonglade-editor.formatter.markdown': 'src/code-formatter-markdown-runtime.ts',
+      'moonglade-editor.formatter.html': 'src/code-formatter-html-runtime.ts',
+      'moonglade-editor.formatter.css': 'src/code-formatter-css-runtime.ts'
+    },
+    outdir: 'dist',
+    entryNames: '[name]',
+    chunkNames: 'chunks/formatter-[name]-[hash]',
+    format: 'esm',
+    splitting: true
   }
 ];
 

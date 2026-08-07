@@ -15,7 +15,9 @@ const requiredAssets = [
   'moonglade-editor.rich-html.js',
   'moonglade-editor.code.js',
   'moonglade-editor.css',
-  'moonglade-editor.formatter.js'
+  'moonglade-editor.formatter.markdown.js',
+  'moonglade-editor.formatter.html.js',
+  'moonglade-editor.formatter.css.js'
 ];
 const browserAssetPattern = /\.(?:js|css)(?:\.map)?$/;
 

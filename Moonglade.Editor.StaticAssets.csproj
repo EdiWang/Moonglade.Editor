@@ -31,7 +31,11 @@
            Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
     <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.css')"
            Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
-    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.formatter.js')"
+    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.formatter.markdown.js')"
+           Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
+    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.formatter.html.js')"
+           Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
+    <Error Condition="!Exists('wwwroot\moonglade-editor\moonglade-editor.formatter.css.js')"
            Text="Run npm run pack:nuget so dist assets are built and staged before dotnet pack." />
   </Target>
 </Project>

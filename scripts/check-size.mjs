@@ -6,7 +6,9 @@ const budgets = [
   { file: 'dist/moonglade-editor.rich-html.js', maxBytes: 32 * 1024 },
   { file: 'dist/moonglade-editor.code.js', maxBytes: 32 * 1024 },
   { file: 'dist/moonglade-editor.global.js', maxBytes: 1530 * 1024 },
-  { file: 'dist/moonglade-editor.formatter.js', maxBytes: 1400 * 1024 },
+  { file: 'dist/moonglade-editor.formatter.markdown.js', maxBytes: 450 * 1024 },
+  { file: 'dist/moonglade-editor.formatter.html.js', maxBytes: 450 * 1024 },
+  { file: 'dist/moonglade-editor.formatter.css.js', maxBytes: 450 * 1024 },
   { file: 'dist/moonglade-editor.css', maxBytes: 32 * 1024 }
 ];
 const chunkBudget = { directory: 'dist/chunks', maxBytes: 650 * 1024 };

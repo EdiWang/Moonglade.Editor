@@ -79,7 +79,7 @@ The build emits:
 - `dist/moonglade-editor.code.js` - smaller ESM entry for Markdown, raw HTML, and CSS modes.
 - `dist/chunks/*.js` - shared ESM chunks loaded by the split entries and by lazy features such as rich HTML source mode.
 - `dist/moonglade-editor.global.js` - bundled and minified browser global entry.
-- `dist/moonglade-editor.formatter.js` - lazy-loaded Prettier formatter asset for code-like modes.
+- `dist/moonglade-editor.formatter.markdown.js`, `dist/moonglade-editor.formatter.html.js`, and `dist/moonglade-editor.formatter.css.js` - language-specific lazy-loaded Prettier formatter assets for code-like modes.
 - `dist/moonglade-editor.css` - minified editor styles.
 - `dist/*.d.ts` - TypeScript declarations.
 
@@ -209,7 +209,7 @@ Preferred NuGet static web assets option:
 <script src="~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.global.js" asp-append-version="true"></script>
 ```
 
-The lazy formatter asset is packaged beside the main JavaScript at `~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.formatter.js`, which matches the editor's default runtime lookup.
+The language-specific lazy formatter assets are packaged beside the main JavaScript at `~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.formatter.markdown.js`, `~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.formatter.html.js`, and `~/_content/Moonglade.Editor.StaticAssets/moonglade-editor/moonglade-editor.formatter.css.js`, which matches the editor's default runtime lookup.
 For module-based consumers, the package also ships split ESM entry points at `moonglade-editor.rich-html.js` and `moonglade-editor.code.js`. Use the rich HTML entry on post-editing pages that only need `createMoongladeEditor(...)` for rich HTML, and use the code entry on pages that only need Markdown, raw HTML, or CSS editors. Keep the generated `chunks/` folder beside those entry files because it contains shared and lazy-loaded runtime code.
 
 Static asset option:
@@ -240,12 +240,12 @@ Static asset option:
 </script>
 ```
 
-Copy `moonglade-editor.formatter.js` to the same folder as `moonglade-editor.js`; it is loaded only when code-like mode formatting is used.
+Copy `moonglade-editor.formatter.markdown.js`, `moonglade-editor.formatter.html.js`, and `moonglade-editor.formatter.css.js` to the same folder as `moonglade-editor.js`; each file is loaded only when code-like mode formatting for that language is used.
 
 Package options that preserve the same contract:
 
 - Publish `Moonglade.Editor.StaticAssets` as a NuGet package with static web assets, then update the `PackageReference` version in Moonglade.
-- Build this project for release, attach the generated `dist/moonglade-editor.global.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.js` files to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` only as a fallback.
+- Build this project for release, attach the generated `dist/moonglade-editor.global.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.*.js` files to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` only as a fallback.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
 - Use a submodule/subtree only if the project later decides to track generated assets again.
 

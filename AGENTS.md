@@ -56,7 +56,7 @@ This repository is a single TypeScript package, not a monorepo or multi-service 
 - Host UI dependencies: Bootstrap 5 CSS and Bootstrap Icons CSS are expected to be loaded by the consuming host page.
 - Theme behavior: Custom editor styles use Bootstrap CSS variables and should inherit the nearest host `data-bs-theme` scope. Keep theme switching host-owned; do not add editor-specific theme APIs unless explicitly requested.
 - Build tooling: esbuild via `scripts/build.mjs`; TypeScript declarations via `tsc -p tsconfig.build.json`.
-- Runtime formatting: Prettier standalone for Markdown, HTML, and CSS, lazy-loaded through `moonglade-editor.formatter.js`.
+- Runtime formatting: Prettier standalone for Markdown, HTML, and CSS, lazy-loaded through language-specific `moonglade-editor.formatter.*.js` assets.
 - Testing: Vitest with jsdom.
 - Type checking: `npm run types`.
 - Bundle size checking: `scripts/check-size.mjs`, run by `npm run build`.
@@ -85,7 +85,7 @@ Key source modules:
 - `src/editor.ts` owns `MoongladeEditor`, `createMoongladeEditor(...)`, `EditorView` setup, plugins, toolbar wiring, textarea sync, source updates, and image paste/drop/upload integration.
 - `src/code-editor.ts` owns `MoongladeCodeEditor`, CodeMirror setup, the built-in code toolbar, textarea sync, language switching, read-only mode, line wrapping, and status UX.
 - `src/code-languages.ts` maps supported code-like modes to CodeMirror language extensions. Keep this list intentionally limited to Markdown, HTML, and CSS unless Moonglade gains a confirmed business need.
-- `src/code-formatter.ts` and `src/code-formatter-runtime.ts` own the lazy Prettier formatting boundary for Markdown, HTML, and CSS.
+- `src/code-formatter.ts`, `src/code-formatter-*-runtime.ts`, and `src/code-formatter-runtime-shared.ts` own the lazy Prettier formatting boundary for Markdown, HTML, and CSS.
 - `src/markdown-image-upload.ts` owns Markdown-only image paste/drop upload handling.
 - `src/schema.ts` defines the ProseMirror schema, including alignment-aware paragraphs/headings that serialize Bootstrap text alignment classes, code block language attributes, table nodes, underline/strike marks, and constrained color marks.
 - `src/html.ts` is the HTML import/export boundary. It removes unsafe URL/event attributes before schema parsing, adds lazy loading to serialized images, and newline-formats block-oriented output for source editing.
@@ -204,7 +204,7 @@ Configuration files:
 - `tsconfig.build.json` - declaration-only TypeScript build output to `dist/`.
 - `vitest.config.ts` - Vitest configuration using the `jsdom` environment.
 - `.github/workflows/build.yml` - CI workflow for tests/builds on `main` and `release`, plus NuGet publishing on release branch pushes.
-- `scripts/build.mjs` - esbuild ESM/global bundles, split ESM entries (`moonglade-editor.js`, `moonglade-editor.rich-html.js`, `moonglade-editor.code.js`), shared chunks, lazy formatter bundle, and CSS output; release builds are minified while `--watch` keeps readable output.
+- `scripts/build.mjs` - esbuild ESM/global bundles, split ESM entries (`moonglade-editor.js`, `moonglade-editor.rich-html.js`, `moonglade-editor.code.js`), shared chunks, language-specific lazy formatter bundles, and CSS output; release builds are minified while `--watch` keeps readable output.
 - `scripts/check-size.mjs` - size budgets for generated JavaScript entries, chunks, formatter JavaScript, and CSS artifacts.
 - `scripts/pack-nuget.mjs` - builds `dist/`, recursively stages browser assets including `chunks/` under `wwwroot/moonglade-editor/`, and runs `dotnet pack` for `Moonglade.Editor.StaticAssets`.
 - `Moonglade.Editor.StaticAssets.csproj` - Razor SDK package project that turns staged browser assets into ASP.NET Core static web assets.
@@ -233,7 +233,7 @@ Command meanings:
 - `npm install` installs dependencies from `package-lock.json`.
 - `npm test` runs Vitest in jsdom.
 - `npm run types` emits declaration files only.
-- `npm run bundle` runs esbuild and writes minified JS/CSS release assets, including the lazy formatter asset.
+- `npm run bundle` runs esbuild and writes minified JS/CSS release assets, including the language-specific lazy formatter assets.
 - `npm run size` checks configured bundle size budgets.
 - `npm run build` cleans `dist/`, emits declarations, bundles assets, and checks size budgets.
 - `npm run pack:nuget` builds the editor and creates `artifacts/nuget/Moonglade.Editor.StaticAssets.{version}.nupkg`, using `package.json` `version` as the single version source.
@@ -261,7 +261,7 @@ The host page must load compatible Bootstrap CSS and Bootstrap Icons CSS before 
 Preferred integration models remain:
 
 - Publish `Moonglade.Editor.StaticAssets` as a NuGet package with static web assets, then update the `PackageReference` version in Moonglade.
-- Build this project for release, attach generated `dist/moonglade-editor.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.js` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` only as a fallback.
+- Build this project for release, attach generated `dist/moonglade-editor.js`, `dist/moonglade-editor.css`, and `dist/moonglade-editor.formatter.*.js` artifacts to the GitHub Release, and manually copy those artifacts into Moonglade `wwwroot` only as a fallback.
 - Publish this project as an npm package only for release tooling, not for the Moonglade app build.
 - Use a submodule/subtree only if the project later decides to track generated assets again.
 

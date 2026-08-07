@@ -23,7 +23,7 @@
 - CI / 构建脚本：`.github/workflows/build.yml`、`scripts/build.mjs`、`scripts/check-size.mjs`、`scripts/upload-test-server.mjs`。
 - 公共入口与模式路由：`src/index.ts`、`src/code-editor-options.ts`、`src/code-languages.ts`。
 - 富文本编辑器主流程：`src/editor.ts`、`src/commands.ts`、`src/editor-state.ts`、`src/schema.ts`、`src/html.ts`、`src/safety.ts`。
-- CodeMirror 公共模式和 source dialog：`src/code-editor.ts`、`src/source-code-editor.ts`、`src/code-editor-shared.ts`、`src/code-formatter.ts`、`src/code-formatter-runtime.ts`。
+- CodeMirror 公共模式和 source dialog：`src/code-editor.ts`、`src/source-code-editor.ts`、`src/code-editor-shared.ts`、`src/code-formatter.ts`、`src/code-formatter-*-runtime.ts`、`src/code-formatter-runtime-shared.ts`。
 - 上传相关模块：`src/image-upload.ts`、`src/markdown-image-upload.ts`、`src/upload-preview.ts`、`src/toolbar/image-files.ts`。
 - 工具栏和对话框：`src/toolbar.ts`、`src/toolbar/`、`src/dialogs.ts`。
 - 测试覆盖：`test/editor.test.ts`、`test/code-editor.test.ts`、`test/html.test.ts`、`test/safety.test.ts`、`test/commands.test.ts`、`test/unified-editor.test.ts`。

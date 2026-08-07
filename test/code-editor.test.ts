@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EditorView } from '@codemirror/view';
 import { createMoongladeCodeEditor } from '../src/code-editor';
-import { setFormatterRuntimeLoaderForTests } from '../src/code-formatter';
+import { formatCode, setFormatterRuntimeLoaderForTests } from '../src/code-formatter';
 
 const emptyClientRects = {
   length: 0,
@@ -326,6 +326,25 @@ describe('code editor public modes', () => {
     expect(host.querySelector('.mg-code-editor-status')?.textContent).toBe('No formatting changes.');
 
     editor.destroy();
+  });
+
+  it('loads formatter runtimes separately per language', async () => {
+    const formatWithPrettier = vi.fn(
+      async (request: Parameters<typeof formatCode>[0]) => `${request.language}:${request.value}`
+    );
+    const runtimeLoader = vi.fn(async () => ({ formatWithPrettier }));
+    setFormatterRuntimeLoaderForTests(runtimeLoader);
+
+    await expect(formatCode({ language: 'css', value: 'body{color:red}', tabSize: 2 }))
+      .resolves.toEqual({ value: 'css:body{color:red}', changed: true });
+    await expect(formatCode({ language: 'css', value: 'a{color:blue}', tabSize: 2 }))
+      .resolves.toEqual({ value: 'css:a{color:blue}', changed: true });
+    await expect(formatCode({ language: 'markdown', value: '# Title', tabSize: 2 }))
+      .resolves.toEqual({ value: 'markdown:# Title', changed: true });
+
+    expect(runtimeLoader).toHaveBeenCalledTimes(2);
+    expect(runtimeLoader).toHaveBeenNthCalledWith(1, 'css');
+    expect(runtimeLoader).toHaveBeenNthCalledWith(2, 'markdown');
   });
 
   it('uploads pasted Markdown images and inserts escaped markdown image syntax', async () => {
