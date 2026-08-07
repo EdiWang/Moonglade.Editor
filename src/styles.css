@@ -456,10 +456,6 @@
   min-width: 0;
 }
 
-.mg-editor-source-textarea[hidden] {
-  display: none !important;
-}
-
 .mg-editor-source-code-editor .cm-editor {
   background-color: var(--mg-source-editor-bg);
   color: var(--mg-source-editor-fg);

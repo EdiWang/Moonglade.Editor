@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TextSelection } from 'prosemirror-state';
-import { createMoongladeEditor } from '../src/editor';
+import { createMoongladeEditor, type MoongladeEditor } from '../src/editor';
 
 const emptyClientRects = {
   length: 0,
@@ -72,6 +72,19 @@ function mockElementRect(element: Element, rect: { left: number; top: number; wi
   } as DOMRect;
 
   vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(domRect);
+}
+
+type EditorWithSourceDialog = MoongladeEditor & {
+  toolbar: {
+    sourceDialog: {
+      getValue(): string;
+      setValue(value: string): Promise<void>;
+    };
+  };
+};
+
+function getSourceDialog(editor: MoongladeEditor): EditorWithSourceDialog['toolbar']['sourceDialog'] {
+  return (editor as unknown as EditorWithSourceDialog).toolbar.sourceDialog;
 }
 
 describe('editor toolbar', () => {
@@ -887,7 +900,6 @@ describe('editor toolbar', () => {
 
     const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
     const form = dialog.querySelector('form') as HTMLFormElement;
-    const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
 
     await waitForExpectation(() => {
       expect(dialog.querySelector('.mg-editor-source-code-editor .cm-editor')).not.toBeNull();
@@ -898,10 +910,10 @@ describe('editor toolbar', () => {
     expect(dialog.querySelector('.mg-editor-source-panel')).not.toBeNull();
     expect(dialog.querySelector('.mg-editor-source-code-editor .cm-editor')).not.toBeNull();
     expect(dialog.querySelector('.mg-editor-source-code-editor .cm-content')).toBe(document.activeElement);
-    expect(sourceTextarea.hidden).toBe(true);
-    expect(sourceTextarea.value).toBe('<p>Hello</p>');
+    expect(dialog.querySelector('[name="source"]')).toBeNull();
+    expect(getSourceDialog(editor).getValue()).toBe('<p>Hello</p>');
 
-    sourceTextarea.value = '<p onclick="alert(1)">Clean <a href="javascript:alert(1)">link</a></p>';
+    await getSourceDialog(editor).setValue('<p onclick="alert(1)">Clean <a href="javascript:alert(1)">link</a></p>');
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
 
     expect(dialog.hidden).toBe(true);
@@ -965,25 +977,27 @@ describe('editor toolbar', () => {
 
     const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
     const form = dialog.querySelector('form') as HTMLFormElement;
-    const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
 
     await waitForExpectation(() => {
       expect(dialog.querySelector('.mg-editor-source-code-editor .cm-editor')).not.toBeNull();
     });
 
-    sourceTextarea.value = sourceTextarea.value
-      .replace('<table>', '<table class="custom-table">')
-      .replace('<ul>', '<ul class="abc">');
+    await getSourceDialog(editor).setValue(
+      getSourceDialog(editor)
+        .getValue()
+        .replace('<table>', '<table class="custom-table">')
+        .replace('<ul>', '<ul class="abc">')
+    );
     form.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
 
     (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
 
     await waitForExpectation(() => {
-      expect(sourceTextarea.value).toContain('<table class="custom-table">');
+      expect(getSourceDialog(editor).getValue()).toContain('<table class="custom-table">');
     });
 
-    expect(sourceTextarea.value).toContain('<table class="custom-table">');
-    expect(sourceTextarea.value).toContain('<ul class="abc">');
+    expect(getSourceDialog(editor).getValue()).toContain('<table class="custom-table">');
+    expect(getSourceDialog(editor).getValue()).toContain('<ul class="abc">');
 
     editor.destroy();
   });
@@ -999,7 +1013,6 @@ describe('editor toolbar', () => {
     (host.querySelector('[data-command="htmlSource"]') as HTMLButtonElement).click();
 
     const dialog = host.querySelector('.mg-editor-source-dialog') as HTMLDivElement;
-    const sourceTextarea = dialog.querySelector('[name="source"]') as HTMLTextAreaElement;
 
     await waitForExpectation(() => {
       expect(dialog.querySelector('.mg-editor-source-code-editor .cm-content')).toBe(document.activeElement);

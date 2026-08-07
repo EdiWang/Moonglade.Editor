@@ -38,24 +38,16 @@ const sourceHighlightStyle = HighlightStyle.define([
 
 export class HtmlSourceCodeEditor {
   readonly root: HTMLDivElement;
-  readonly textarea: HTMLTextAreaElement;
 
   private readonly view: EditorView;
 
-  constructor(private readonly onChange?: (value: string) => void) {
+  constructor() {
     this.root = document.createElement('div');
     this.root.className = 'mg-editor-source-code-editor';
 
-    this.textarea = document.createElement('textarea');
-    this.textarea.className = 'mg-editor-source-textarea';
-    this.textarea.name = 'source';
-    this.textarea.hidden = true;
-    this.textarea.spellcheck = false;
-    this.textarea.setAttribute('aria-label', 'HTML source');
-
     const host = document.createElement('div');
     host.className = 'mg-editor-source-code-host';
-    this.root.append(host, this.textarea);
+    this.root.append(host);
 
     this.view = new EditorView({
       parent: host,
@@ -82,7 +74,6 @@ export class HtmlSourceCodeEditor {
       },
       effects: EditorView.scrollIntoView(0, { y: 'start' })
     });
-    this.syncTextarea();
     this.view.scrollDOM.scrollTop = 0;
   }
 
@@ -103,21 +94,12 @@ export class HtmlSourceCodeEditor {
     return createCodeMirrorBaseExtensions({
       theme: createSourceCodeEditorTheme(),
       language: html(),
-      lineWrapping: true,
-      onDocChanged: () => {
-        this.syncTextarea();
-      }
+      lineWrapping: true
     });
   }
 
   private focusSearchPanelField(focusTarget: SearchPanelFocusTarget): void {
     focusCodeMirrorSearchPanelField(this.root, focusTarget);
-  }
-
-  private syncTextarea(): void {
-    const value = this.getValue();
-    this.textarea.value = value;
-    this.onChange?.(value);
   }
 }
 

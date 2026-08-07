@@ -32,10 +32,10 @@ export interface CodeDialogElements {
 export interface SourceDialogElements {
   root: HTMLDivElement;
   form: HTMLFormElement;
-  sourceTextarea: HTMLTextAreaElement;
   findButton: HTMLButtonElement;
   replaceButton: HTMLButtonElement;
   cancelButton: HTMLButtonElement;
+  getValue(): string;
   setValue(value: string): Promise<void>;
   focus(): Promise<void>;
   destroy(): void;
@@ -270,13 +270,7 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   const sourceEditorHost = document.createElement('div');
   let sourceEditor: HtmlSourceCodeEditor | undefined;
   let sourceEditorPromise: Promise<HtmlSourceCodeEditor> | undefined;
-
-  const sourceTextarea = document.createElement('textarea');
-  sourceTextarea.className = 'mg-editor-source-textarea';
-  sourceTextarea.name = 'source';
-  sourceTextarea.hidden = true;
-  sourceTextarea.spellcheck = false;
-  sourceTextarea.setAttribute('aria-label', 'HTML source');
+  let currentSourceHtml = '';
 
   const actionsElement = document.createElement('div');
   actionsElement.className = 'mg-editor-dialog-actions d-flex justify-content-end gap-2';
@@ -293,7 +287,7 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
   cancelButton.addEventListener('click', () => actions.closeSourceDialog(true));
 
   actionsElement.append(saveButton, cancelButton);
-  form.append(header, sourceEditorHost, sourceTextarea, actionsElement);
+  form.append(header, sourceEditorHost, actionsElement);
   root.append(form);
 
   findButton.addEventListener('click', () => {
@@ -305,7 +299,7 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    actions.applySourceHtml(sourceTextarea.value);
+    actions.applySourceHtml(getValue());
     actions.closeSourceDialog(true);
   });
   closeOnEscape(root, () => actions.closeSourceDialog(true));
@@ -316,9 +310,7 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
     }
 
     sourceEditorPromise ??= import('./source-code-editor').then(({ HtmlSourceCodeEditor }) => {
-      const editor = new HtmlSourceCodeEditor((value) => {
-        sourceTextarea.value = value;
-      });
+      const editor = new HtmlSourceCodeEditor();
       sourceEditorHost.replaceChildren(editor.root);
       sourceEditor = editor;
       return editor;
@@ -327,8 +319,12 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
     return sourceEditorPromise;
   }
 
+  function getValue(): string {
+    return sourceEditor?.getValue() ?? currentSourceHtml;
+  }
+
   async function setValue(value: string): Promise<void> {
-    sourceTextarea.value = value;
+    currentSourceHtml = value;
     const editor = await ensureSourceEditor();
     editor.setValue(value);
   }
@@ -344,7 +340,7 @@ export function createSourceDialog(actions: EditorDialogActions): SourceDialogEl
     sourceEditorPromise = undefined;
   }
 
-  return { root, form, sourceTextarea, findButton, replaceButton, cancelButton, setValue, focus, destroy };
+  return { root, form, findButton, replaceButton, cancelButton, getValue, setValue, focus, destroy };
 }
 
 function createSourceActionButton(command: string, icon: string, label: string): HTMLButtonElement {
