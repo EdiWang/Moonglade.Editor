@@ -201,7 +201,7 @@ The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `
 Preferred NuGet static web assets option:
 
 ```xml
-<PackageReference Include="Moonglade.Editor.StaticAssets" Version="0.5.0" />
+<PackageReference Include="Moonglade.Editor.StaticAssets" Version="0.6.0" />
 ```
 
 ```html
