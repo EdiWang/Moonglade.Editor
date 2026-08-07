@@ -72,7 +72,9 @@ describe('code editor public modes', () => {
   it('uses initial content, height, line wrapping, tab size, and textarea sync', () => {
     const host = document.createElement('div');
     const textarea = document.createElement('textarea');
+    const inputListener = vi.fn();
     textarea.value = '# From textarea';
+    textarea.addEventListener('input', inputListener);
 
     const editor = createMoongladeCodeEditor({
       element: host,
@@ -87,6 +89,7 @@ describe('code editor public modes', () => {
     expect(host.style.height).toBe('640px');
     expect(editor.getValue()).toBe('# From options');
     expect(textarea.value).toBe('# From options');
+    expect(inputListener).not.toHaveBeenCalled();
     expect(host.querySelector('.mg-code-editor-toolbar')).not.toBeNull();
     expect(host.querySelector('.cm-editor')).not.toBeNull();
 
@@ -96,7 +99,9 @@ describe('code editor public modes', () => {
   it('updates value, textarea, and onChange through the public setter', () => {
     const host = document.createElement('div');
     const textarea = document.createElement('textarea');
+    const inputListener = vi.fn();
     const onChange = vi.fn();
+    textarea.addEventListener('input', inputListener);
 
     const editor = createMoongladeCodeEditor({
       element: host,
@@ -110,7 +115,36 @@ describe('code editor public modes', () => {
 
     expect(editor.getValue()).toBe('<section>Updated</section>');
     expect(textarea.value).toBe('<section>Updated</section>');
+    expect(inputListener).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith('<section>Updated</section>');
+
+    editor.destroy();
+  });
+
+  it('notifies the host for explicit textarea sync without pending document changes', () => {
+    const host = document.createElement('div');
+    const textarea = document.createElement('textarea');
+    const inputListener = vi.fn();
+    const onChange = vi.fn();
+    textarea.addEventListener('input', inputListener);
+
+    const editor = createMoongladeCodeEditor({
+      element: host,
+      textarea,
+      language: 'markdown',
+      content: '# Title',
+      onChange
+    });
+
+    expect(inputListener).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+
+    editor.syncToTextarea();
+
+    expect(textarea.value).toBe('# Title');
+    expect(inputListener).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith('# Title');
 
     editor.destroy();
   });
@@ -120,7 +154,9 @@ describe('code editor public modes', () => {
     try {
       const host = document.createElement('div');
       const textarea = document.createElement('textarea');
+      const inputListener = vi.fn();
       const onChange = vi.fn();
+      textarea.addEventListener('input', inputListener);
       const editor = createMoongladeCodeEditor({
         element: host,
         textarea,
@@ -135,16 +171,19 @@ describe('code editor public modes', () => {
 
       expect(editor.getValue()).toBe('# Title\nBody');
       expect(textarea.value).toBe('# Title');
+      expect(inputListener).not.toHaveBeenCalled();
       expect(onChange).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(199);
 
       expect(textarea.value).toBe('# Title');
+      expect(inputListener).not.toHaveBeenCalled();
       expect(onChange).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(1);
 
       expect(textarea.value).toBe('# Title\nBody');
+      expect(inputListener).toHaveBeenCalledTimes(1);
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange).toHaveBeenLastCalledWith('# Title\nBody');
 
@@ -159,7 +198,9 @@ describe('code editor public modes', () => {
     try {
       const host = document.createElement('div');
       const textarea = document.createElement('textarea');
+      const inputListener = vi.fn();
       const onChange = vi.fn();
+      textarea.addEventListener('input', inputListener);
       const editor = createMoongladeCodeEditor({
         element: host,
         textarea,
@@ -176,6 +217,7 @@ describe('code editor public modes', () => {
       editor.syncToTextarea();
 
       expect(textarea.value).toBe('# Title\nBody');
+      expect(inputListener).toHaveBeenCalledTimes(1);
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange).toHaveBeenLastCalledWith('# Title\nBody');
 
@@ -186,6 +228,7 @@ describe('code editor public modes', () => {
       editor.destroy();
 
       expect(textarea.value).toBe('# Title\nBody\nTail');
+      expect(inputListener).toHaveBeenCalledTimes(2);
       expect(onChange).toHaveBeenCalledTimes(2);
       expect(onChange).toHaveBeenLastCalledWith('# Title\nBody\nTail');
     } finally {

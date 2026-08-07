@@ -56,15 +56,24 @@ function getDefaultFormatterAssetUrl(): string {
   const scriptUrl = getCurrentScriptUrl();
 
   if (scriptUrl) {
-    return new URL(formatterAssetFileName, scriptUrl).href;
+    return resolveFormatterAssetUrl(scriptUrl);
   }
 
   const moduleUrl = getImportMetaUrl();
   if (moduleUrl) {
-    return new URL(formatterAssetFileName, moduleUrl).href;
+    return resolveFormatterAssetUrl(moduleUrl);
   }
 
   return formatterAssetFileName;
+}
+
+function resolveFormatterAssetUrl(baseUrl: string): string {
+  const url = new URL(baseUrl);
+  const assetPath = url.pathname.includes('/chunks/')
+    ? `../${formatterAssetFileName}`
+    : formatterAssetFileName;
+
+  return new URL(assetPath, url).href;
 }
 
 function getImportMetaUrl(): string | undefined {

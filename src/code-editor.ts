@@ -89,7 +89,7 @@ export class MoongladeCodeEditor {
       })
     });
 
-    this.syncToTextarea();
+    this.writeEditorValue(initialContent, false);
   }
 
   get dom(): HTMLElement {
@@ -193,7 +193,7 @@ export class MoongladeCodeEditor {
       return;
     }
 
-    this.writeEditorValue(this.getValue(), false);
+    this.writeEditorValue(this.getValue(), true);
   }
 
   private scheduleTextareaSync(): void {
@@ -230,6 +230,9 @@ export class MoongladeCodeEditor {
   private writeEditorValue(value: string, notifyHost: boolean): void {
     if (this.textarea) {
       this.textarea.value = value;
+      if (notifyHost) {
+        this.textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }
 
     if (notifyHost) {

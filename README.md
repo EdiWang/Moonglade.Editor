@@ -151,7 +151,7 @@ editor.syncToTextarea();
 
 `createMoongladeCodeEditor(...)` remains exported as a compatibility factory during migration, but new host code should prefer `createMoongladeEditor({ mode })`.
 
-Content access is immediate through `getHTML()` in rich HTML mode and `getValue()` in code-like modes. Explicit `syncToTextarea()` writes immediately. Automatic `textarea` and `onChange` sync is debounced after document edits.
+Content access is immediate through `getHTML()` in rich HTML mode and `getValue()` in code-like modes. Explicit `syncToTextarea()` writes immediately. Automatic `textarea` and `onChange` sync is debounced after document edits. Host-notified textarea writes dispatch a bubbling `input` event before calling `onChange` in both rich HTML and code-like modes.
 
 For custom image upload flows, pass `uploadImage` instead of `uploadUrl`:
 
@@ -201,7 +201,7 @@ The editor markup uses Bootstrap 5 utility/control classes and Bootstrap Icons `
 Preferred NuGet static web assets option:
 
 ```xml
-<PackageReference Include="Moonglade.Editor.StaticAssets" Version="0.6.0" />
+<PackageReference Include="Moonglade.Editor.StaticAssets" Version="0.7.0" />
 ```
 
 ```html
