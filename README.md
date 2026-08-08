@@ -37,7 +37,7 @@ Key concepts:
 - Code snippet languages are configured through `codesample_languages`, with values filtered by the same code language sanitizer used for stored HTML.
 - HTML source mode uses an internal CodeMirror 6 HTML editor for syntax highlighting, folding, and find/replace while keeping saved content routed through the same sanitizer-backed HTML boundary.
 
-Supported rich HTML capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, and HTML source view/edit with code highlighting, folding, and find/replace. Supported code-like modes are `markdown`, `html`, and `css`, with search/replace, folding, syntax highlighting, formatting, textarea synchronization, and Markdown image paste/drop upload.
+Supported rich HTML capabilities currently include H1-H6 headings, paragraphs, bold, italic, underline, strikethrough, foreground/background color, tables, images, inline code, code snippets, links, blockquotes, horizontal rules, bullet/numbered lists, text alignment, common formatting keyboard shortcuts, and HTML source view/edit with code highlighting, folding, and find/replace. Supported code-like modes are `markdown`, `html`, and `css`, with search/replace, folding, syntax highlighting, formatting, textarea synchronization, and Markdown image paste/drop upload.
 
 ## Development
 
@@ -261,7 +261,7 @@ Package options that preserve the same contract:
 
 ## Repository Status
 
-The schema, parser/serializer, rich editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed code modes, jsdom tests, Playwright demo smoke tests, consumption docs, and build pipeline are present.
+The schema, parser/serializer, rich editor shell, Bootstrap light/dark theme adaptation, toolbar shell, formatting controls, keyboard shortcuts, selection state, link dialog, color controls, text alignment, image upload dialog with paste support, inline code, code snippets, horizontal rule insertion, table controls, CodeMirror-backed code modes, jsdom tests, Playwright demo smoke tests, consumption docs, and build pipeline are present.
 
 Moonglade should consume this package through the `Moonglade.Editor.StaticAssets` NuGet package, or through manually copied prebuilt static assets as a fallback. It should continue doing so without adding npm, Vite, webpack, Rollup, or esbuild to the main Moonglade repository.
 

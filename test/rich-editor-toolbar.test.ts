@@ -22,6 +22,8 @@ describe('rich editor toolbar', () => {
     expect(host.querySelector('.mg-editor-format')?.classList.contains('form-select')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')?.classList.contains('btn')).toBe(true);
     expect(host.querySelector('[data-command="bold"]')?.textContent).toBe('');
+    expect(host.querySelector('[data-command="bold"]')?.getAttribute('title')).toBe('Bold (Ctrl+B)');
+    expect(host.querySelector('[data-command="bold"]')?.getAttribute('aria-keyshortcuts')).toBe('Control+B Meta+B');
     expect(host.querySelector('[data-command="bold"] .bi-type-bold')).not.toBeNull();
     expect(host.querySelector('[data-command="undo"] .bi-arrow-counterclockwise')).not.toBeNull();
     expect(host.querySelector('[data-command="text_color"]')?.classList.contains('mg-editor-color-trigger')).toBe(true);

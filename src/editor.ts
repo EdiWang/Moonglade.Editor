@@ -1,6 +1,6 @@
 import { baseKeymap } from 'prosemirror-commands';
 import { gapCursor } from 'prosemirror-gapcursor';
-import { history, redo, undo } from 'prosemirror-history';
+import { history } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import type { Node as ProseMirrorNode, Schema } from 'prosemirror-model';
 import { EditorState, Plugin, PluginKey, Selection, TextSelection, type Command, type SelectionBookmark, type Transaction } from 'prosemirror-state';
@@ -28,6 +28,7 @@ import {
   normalizeAllowedImageExtensions,
   type MoongladeImageUploader
 } from './image-upload';
+import { createRichHtmlKeyboardShortcutMap } from './keyboard-shortcuts';
 import {
   assertHTMLElement,
   assertOptionalBoolean,
@@ -155,11 +156,7 @@ export class MoongladeEditor {
           createUploadPreviewPlugin(),
           createCodeBlockSpellcheckPlugin(),
           tableEditing(),
-          keymap({
-            'Mod-z': undo,
-            'Mod-y': redo,
-            'Shift-Mod-z': redo
-          }),
+          keymap(createRichHtmlKeyboardShortcutMap(this.commands)),
           keymap(baseKeymap)
         ]
       }),

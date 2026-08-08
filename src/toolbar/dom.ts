@@ -1,7 +1,8 @@
 import type { Command } from 'prosemirror-state';
 import type { ToolbarButtonId, ToolbarContext } from './types';
 
-export type CommandButtonItem = [ToolbarButtonId, string, string, Command];
+export type CommandButtonShortcut = { title: string; ariaKeyShortcuts: string };
+export type CommandButtonItem = [ToolbarButtonId, string, string, Command, CommandButtonShortcut?];
 
 export function createButtonGroup(ariaLabel?: string): HTMLDivElement {
   const group = document.createElement('div');
@@ -22,8 +23,8 @@ export function createCommandButtonGroup(
 ): HTMLDivElement {
   const group = createButtonGroup(ariaLabel);
 
-  for (const [name, icon, label, command] of items) {
-    const button = createToolbarButton(name, icon, label);
+  for (const [name, icon, label, command, shortcut] of items) {
+    const button = createToolbarButton(name, icon, label, shortcut);
     button.addEventListener('click', () => context.actions.execute(command));
     context.buttons[name] = button;
     group.append(button);
@@ -32,14 +33,22 @@ export function createCommandButtonGroup(
   return group;
 }
 
-export function createToolbarButton(name: ToolbarButtonId, icon: string, ariaLabel: string): HTMLButtonElement {
+export function createToolbarButton(
+  name: ToolbarButtonId,
+  icon: string,
+  ariaLabel: string,
+  shortcut?: CommandButtonShortcut
+): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'mg-editor-toolbar-button mg-editor-icon-button btn btn-outline-secondary';
   button.dataset.command = name;
   button.setAttribute('aria-label', ariaLabel);
   button.setAttribute('aria-pressed', 'false');
-  button.title = ariaLabel;
+  button.title = shortcut ? `${ariaLabel} (${shortcut.title})` : ariaLabel;
+  if (shortcut) {
+    button.setAttribute('aria-keyshortcuts', shortcut.ariaKeyShortcuts);
+  }
   preserveDisabledButtonTitle(button);
   button.addEventListener('mousedown', (event) => event.preventDefault());
 

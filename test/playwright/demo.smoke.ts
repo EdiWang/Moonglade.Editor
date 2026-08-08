@@ -29,6 +29,19 @@ test('rich HTML demo keeps focus, opens source dialog, and applies toolbar comma
   await expect.poll(() => editor.evaluate((element) => element.innerHTML)).toBe('<p>Browser Clean link</p>');
 });
 
+test('rich HTML demo applies common formatting keyboard shortcuts', async ({ page }) => {
+  const editor = page.locator('.ProseMirror');
+  const textarea = page.locator('#content');
+
+  await expect(editor).toBeFocused();
+
+  await editor.press('Control+Home');
+  await editor.press('Control+B');
+  await editor.type('Shortcut ');
+
+  await expect.poll(() => textarea.inputValue()).toContain('<strong>Shortcut');
+});
+
 test('rich HTML demo uploads an image through the toolbar dialog', async ({ page }) => {
   const editor = page.locator('.ProseMirror');
 
